@@ -11,18 +11,13 @@ export default defineConfig({
       "@assets": path.resolve(process.cwd(), "attached_assets"),
     },
   },
-  root: path.resolve(process.cwd(), "client"),
   build: {
-    outDir: path.resolve(process.cwd(), "dist", "public"),
+    outDir: "dist/public",
     emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(process.cwd(), "client", "index.html")
-    }
   },
   server: {
     fs: {
       strict: false,
-      allow: [process.cwd()]
     },
   },
 });
