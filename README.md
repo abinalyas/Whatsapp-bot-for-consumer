@@ -62,12 +62,15 @@ The build process creates a `dist/` folder with both your frontend assets and ba
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
 
 1. In your Vercel project settings, override the build command to use `npm run vercel-build`
-2. This special build command avoids some of the problematic dependency conflicts
+2. This special build command completely avoids Vite and rollup by only building the backend API server
 3. Add these environment variables in your Vercel project settings:
    - `NODE_ENV=production`
-   - `NPM_FLAGS=--legacy-peer-deps`
 
-We've updated the server code to conditionally import Vite modules only in development, which should prevent the "Cannot find package 'vite'" error in production.
+This approach builds only the backend server without the frontend, which completely avoids the rollup dependency issues. The backend API will still work correctly, but the frontend dashboard will not be available through this deployment.
+
+If you want to deploy the full application with the frontend:
+1. First deploy the backend API using this simplified approach
+2. Then deploy the frontend separately using a static site deployment from the `dist/public` directory after building it locally
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies

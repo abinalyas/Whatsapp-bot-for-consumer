@@ -3,8 +3,6 @@ import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
 
-const viteLogger = createLogger();
-
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -16,7 +14,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export async function setupVite(app: Express, server: Server) {
+export async function setupVite(app: Express, server: any) {
   // Only import Vite modules when this function is actually called (in development)
   const { createServer: createViteServer, createLogger } = await import("vite");
   const viteConfig = (await import("../vite.config")).default;
@@ -73,16 +71,23 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+  // Check if the dist/public directory exists
+  if (fs.existsSync(distPath)) {
+    // Serve static files if they exist
+    app.use(express.static(distPath));
+
+    // Fall through to index.html if the file doesn't exist
+    app.use("*", (_req, res) => {
+      res.sendFile(path.resolve(distPath, "index.html"));
+    });
+  } else {
+    // If no frontend build exists, serve a simple API response
+    app.use("*", (_req, res) => {
+      res.status(200).json({ 
+        message: "Spark Salon WhatsApp Bot API Server", 
+        status: "running",
+        timestamp: new Date().toISOString()
+      });
+    });
   }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
 }
