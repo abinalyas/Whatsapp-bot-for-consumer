@@ -722,12 +722,28 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 function serveStatic(app2) {
-  const distPath = path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
+  // Try multiple possible paths for static files
+  const possiblePaths = [
+    path.resolve(import.meta.dirname, "public"),
+    path.resolve(import.meta.dirname, "..", "dist", "public"),
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve("/var/task/dist/public")
+  ];
+  
+  let distPath = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      break;
+    }
+  }
+  
+  if (!distPath) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `Could not find the build directory. Tried: ${possiblePaths.join(", ")}`
     );
   }
+  
   app2.use(express.static(distPath));
   app2.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
