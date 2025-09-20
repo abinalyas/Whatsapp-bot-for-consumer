@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Production build
+/dist/
+
+# Environment variables
+.env*
+!.env.example
+
+# Logs
+*.log
+
+# Runtime data
+tmp/
+temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS generated files
+Thumbs.db
+
+# Vercel
+.vercel/
+
+# Replit
+replit.nix
+
+# Typescript
+*.tsbuildinfo
