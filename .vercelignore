@@ -13,3 +13,4 @@ shared
 .replit
 replit.nix
 attached_assets
+!dist/public
