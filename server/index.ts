@@ -63,7 +63,7 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
-    host: "localhost", // Changed from "0.0.0.0" to "localhost"
+    host: "0.0.0.0", // Use 0.0.0.0 for Vercel deployment
   }, () => {
     log(`serving on port ${port}`);
   });
