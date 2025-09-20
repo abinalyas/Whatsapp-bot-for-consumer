@@ -62,12 +62,12 @@ The build process creates a `dist/` folder with both your frontend assets and ba
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
 
 1. In your Vercel project settings, override the build command to use `npm run vercel-build`
-2. This special build command avoids installing development dependencies that cause conflicts on Vercel
+2. This special build command avoids some of the problematic dependency conflicts
 3. Add these environment variables in your Vercel project settings:
    - `NODE_ENV=production`
-   - `NPM_FLAGS=--legacy-peer-deps --omit=dev`
+   - `NPM_FLAGS=--legacy-peer-deps`
 
-We've moved `esbuild` from `devDependencies` to `dependencies` to ensure it's available during the Vercel build process while still omitting other development dependencies that cause issues.
+We've updated the server code to conditionally import Vite modules only in development, which should prevent the "Cannot find package 'vite'" error in production.
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
