@@ -14,4 +14,4 @@ shared
 replit.nix
 attached_assets
 !dist/public
-!index.html
+!api/index.js
