@@ -65,12 +65,11 @@ If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or 
 2. This special build command avoids installing development dependencies that cause conflicts on Vercel
 3. Add these environment variables in your Vercel project settings:
    - `NODE_ENV=production`
-   - `NPM_FLAGS=--legacy-peer-deps --omit=optional --omit=dev`
+   - `NPM_FLAGS=--legacy-peer-deps --omit=dev`
 
-These changes should prevent the problematic native rollup dependencies from being installed and loaded during the Vercel build process.
+We've moved `esbuild` from `devDependencies` to `dependencies` to ensure it's available during the Vercel build process while still omitting other development dependencies that cause issues.
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
 2. Clear your Vercel build cache
 3. Make sure you're using Node.js 18.x or higher in your Vercel settings
-4. As a last resort, you can try using Yarn instead of npm for the build process
