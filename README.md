@@ -27,3 +27,44 @@ A WhatsApp bot prototype for Spark Salon that handles service bookings and UPI p
 git clone <repository-url>
 cd spark-salon-whatsapp-bot
 npm install
+```
+
+### 2. Run locally
+
+- **Development mode**:
+  ```bash
+  npm run dev
+  ```
+
+- **Production mode**:
+  ```bash
+  npm run build
+  npm start
+  ```
+
+## Deployment to Vercel
+
+This application can be deployed to Vercel with minimal configuration. Follow these steps:
+
+1. Push your code to a GitHub repository (including the new [vercel.json](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/vercel.json) file)
+2. Create a new project on Vercel and import your repository
+3. Vercel will automatically detect it as a Node.js project
+4. Configure the following environment variables in your Vercel project settings:
+   - `NODE_ENV=production`
+   - Any other environment variables required for WhatsApp integration (e.g., `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, etc.)
+
+Vercel will automatically run `npm run build` and then `npm start` to serve your application.
+
+The build process creates a `dist/` folder with both your frontend assets and backend server code. The `vercel.json` configuration file ensures that all routes are properly handled by your Express server.
+
+### Troubleshooting Vercel Deployment
+
+If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
+
+1. Add `vercel-build` script to your package.json (already included)
+2. In your Vercel project settings, override the build command to use `npm run vercel-build`
+3. Add these environment variables in your Vercel project settings:
+   - `SKIP_OPTIONAL_DEPENDENCIES=true`
+   - `NODE_ENV=production`
+
+These settings help avoid issues with optional dependencies that may not be compatible with Vercel's build environment.
