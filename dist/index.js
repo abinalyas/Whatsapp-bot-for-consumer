@@ -606,11 +606,17 @@ ${upiLink}
 async function registerRoutes(app2) {
   app2.get("/webhook", (req, res) => {
     try {
+      console.log("Webhook verification request:", req.query);
       const verification = webhookVerificationSchema.parse(req.query);
       const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+      console.log("Received verify token:", verification["hub.verify_token"]);
+      console.log("Expected verify token:", verifyToken);
+      console.log("Mode:", verification["hub.mode"]);
       if (verification["hub.mode"] === "subscribe" && verification["hub.verify_token"] === verifyToken) {
+        console.log("Verification successful, returning challenge:", verification["hub.challenge"]);
         res.status(200).send(verification["hub.challenge"]);
       } else {
+        console.log("Verification failed - mode or token mismatch");
         res.status(403).send("Forbidden");
       }
     } catch (error) {
