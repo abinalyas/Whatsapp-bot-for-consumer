@@ -63,8 +63,17 @@ If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or 
 
 1. Make sure you're using the `vercel-build` script (already included in package.json)
 2. In your Vercel project settings, override the build command to use `npm run vercel-build`
-3. The `vercel-build` script includes `--include=dev` flag to ensure devDependencies like Vite are available during build
+3. Add these environment variables in your Vercel project settings:
+   - `NODE_ENV=production`
+   - `NPM_FLAGS=--legacy-peer-deps --omit=optional`
+   - `SKIP_OPTIONAL_DEPENDENCIES=true`
 
-If you still encounter issues, you can also try:
-- Adding `NPM_FLAGS=--legacy-peer-deps` as an environment variable in Vercel
-- Adding `SKIP_OPTIONAL_DEPENDENCIES=true` as an environment variable in Vercel
+The key changes we've made:
+- The `vercel-build` script now uses `--omit=optional` to skip optional dependencies that cause conflicts
+- Using `--legacy-peer-deps` to avoid peer dependency conflicts
+- These flags help avoid the problematic `@rollup/rollup-linux-x64-gnu` module that causes deployment failures
+
+If you're still having issues:
+1. Clear your Vercel build cache
+2. Make sure you're using the latest version of Node.js in your Vercel settings (18.x or higher)
+3. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
