@@ -19,12 +19,5 @@
       "src": "/(.*)",
       "dest": "dist/index.js"
     }
-  ],
-  "build": {
-    "env": {
-      "ROLLUP_DISABLE_LOAD": "true",
-      "SKIP_OPTIONAL_DEPENDENCIES": "true",
-      "NPM_FLAGS": "--legacy-peer-deps --omit=optional"
-    }
-  }
+  ]
 }
