@@ -53,20 +53,14 @@ This application can be deployed to Vercel with minimal configuration. Follow th
    - `NODE_ENV=production`
    - Any other environment variables required for WhatsApp integration (e.g., `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, etc.)
 
-Vercel will automatically run `npm run build` and then `npm start` to serve your application.
-
-The build process creates a `dist/` folder with both your frontend assets and backend server code. The `vercel.json` configuration file ensures that all routes are properly handled by your Express server.
+The [vercel.json](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/vercel.json) configuration file tells Vercel to directly use the [server/index.vercel.ts](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/server/index.vercel.ts) file which doesn't include any Vite dependencies.
 
 ### Troubleshooting Vercel Deployment
 
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors:
 
-1. Make sure you're using the `vercel-build` script which creates a Vercel-specific build without Vite
-2. In your Vercel project settings, override the build command to use `npm run vercel-build`
-3. Add this environment variable in your Vercel project settings:
-   - `NODE_ENV=production`
-
-This approach completely avoids the rollup dependency issue by using a separate server entry point that doesn't use Vite at all.
+1. Make sure your [vercel.json](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/vercel.json) is configured to use [server/index.vercel.ts](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/server/index.vercel.ts) directly
+2. This approach completely avoids the rollup dependency issue by using a separate server entry point that doesn't use Vite at all
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
