@@ -2,9 +2,6 @@
 node_modules/
 .npm/
 
-# Production build
-/dist/
-
 # Environment variables
 .env*
 !.env.example

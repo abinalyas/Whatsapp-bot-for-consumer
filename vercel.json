@@ -2,22 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "server/index.vercel.ts",
+      "src": "dist/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/index.vercel.ts"
+      "dest": "dist/index.js"
     },
     {
       "src": "/webhook",
-      "dest": "server/index.vercel.ts"
+      "dest": "dist/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "server/index.vercel.ts"
+      "dest": "/dist/public/index.html"
     }
   ]
 }
