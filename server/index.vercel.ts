@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.ts";
+import { registerRoutes } from "./routes";
 
 // Simple logger function
 function log(message: string, source = "express") {
