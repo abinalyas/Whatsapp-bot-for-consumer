@@ -727,36 +727,23 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 var vite_config_default = defineConfig({
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
-      await import("@replit/vite-plugin-cartographer").then(
-        (m) => m.cartographer()
-      ),
-      await import("@replit/vite-plugin-dev-banner").then(
-        (m) => m.devBanner()
-      )
-    ] : []
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets")
+      "@": path.resolve(process.cwd(), "client", "src"),
+      "@shared": path.resolve(process.cwd(), "shared"),
+      "@assets": path.resolve(process.cwd(), "attached_assets")
     }
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: "./client",
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: "../dist/public",
     emptyOutDir: true
   },
   server: {
     fs: {
-      strict: true,
-      deny: ["**/.*"]
+      strict: false
     }
   }
 });
@@ -821,7 +808,10 @@ import express2 from "express";
 import fs2 from "fs";
 import path3 from "path";
 function serveStatic(app2) {
-  const distPath = path3.resolve(import.meta.dirname, "public");
+  let distPath = path3.resolve(import.meta.dirname, "public");
+  if (!fs2.existsSync(distPath)) {
+    distPath = path3.resolve(import.meta.dirname, "..", "dist", "public");
+  }
   if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
