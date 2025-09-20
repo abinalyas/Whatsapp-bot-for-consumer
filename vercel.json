@@ -2,14 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
+      "src": "dist/index.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "dist/**",
-          "server/**",
-          "client/**",
-          "shared/**"
+          "dist/**"
         ]
       }
     }
@@ -17,15 +14,15 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/index.ts"
+      "dest": "dist/index.js"
     },
     {
       "src": "/webhook",
-      "dest": "/server/index.ts"
+      "dest": "dist/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/server/index.ts"
+      "dest": "dist/index.js"
     }
   ],
   "build": {

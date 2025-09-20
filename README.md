@@ -61,10 +61,10 @@ The build process creates a `dist/` folder with both your frontend assets and ba
 
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
 
-1. Add `vercel-build` script to your package.json (already included)
+1. Make sure you're using the `vercel-build` script (already included in package.json)
 2. In your Vercel project settings, override the build command to use `npm run vercel-build`
-3. Add these environment variables in your Vercel project settings:
-   - `SKIP_OPTIONAL_DEPENDENCIES=true`
-   - `NODE_ENV=production`
+3. The `vercel-build` script includes `--include=dev` flag to ensure devDependencies like Vite are available during build
 
-These settings help avoid issues with optional dependencies that may not be compatible with Vercel's build environment.
+If you still encounter issues, you can also try:
+- Adding `NPM_FLAGS=--legacy-peer-deps` as an environment variable in Vercel
+- Adding `SKIP_OPTIONAL_DEPENDENCIES=true` as an environment variable in Vercel
