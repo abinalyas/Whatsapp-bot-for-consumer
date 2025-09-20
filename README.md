@@ -61,19 +61,17 @@ The build process creates a `dist/` folder with both your frontend assets and ba
 
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
 
-1. Make sure you're using the `vercel-build` script (already included in package.json)
-2. In your Vercel project settings, override the build command to use `npm run vercel-build`
-3. Add these environment variables in your Vercel project settings:
+1. In your Vercel project settings, override the build command to use `npm run vercel-build`
+2. Add these environment variables in your Vercel project settings:
    - `NODE_ENV=production`
+   - `ROLLUP_DISABLE_LOAD=true`
    - `NPM_FLAGS=--legacy-peer-deps --omit=optional`
    - `SKIP_OPTIONAL_DEPENDENCIES=true`
 
-The key changes we've made:
-- The `vercel-build` script now uses `--omit=optional` to skip optional dependencies that cause conflicts
-- Using `--legacy-peer-deps` to avoid peer dependency conflicts
-- These flags help avoid the problematic `@rollup/rollup-linux-x64-gnu` module that causes deployment failures
+These environment variables will help avoid the problematic native rollup dependencies that cause deployment failures on Vercel.
 
 If you're still having issues:
-1. Clear your Vercel build cache
-2. Make sure you're using the latest version of Node.js in your Vercel settings (18.x or higher)
-3. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
+1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
+2. Clear your Vercel build cache
+3. Make sure you're using Node.js 18.x or higher in your Vercel settings
+4. As a last resort, you can try using Yarn instead of npm for the build process

@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "dist/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/**"]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -25,6 +22,7 @@
   ],
   "build": {
     "env": {
+      "ROLLUP_DISABLE_LOAD": "true",
       "SKIP_OPTIONAL_DEPENDENCIES": "true",
       "NPM_FLAGS": "--legacy-peer-deps --omit=optional"
     }
