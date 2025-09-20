@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { log } from "./vite";
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
@@ -51,27 +51,9 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    try {
-      // Dynamically import vite-related modules only in development
-      const { setupVite } = await import("./vite");
-      await setupVite(app, server);
-    } catch (error) {
-      console.error("Failed to setup Vite:", error);
-    }
+    await setupVite(app, server);
   } else {
-    try {
-      const { serveStatic } = await import("./vite");
-      serveStatic(app);
-    } catch (error) {
-      // If vite module cannot be imported (e.g., in Vercel), serve a simple response
-      app.use("*", (_req, res) => {
-        res.status(200).json({ 
-          message: "Spark Salon WhatsApp Bot API Server", 
-          status: "running",
-          timestamp: new Date().toISOString()
-        });
-      });
-    }
+    serveStatic(app);
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
