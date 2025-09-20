@@ -61,18 +61,15 @@ The build process creates a `dist/` folder with both your frontend assets and ba
 
 If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors, try these solutions:
 
-1. In your Vercel project settings, override the build command to use `npm run vercel-build`
-2. This special build command completely avoids Vite and rollup by only building the backend API server
-3. Add these environment variables in your Vercel project settings:
+1. Make sure you have the [.npmrc](file:///Users/abinalias/Documents/Whatsapp-bot-for-consumer/.npmrc) file with `optional = false` in your project root
+2. Make sure rollup is pinned to version 4.14.0 in your devDependencies
+3. In your Vercel project settings, override the build command to use `npm run vercel-build`
+4. Add these environment variables in your Vercel project settings:
    - `NODE_ENV=production`
-
-This approach builds only the backend server without the frontend, which completely avoids the rollup dependency issues. The backend API will still work correctly, but the frontend dashboard will not be available through this deployment.
-
-If you want to deploy the full application with the frontend:
-1. First deploy the backend API using this simplified approach
-2. Then deploy the frontend separately using a static site deployment from the `dist/public` directory after building it locally
+   - `NPM_FLAGS=--legacy-peer-deps`
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
 2. Clear your Vercel build cache
 3. Make sure you're using Node.js 18.x or higher in your Vercel settings
+4. In Vercel dashboard → Project → Settings → General → Build & Development Settings → Clear cache and redeploy

@@ -51,12 +51,27 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    // Dynamically import vite-related modules only in development
-    const { setupVite } = await import("./vite");
-    await setupVite(app, server);
+    try {
+      // Dynamically import vite-related modules only in development
+      const { setupVite } = await import("./vite");
+      await setupVite(app, server);
+    } catch (error) {
+      console.error("Failed to setup Vite:", error);
+    }
   } else {
-    const { serveStatic } = await import("./vite");
-    serveStatic(app);
+    try {
+      const { serveStatic } = await import("./vite");
+      serveStatic(app);
+    } catch (error) {
+      // If vite module cannot be imported (e.g., in Vercel), serve a simple response
+      app.use("*", (_req, res) => {
+        res.status(200).json({ 
+          message: "Spark Salon WhatsApp Bot API Server", 
+          status: "running",
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
