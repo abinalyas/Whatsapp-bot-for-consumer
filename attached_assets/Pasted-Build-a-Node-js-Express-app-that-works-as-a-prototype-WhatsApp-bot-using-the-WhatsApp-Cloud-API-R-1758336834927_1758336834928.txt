@@ -1,0 +1,54 @@
+Build a Node.js (Express) app that works as a prototype WhatsApp bot using the WhatsApp Cloud API.
+Requirements:
+Webhook Setup:
+Create a POST endpoint `/webhook` to handle incoming WhatsApp messages.
+Create a GET endpoint `/webhook` for verification with Meta (respond with hub.challenge).
+Parse incoming JSON from WhatsApp (message text, sender id).
+Bot Logic:
+When a user sends "Hi" or "hello":
+Reply with a welcome intro message and list of services.
+       Example:
+       ":wave: Welcome to Spark Salon!
+        Here are our services:
+Haircut – ₹200
+Facial – ₹500
+Massage – ₹800
+        Reply with service name to book."
+When a user replies with "Haircut", "Facial", or "Massage":
+Reply with a UPI deep link for payment.
+Example UPI link format:
+       `upi://pay?pa=sparksalon@upi&pn=Spark+Salon&am=500&cu=INR`
+After sending the UPI link, send a confirmation message:
+       "Please complete your payment in GPay/PhonePe/Paytm. Once done, reply 'paid'."
+Payment Confirmation (Mock for POC):
+If user replies "paid":
+Reply ":white_check_mark: Payment received! Your booking is confirmed."
+Configurations:
+Store shop data (services + UPI ID) in a simple JSON object.
+Use environment variables for WhatsApp API credentials:
+`WHATSAPP_TOKEN` (Permanent access token)
+`WHATSAPP_PHONE_ID` (Phone number ID from Meta)
+`WHATSAPP_VERIFY_TOKEN` (for webhook verification)
+Outgoing Messages:
+Implement a helper function `sendMessage(to, message)` that uses WhatsApp Cloud API:
+POST request to `https://graph.facebook.com/v17.0/{phone_number_id}/messages`
+Headers: Authorization Bearer token
+Body: JSON with `messaging_product: "whatsapp"`, `to`, `text`.
+Deployment:
+Make the app deployable on Vercel or Railway.
+Expose `/webhook` endpoint publicly (for Meta to send events).
+Deliverables:
+Full `server.js` code.
+Example `.env` file with placeholders for credentials.
+Instructions in README on how to:
+Get WhatsApp Cloud API credentials from Meta Developer portal.
+Verify webhook with Meta.
+Test sending messages from a WhatsApp test number.
+Goal:
+A working POC where:
+User types "Hi"
+Bot replies with services
+User selects service
+Bot replies with UPI payment link
+User replies "paid"
+Bot confirms booking
