@@ -51,11 +51,11 @@ This application can be deployed to Vercel with minimal configuration. Follow th
    npm run build
    ```
 
-2. Push your code including the `dist` folder to a GitHub repository
+2. Push your code including the `dist` and `public` folders to a GitHub repository
 
 3. Create a new project on Vercel and import your repository
 
-4. Vercel will automatically detect it as a Node.js project
+4. Vercel will automatically detect it as a hybrid project (static site + serverless functions)
 
 5. Configure the following environment variables in your Vercel project settings:
    - `NODE_ENV=production`
@@ -65,17 +65,21 @@ This application can be deployed to Vercel with minimal configuration. Follow th
 
 6. Deploy the project
 
-The build process creates a `dist/` folder with both your frontend assets and backend server code. The `vercel.json` configuration file ensures that:
-- API requests to `/api/*` and `/webhook` are handled by the backend server
-- All other requests are served the frontend dashboard
+The build process creates:
+- A `public/` folder with frontend assets (HTML, CSS, JS)
+- A `dist/` folder with the backend server code
+
+Vercel will automatically:
+- Serve static files from the `public/` folder
+- Route API requests to `/api/*` and `/webhook` to the serverless function
 
 ### Troubleshooting Vercel Deployment
 
-If you encounter deployment errors related to `@rollup/rollup-linux-x64-gnu` or similar module not found errors:
+If you encounter deployment errors:
 
 1. Make sure you build the project locally with `npm run build` before deploying
-2. Ensure the `dist` folder is included in your repository
-3. The pre-built approach avoids these issues by not requiring Vercel to install Vite dependencies
+2. Ensure both the `dist` and `public` folders are included in your repository
+3. The pre-built approach avoids Vercel build issues by not requiring dependency installation
 
 If you're still having issues:
 1. Try removing `package-lock.json` and `node_modules` and reinstalling dependencies
