@@ -5,12 +5,7 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-// Only require DATABASE_URL in production environment
-if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// DATABASE_URL is optional - if not provided, the app will use in-memory storage
 
 // Only initialize database connection if DATABASE_URL is provided
 let db;
