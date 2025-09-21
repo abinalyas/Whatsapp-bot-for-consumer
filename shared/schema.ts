@@ -18,6 +18,10 @@ export const tenants = pgTable("tenants", {
   whatsappVerifyToken: varchar("whatsapp_verify_token", { length: 100 }),
   botSettings: jsonb("bot_settings").default(sql`'{}'::jsonb`),
   billingSettings: jsonb("billing_settings").default(sql`'{}'::jsonb`),
+  // New business configuration fields
+  businessTypeId: varchar("business_type_id").references(() => businessTypes.id),
+  businessConfig: jsonb("business_config").default(sql`'{}'::jsonb`),
+  terminology: jsonb("terminology").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -114,6 +118,9 @@ export const conversations = pgTable("conversations", {
   selectedDate: text("selected_date"), // YYYY-MM-DD format
   selectedTime: text("selected_time"), // HH:MM format
   contextData: jsonb("context_data").default(sql`'{}'::jsonb`),
+  // New flexible business model fields
+  customFields: jsonb("custom_fields").default(sql`'{}'::jsonb`),
+  botFlowExecutionId: varchar("bot_flow_execution_id").references(() => botFlowExecutions.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
@@ -309,3 +316,264 @@ export type WhatsappCredentials = typeof whatsappCredentials.$inferSelect;
 export type InsertWhatsappCredentials = z.infer<typeof insertWhatsappCredentialsSchema>;
 export type SettingsChangeLog = typeof settingsChangeLog.$inferSelect;
 export type InsertSettingsChangeLog = z.infer<typeof insertSettingsChangeLogSchema>;
+
+// ===== FLEXIBLE BUSINESS MODELS TABLES =====
+
+// Business Types schema
+export const businessTypes = pgTable("business_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  description: text("description"),
+  terminology: jsonb("terminology").notNull().default(sql`'{}'::jsonb`),
+  defaultConfig: jsonb("default_config").notNull().default(sql`'{}'::jsonb`),
+  isSystem: boolean("is_system").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Custom Fields schema
+export const customFields = pgTable("custom_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  entityType: varchar("entity_type", { length: 50 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  label: varchar("label", { length: 200 }).notNull(),
+  fieldType: varchar("field_type", { length: 50 }).notNull(),
+  isRequired: boolean("is_required").notNull().default(false),
+  validationRules: jsonb("validation_rules").default(sql`'{}'::jsonb`),
+  fieldOptions: jsonb("field_options").default(sql`'[]'::jsonb`),
+  defaultValue: jsonb("default_value"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueTenantEntityName: unique().on(table.tenantId, table.entityType, table.name),
+}));
+
+// Offerings schema (replaces services)
+export const offerings = pgTable("offerings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  offeringType: varchar("offering_type", { length: 50 }).notNull().default("service"),
+  category: varchar("category", { length: 100 }),
+  subcategory: varchar("subcategory", { length: 100 }),
+  pricingType: varchar("pricing_type", { length: 50 }).notNull().default("fixed"),
+  basePrice: integer("base_price").notNull().default(0),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  pricingConfig: jsonb("pricing_config").default(sql`'{}'::jsonb`),
+  isSchedulable: boolean("is_schedulable").notNull().default(false),
+  durationMinutes: integer("duration_minutes"),
+  availabilityConfig: jsonb("availability_config").default(sql`'{}'::jsonb`),
+  hasVariants: boolean("has_variants").notNull().default(false),
+  variants: jsonb("variants").default(sql`'[]'::jsonb`),
+  customFields: jsonb("custom_fields").default(sql`'{}'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  tags: jsonb("tags").default(sql`'[]'::jsonb`),
+  images: jsonb("images").default(sql`'[]'::jsonb`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Workflow States schema
+export const workflowStates = pgTable("workflow_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  workflowType: varchar("workflow_type", { length: 50 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  stateType: varchar("state_type", { length: 20 }).notNull().default("intermediate"),
+  color: varchar("color", { length: 7 }).default("#6B7280"),
+  description: text("description"),
+  isSystem: boolean("is_system").notNull().default(false),
+  displayOrder: integer("display_order").notNull().default(0),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueTenantWorkflowName: unique().on(table.tenantId, table.workflowType, table.name),
+}));
+
+// Workflow Transitions schema
+export const workflowTransitions = pgTable("workflow_transitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  workflowType: varchar("workflow_type", { length: 50 }).notNull(),
+  fromStateId: varchar("from_state_id").notNull().references(() => workflowStates.id, { onDelete: "cascade" }),
+  toStateId: varchar("to_state_id").notNull().references(() => workflowStates.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  conditions: jsonb("conditions").default(sql`'{}'::jsonb`),
+  actions: jsonb("actions").default(sql`'[]'::jsonb`),
+  isAutomatic: boolean("is_automatic").notNull().default(false),
+  requiresApproval: boolean("requires_approval").notNull().default(false),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Transactions schema (replaces bookings)
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  transactionType: varchar("transaction_type", { length: 50 }).notNull().default("booking"),
+  transactionNumber: varchar("transaction_number", { length: 50 }),
+  customerPhone: varchar("customer_phone", { length: 20 }).notNull(),
+  customerName: varchar("customer_name", { length: 200 }),
+  customerEmail: varchar("customer_email", { length: 255 }),
+  offeringId: varchar("offering_id").references(() => offerings.id, { onDelete: "set null" }),
+  scheduledAt: timestamp("scheduled_at"),
+  durationMinutes: integer("duration_minutes"),
+  timezone: varchar("timezone", { length: 50 }).default("UTC"),
+  amount: integer("amount").notNull().default(0),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  paymentStatus: varchar("payment_status", { length: 50 }).default("pending"),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  paymentReference: varchar("payment_reference", { length: 200 }),
+  currentStateId: varchar("current_state_id").references(() => workflowStates.id),
+  workflowHistory: jsonb("workflow_history").default(sql`'[]'::jsonb`),
+  customFields: jsonb("custom_fields").default(sql`'{}'::jsonb`),
+  notes: text("notes"),
+  internalNotes: text("internal_notes"),
+  tags: jsonb("tags").default(sql`'[]'::jsonb`),
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  source: varchar("source", { length: 50 }).default("whatsapp"),
+  conversationId: varchar("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Bot Flows schema
+export const botFlows = pgTable("bot_flows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  flowType: varchar("flow_type", { length: 50 }).notNull().default("conversation"),
+  startNodeId: varchar("start_node_id"),
+  isActive: boolean("is_active").notNull().default(false),
+  isDefault: boolean("is_default").notNull().default(false),
+  version: integer("version").notNull().default(1),
+  variables: jsonb("variables").default(sql`'{}'::jsonb`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueTenantNameVersion: unique().on(table.tenantId, table.name, table.version),
+}));
+
+// Bot Flow Nodes schema
+export const botFlowNodes = pgTable("bot_flow_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  flowId: varchar("flow_id").notNull().references(() => botFlows.id, { onDelete: "cascade" }),
+  nodeType: varchar("node_type", { length: 50 }).notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  positionX: integer("position_x").notNull().default(0),
+  positionY: integer("position_y").notNull().default(0),
+  config: jsonb("config").notNull().default(sql`'{}'::jsonb`),
+  connections: jsonb("connections").default(sql`'[]'::jsonb`),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Bot Flow Executions schema
+export const botFlowExecutions = pgTable("bot_flow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  flowId: varchar("flow_id").notNull().references(() => botFlows.id, { onDelete: "cascade" }),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  currentNodeId: varchar("current_node_id").references(() => botFlowNodes.id),
+  variables: jsonb("variables").default(sql`'{}'::jsonb`),
+  executionHistory: jsonb("execution_history").default(sql`'[]'::jsonb`),
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+}, (table) => ({
+  uniqueConversation: unique().on(table.conversationId),
+}));
+
+// ===== FLEXIBLE BUSINESS MODELS SCHEMAS =====
+
+export const insertBusinessTypeSchema = createInsertSchema(businessTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomFieldSchema = createInsertSchema(customFields).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOfferingSchema = createInsertSchema(offerings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowStateSchema = createInsertSchema(workflowStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkflowTransitionSchema = createInsertSchema(workflowTransitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBotFlowSchema = createInsertSchema(botFlows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBotFlowNodeSchema = createInsertSchema(botFlowNodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBotFlowExecutionSchema = createInsertSchema(botFlowExecutions).omit({
+  id: true,
+  startedAt: true,
+});
+
+// ===== FLEXIBLE BUSINESS MODELS TYPES =====
+
+export type BusinessType = typeof businessTypes.$inferSelect;
+export type InsertBusinessType = z.infer<typeof insertBusinessTypeSchema>;
+export type CustomField = typeof customFields.$inferSelect;
+export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
+export type Offering = typeof offerings.$inferSelect;
+export type InsertOffering = z.infer<typeof insertOfferingSchema>;
+export type WorkflowState = typeof workflowStates.$inferSelect;
+export type InsertWorkflowState = z.infer<typeof insertWorkflowStateSchema>;
+export type WorkflowTransition = typeof workflowTransitions.$inferSelect;
+export type InsertWorkflowTransition = z.infer<typeof insertWorkflowTransitionSchema>;
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type BotFlow = typeof botFlows.$inferSelect;
+export type InsertBotFlow = z.infer<typeof insertBotFlowSchema>;
+export type BotFlowNode = typeof botFlowNodes.$inferSelect;
+export type InsertBotFlowNode = z.infer<typeof insertBotFlowNodeSchema>;
+export type BotFlowExecution = typeof botFlowExecutions.$inferSelect;
+export type InsertBotFlowExecution = z.infer<typeof insertBotFlowExecutionSchema>;
