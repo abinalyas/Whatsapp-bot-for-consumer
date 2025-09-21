@@ -88,6 +88,12 @@ export const BusinessTypeSelector: React.FC<BusinessTypeSelectorProps> = ({
   onSelect,
   loading = false,
 }) => {
+  console.log('BusinessTypeSelector received:', { 
+    businessTypesCount: businessTypes.length, 
+    businessTypes: businessTypes.map(bt => bt.name),
+    selectedBusinessType: selectedBusinessType?.name 
+  });
+
   if (businessTypes.length === 0) {
     return (
       <Card>
@@ -96,7 +102,10 @@ export const BusinessTypeSelector: React.FC<BusinessTypeSelectorProps> = ({
             <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-muted-foreground">No Business Types Available</h3>
             <p className="text-sm text-muted-foreground mt-2">
-              Please contact support to set up business types for your organization.
+              The mock API should provide business types. Check console for errors.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Debug: businessTypes.length = {businessTypes.length}
             </p>
           </div>
         </CardContent>

@@ -9,6 +9,7 @@ import { SimpleTestPage } from "@/pages/simple-test";
 import BusinessConfigurationPage from "@/pages/business-configuration";
 import OfferingsManagementPage from "@/pages/offerings-management";
 import TransactionsManagementPage from "@/pages/transactions-management";
+import DebugBusinessConfigPage from "@/pages/debug-business-config";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/business-config" component={SimpleBusinessConfigPage} />
       <Route path="/business-config-full" component={BusinessConfigurationPage} />
+      <Route path="/debug-config" component={DebugBusinessConfigPage} />
       <Route path="/offerings" component={OfferingsManagementPage} />
       <Route path="/transactions" component={TransactionsManagementPage} />
       <Route path="/test" component={SimpleTestPage} />

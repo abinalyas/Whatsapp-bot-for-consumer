@@ -87,7 +87,10 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       setLoading(true);
       setError(null);
 
-      // Mock data for demo
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Mock data for demo - expanded with more business types
       const mockBusinessTypes = [
         {
           id: '1',
@@ -128,39 +131,70 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
             { name: 'Appointment Flow', states: ['booked', 'confirmed', 'in_progress', 'completed', 'no_show'] }
           ],
           metadata: { hasInventory: false, requiresScheduling: true }
+        },
+        {
+          id: '3',
+          name: 'Medical Clinic',
+          description: 'Healthcare services with patient appointments and medical records',
+          category: 'Healthcare',
+          terminology: {
+            offering: 'Service',
+            transaction: 'Appointment',
+            customer: 'Patient',
+            booking: 'Appointment'
+          },
+          customFields: [
+            { name: 'Insurance Provider', type: 'text', isRequired: false },
+            { name: 'Medical History', type: 'text', isRequired: false }
+          ],
+          workflows: [
+            { name: 'Patient Flow', states: ['scheduled', 'checked_in', 'in_consultation', 'completed', 'no_show'] }
+          ],
+          metadata: { hasInventory: false, requiresScheduling: true }
+        },
+        {
+          id: '4',
+          name: 'Retail Store',
+          description: 'Product sales with inventory management and customer orders',
+          category: 'Retail',
+          terminology: {
+            offering: 'Product',
+            transaction: 'Order',
+            customer: 'Customer',
+            booking: 'Order'
+          },
+          customFields: [
+            { name: 'Size', type: 'select', isRequired: false, options: ['XS', 'S', 'M', 'L', 'XL'] },
+            { name: 'Color Preference', type: 'text', isRequired: false }
+          ],
+          workflows: [
+            { name: 'Order Processing', states: ['pending', 'confirmed', 'shipped', 'delivered', 'returned'] }
+          ],
+          metadata: { hasInventory: true, requiresScheduling: false }
         }
       ];
 
+      console.log('Loading business types:', mockBusinessTypes.length);
       setBusinessTypes(mockBusinessTypes);
 
-      // Mock tenant config
+      // Mock tenant config - start with no selection
       const mockTenantConfig = {
         id: '1',
         tenantId: tenantId,
-        businessTypeId: '2',
-        businessName: 'Spark Beauty Salon',
-        customTerminology: {
-          offering: 'Service',
-          transaction: 'Appointment',
-          customer: 'Client',
-          booking: 'Appointment'
-        },
+        businessTypeId: '',
+        businessName: 'My Business',
+        customTerminology: {},
         branding: {
           primaryColor: '#3b82f6',
           secondaryColor: '#64748b'
         },
-        customFields: [
-          { name: 'Hair Type', type: 'select', isRequired: false, options: ['Straight', 'Wavy', 'Curly', 'Coily'] }
-        ],
-        settings: { hasInventory: false, requiresScheduling: true },
+        customFields: [],
+        settings: {},
         isConfigured: false
       };
 
       setTenantConfig(mockTenantConfig);
-      
-      // Find and set the selected business type
-      const businessType = mockBusinessTypes.find(bt => bt.id === mockTenantConfig.businessTypeId);
-      setSelectedBusinessType(businessType || null);
+      setSelectedBusinessType(null);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
