@@ -37,7 +37,7 @@
     - Write unit tests for authentication flows and token validation
     - _Requirements: 7.1, 1.4_
 
-  - [ ] 3.2 Build API key management system
+  - [x] 3.2 Build API key management system
     - Implement API key generation, validation, and revocation
     - Create tenant-scoped API key permissions and rate limiting
     - Add API key usage tracking and analytics
