@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import businessConfigRoutes from "./routes/business-config.routes";
 
 // WhatsApp webhook verification schema
 const webhookVerificationSchema = z.object({
@@ -608,6 +609,9 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  // Business configuration routes
+  app.use("/api/business-config", businessConfigRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
