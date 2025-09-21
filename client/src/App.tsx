@@ -12,6 +12,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/business-config" component={BusinessConfigurationPage} />
+      <Route path="/test" component={() => <div className="p-8"><h1 className="text-2xl">Test Route Works!</h1><p>If you see this, routing is working correctly.</p></div>} />
       <Route component={NotFound} />
     </Switch>
   );
