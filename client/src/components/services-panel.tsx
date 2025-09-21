@@ -32,8 +32,10 @@ export function ServicesPanel() {
 
   // Create service mutation
   const createServiceMutation = useMutation({
-    mutationFn: (serviceData: InsertService) =>
-      apiRequest("/api/services", "POST", serviceData),
+    mutationFn: async (serviceData: InsertService) => {
+      const response = await apiRequest("/api/services", "POST", serviceData);
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       setIsAddDialogOpen(false);
@@ -43,10 +45,11 @@ export function ServicesPanel() {
         description: "New service has been added successfully.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Create service error:", error);
       toast({
         title: "Error",
-        description: "Failed to create service. Please try again.",
+        description: `Failed to create service: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -54,8 +57,10 @@ export function ServicesPanel() {
 
   // Update service mutation
   const updateServiceMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<InsertService> }) =>
-      apiRequest(`/api/services/${id}`, "PATCH", data),
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertService> }) => {
+      const response = await apiRequest(`/api/services/${id}`, "PATCH", data);
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       setIsEditDialogOpen(false);
@@ -66,10 +71,11 @@ export function ServicesPanel() {
         description: "Service has been updated successfully.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Update service error:", error);
       toast({
         title: "Error",
-        description: "Failed to update service. Please try again.",
+        description: `Failed to update service: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -77,7 +83,10 @@ export function ServicesPanel() {
 
   // Delete service mutation
   const deleteServiceMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/services/${id}`, "DELETE"),
+    mutationFn: async (id: string) => {
+      const response = await apiRequest(`/api/services/${id}`, "DELETE");
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({
@@ -85,10 +94,11 @@ export function ServicesPanel() {
         description: "Service has been removed successfully.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Delete service error:", error);
       toast({
         title: "Error",
-        description: "Failed to delete service. Please try again.",
+        description: `Failed to delete service: ${error.message}`,
         variant: "destructive",
       });
     },

@@ -35,8 +35,10 @@ export function BotConfig() {
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: (settingsData: Partial<Settings>) =>
-      apiRequest("/api/settings", "PATCH", settingsData),
+    mutationFn: async (settingsData: Partial<Settings>) => {
+      const response = await apiRequest("/api/settings", "PATCH", settingsData);
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       setIsUpiDialogOpen(false);
@@ -45,10 +47,11 @@ export function BotConfig() {
         description: "Your settings have been saved successfully.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Update settings error:", error);
       toast({
         title: "Error",
-        description: "Failed to update settings. Please try again.",
+        description: `Failed to update settings: ${error.message}`,
         variant: "destructive",
       });
     },
