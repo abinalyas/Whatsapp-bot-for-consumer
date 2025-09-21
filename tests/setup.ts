@@ -1,9 +1,9 @@
 import { beforeAll, afterAll } from 'vitest';
 import { Pool } from '@neondatabase/serverless';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 
 // Load environment variables
-config();
+dotenv.config();
 
 let testPool: Pool;
 
