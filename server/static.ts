@@ -20,8 +20,20 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Only serve index.html for non-asset routes (SPA fallback)
+  app.get("*", (req, res, next) => {
+    // Don't serve index.html for asset requests
+    if (req.path.startsWith('/assets/') || 
+        req.path.endsWith('.js') || 
+        req.path.endsWith('.css') || 
+        req.path.endsWith('.ico') || 
+        req.path.endsWith('.png') || 
+        req.path.endsWith('.jpg') || 
+        req.path.endsWith('.svg')) {
+      return next();
+    }
+    
+    // Serve index.html for all other routes (SPA routing)
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
