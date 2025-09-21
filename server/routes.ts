@@ -422,10 +422,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!status || !['pending', 'confirmed', 'cancelled'].includes(status)) {
         return res.status(400).json({ error: "Invalid status. Must be pending, confirmed, or cancelled" });
       }
-      
+
+      // Get booking details before updating
+      const bookings = await storage.getBookings();
+      const booking = bookings.find(b => b.id === id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Update booking status
       const updatedBooking = await storage.updateBooking(id, { status });
       if (!updatedBooking) {
         return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Send WhatsApp notification to customer
+      if (status === 'confirmed' || status === 'cancelled') {
+        try {
+          // Get service details for the notification
+          const services = await storage.getServices();
+          const service = services.find(s => s.id === booking.serviceId);
+          const serviceName = service?.name || 'Service';
+
+          let notificationMessage = '';
+          
+          if (status === 'confirmed') {
+            const appointmentDate = booking.appointmentDate 
+              ? new Date(booking.appointmentDate).toLocaleDateString('en-GB', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })
+              : 'your selected date';
+            
+            const appointmentTime = booking.appointmentTime || 'your selected time';
+
+            notificationMessage = `✅ *Booking Confirmed!*
+
+Your appointment has been confirmed by Spark Salon.
+
+📋 *Booking Details:*
+Service: ${serviceName}
+Date: ${appointmentDate}
+Time: ${appointmentTime}
+Amount: ₹${booking.amount}
+
+📍 Please arrive 10 minutes early for your appointment.
+
+Thank you for choosing Spark Salon! 🎉`;
+
+          } else if (status === 'cancelled') {
+            notificationMessage = `❌ *Booking Cancelled*
+
+We're sorry to inform you that your booking has been cancelled.
+
+📋 *Cancelled Booking:*
+Service: ${serviceName}
+Amount: ₹${booking.amount}
+
+If you have any questions or would like to reschedule, please contact us or send a new booking request.
+
+We apologize for any inconvenience caused.`;
+          }
+
+          // Send WhatsApp notification
+          const notificationSent = await sendWhatsAppMessage(booking.phoneNumber, notificationMessage);
+          console.log(`WhatsApp notification ${notificationSent ? 'sent' : 'failed'} for booking ${id} status change to ${status}`);
+          
+        } catch (notificationError) {
+          console.error("Error sending WhatsApp notification:", notificationError);
+          // Don't fail the booking update if notification fails
+        }
       }
       
       res.json(updatedBooking);

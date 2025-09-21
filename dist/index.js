@@ -694,9 +694,60 @@ async function registerRoutes(app2) {
       if (!status || !["pending", "confirmed", "cancelled"].includes(status)) {
         return res.status(400).json({ error: "Invalid status. Must be pending, confirmed, or cancelled" });
       }
+      const bookings2 = await storage.getBookings();
+      const booking = bookings2.find((b) => b.id === id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
       const updatedBooking = await storage.updateBooking(id, { status });
       if (!updatedBooking) {
         return res.status(404).json({ error: "Booking not found" });
+      }
+      if (status === "confirmed" || status === "cancelled") {
+        try {
+          const services2 = await storage.getServices();
+          const service = services2.find((s) => s.id === booking.serviceId);
+          const serviceName = service?.name || "Service";
+          let notificationMessage = "";
+          if (status === "confirmed") {
+            const appointmentDate = booking.appointmentDate ? new Date(booking.appointmentDate).toLocaleDateString("en-GB", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric"
+            }) : "your selected date";
+            const appointmentTime = booking.appointmentTime || "your selected time";
+            notificationMessage = `\u2705 *Booking Confirmed!*
+
+Your appointment has been confirmed by Spark Salon.
+
+\u{1F4CB} *Booking Details:*
+Service: ${serviceName}
+Date: ${appointmentDate}
+Time: ${appointmentTime}
+Amount: \u20B9${booking.amount}
+
+\u{1F4CD} Please arrive 10 minutes early for your appointment.
+
+Thank you for choosing Spark Salon! \u{1F389}`;
+          } else if (status === "cancelled") {
+            notificationMessage = `\u274C *Booking Cancelled*
+
+We're sorry to inform you that your booking has been cancelled.
+
+\u{1F4CB} *Cancelled Booking:*
+Service: ${serviceName}
+Amount: \u20B9${booking.amount}
+
+If you have any questions or would like to reschedule, please contact us or send a new booking request.
+
+We apologize for any inconvenience caused.`;
+          }
+          const notificationSent = await sendWhatsAppMessage(booking.phoneNumber, notificationMessage);
+          console.log(`WhatsApp notification ${notificationSent ? "sent" : "failed"} for booking ${id} status change to ${status}`);
+        } catch (notificationError) {
+          console.error("Error sending WhatsApp notification:", notificationError);
+        }
       }
       res.json(updatedBooking);
     } catch (error) {
