@@ -22,7 +22,7 @@
     - Write integration tests for tenant operations with multiple tenant scenarios
     - _Requirements: 1.1, 1.3, 2.2_
 
-  - [ ] 2.3 Implement tenant settings and configuration management
+  - [x] 2.3 Implement tenant settings and configuration management
     - Create tenant settings storage and retrieval system
     - Implement WhatsApp credentials management with encryption
     - Add bot configuration storage with versioning support

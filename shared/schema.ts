@@ -235,3 +235,77 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
+
+// ===== SETTINGS VERSIONING TABLES =====
+
+export const settingsVersions = pgTable("settings_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  settings: jsonb("settings").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  isActive: boolean("is_active").notNull().default(false),
+  changeSummary: text("change_summary"),
+  rollbackReason: text("rollback_reason"),
+}, (table) => ({
+  uniqueTenantVersion: unique().on(table.tenantId, table.version),
+}));
+
+export const whatsappCredentials = pgTable("whatsapp_credentials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }).unique(),
+  phoneNumberId: varchar("phone_number_id").notNull(),
+  accessTokenEncrypted: text("access_token_encrypted").notNull(),
+  verifyToken: varchar("verify_token", { length: 255 }).notNull(),
+  businessAccountId: varchar("business_account_id", { length: 255 }),
+  appId: varchar("app_id", { length: 255 }),
+  appSecretEncrypted: text("app_secret_encrypted"),
+  webhookUrl: text("webhook_url"),
+  isVerified: boolean("is_verified").notNull().default(false),
+  lastVerified: timestamp("last_verified"),
+  verificationErrors: jsonb("verification_errors"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const settingsChangeLog = pgTable("settings_change_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  changedBy: varchar("changed_by").notNull(),
+  changeType: varchar("change_type", { length: 50 }).notNull(), // 'update', 'reset', 'rollback'
+  fieldPath: varchar("field_path", { length: 255 }), // JSON path of changed field
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
+  changeReason: text("change_reason"),
+  ipAddress: varchar("ip_address", { length: 45 }), // Support IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ===== SETTINGS VERSIONING SCHEMAS =====
+
+export const insertSettingsVersionSchema = createInsertSchema(settingsVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWhatsappCredentialsSchema = createInsertSchema(whatsappCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSettingsChangeLogSchema = createInsertSchema(settingsChangeLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ===== SETTINGS VERSIONING TYPES =====
+
+export type SettingsVersion = typeof settingsVersions.$inferSelect;
+export type InsertSettingsVersion = z.infer<typeof insertSettingsVersionSchema>;
+export type WhatsappCredentials = typeof whatsappCredentials.$inferSelect;
+export type InsertWhatsappCredentials = z.infer<typeof insertWhatsappCredentialsSchema>;
+export type SettingsChangeLog = typeof settingsChangeLog.$inferSelect;
+export type InsertSettingsChangeLog = z.infer<typeof insertSettingsChangeLogSchema>;
