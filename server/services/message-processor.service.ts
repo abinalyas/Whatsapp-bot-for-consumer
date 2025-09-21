@@ -9,6 +9,7 @@ import { Pool } from '@neondatabase/serverless';
 import * as schema from '@shared/schema';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { ServiceRepository } from '../repositories/service.repository';
+import { BotConfigurationService } from './bot-configuration.service';
 import type {
   ServiceResponse,
   TenantContext,
@@ -17,6 +18,8 @@ import type {
   Service,
   InsertMessage,
   InsertConversation,
+  BotSettings,
+  ConversationStep,
 } from '@shared/types/tenant';
 
 export interface WhatsAppMessage {
@@ -128,12 +131,14 @@ export class MessageProcessorService {
   private pool: Pool;
   private conversationRepo: ConversationRepository;
   private serviceRepo: ServiceRepository;
+  private botConfigService: BotConfigurationService;
 
   constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
     this.db = drizzle({ client: this.pool, schema });
     this.conversationRepo = new ConversationRepository(connectionString);
     this.serviceRepo = new ServiceRepository(connectionString);
+    this.botConfigService = new BotConfigurationService(connectionString);
   }
 
   // ===== MAIN MESSAGE PROCESSING =====
@@ -488,31 +493,90 @@ export class MessageProcessorService {
     messageContent: string,
     contextData: any
   ): Promise<ServiceResponse<{ newState?: string; response?: BotResponse; contextData?: any }>> {
-    // Get tenant settings for personalized greeting
-    const [tenant] = await this.db
-      .select()
-      .from(schema.tenants)
-      .where(eq(schema.tenants.id, tenantId))
-      .limit(1);
+    try {
+      // Get bot configuration for personalized greeting
+      const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+      if (!configResult.success) {
+        console.error('Failed to get bot configuration:', configResult.error);
+        // Fallback to default greeting
+        const response: BotResponse = {
+          content: 'Hello! Welcome to our business. I\'m here to help you book an appointment.',
+          messageType: 'text',
+        };
 
-    const businessName = tenant?.businessName || 'our business';
-    
-    const response: BotResponse = {
-      content: `Hello! Welcome to ${businessName}. I'm here to help you book an appointment. What service would you like to book?`,
-      messageType: 'text',
-    };
+        return {
+          success: true,
+          data: {
+            newState: 'awaiting_service',
+            response,
+            contextData: {
+              ...contextData,
+              greetingSent: true,
+            },
+          },
+        };
+      }
 
-    return {
-      success: true,
-      data: {
-        newState: 'awaiting_service',
-        response,
-        contextData: {
-          ...contextData,
-          greetingSent: true,
+      const botSettings = configResult.data!;
+      
+      // Check business hours if enabled
+      if (botSettings.businessHours.enabled) {
+        const isWithinBusinessHours = this.checkBusinessHours(botSettings.businessHours);
+        if (!isWithinBusinessHours) {
+          const response: BotResponse = {
+            content: botSettings.businessHours.closedMessage || 'We are currently closed. Please try again during business hours.',
+            messageType: 'text',
+          };
+
+          return {
+            success: true,
+            data: {
+              newState: 'completed',
+              response,
+              contextData: {
+                ...contextData,
+                closedMessageSent: true,
+              },
+            },
+          };
+        }
+      }
+
+      // Use configured greeting message
+      const greetingMessage = botSettings.greetingMessage || 'Hello! Welcome to our business.';
+      const welcomeMessage = botSettings.autoResponses.welcomeMessage || 'How can I help you today?';
+      
+      const response: BotResponse = {
+        content: `${greetingMessage}\n\n${welcomeMessage}`,
+        messageType: 'text',
+      };
+
+      // Determine next state based on conversation flow
+      const nextStep = this.getNextConversationStep(botSettings, 'greeting');
+      const newState = nextStep?.id || 'awaiting_service';
+
+      return {
+        success: true,
+        data: {
+          newState,
+          response,
+          contextData: {
+            ...contextData,
+            greetingSent: true,
+            configVersion: configResult.metadata?.version,
+          },
         },
-      },
-    };
+      };
+    } catch (error) {
+      console.error('Error in handleGreetingState:', error);
+      return {
+        success: false,
+        error: {
+          code: 'GREETING_STATE_ERROR',
+          message: 'Failed to handle greeting state',
+        },
+      };
+    }
   }
 
   /**
@@ -561,15 +625,27 @@ export class MessageProcessorService {
     }
 
     if (selectedService) {
+      // Get bot configuration for customized prompts
+      const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+      const botSettings = configResult.success ? configResult.data! : null;
+
+      // Use configured date selection prompt
+      const datePrompt = botSettings?.autoResponses.dateSelectionPrompt || 'Please select your preferred date (YYYY-MM-DD format, e.g., 2024-01-15):';
+      const currency = botSettings?.paymentSettings.currency || 'USD';
+      
       const response: BotResponse = {
-        content: `Great! You've selected ${selectedService.name} (${selectedService.price} USD). Please select your preferred date (YYYY-MM-DD format, e.g., 2024-01-15):`,
+        content: `Great! You've selected ${selectedService.name} (${selectedService.price} ${currency}). ${datePrompt}`,
         messageType: 'text',
       };
+
+      // Determine next state from conversation flow
+      const nextStep = this.getNextConversationStep(botSettings, 'service_selection');
+      const newState = nextStep?.id || 'awaiting_date';
 
       return {
         success: true,
         data: {
-          newState: 'awaiting_date',
+          newState,
           response,
           contextData: {
             ...contextData,
@@ -587,8 +663,15 @@ export class MessageProcessorService {
       title: `${service.name} - $${service.price}`,
     }));
 
+    // Get bot configuration for customized prompts
+    const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+    const botSettings = configResult.success ? configResult.data! : null;
+
+    // Show service options with configured prompt
+    const servicePrompt = botSettings?.autoResponses.serviceSelectionPrompt || 'Please select a service:';
+
     const response: BotResponse = {
-      content: 'Please select a service:',
+      content: servicePrompt,
       messageType: 'interactive',
       metadata: {
         buttons,
@@ -612,58 +695,90 @@ export class MessageProcessorService {
     messageContent: string,
     contextData: any
   ): Promise<ServiceResponse<{ newState?: string; response?: BotResponse; contextData?: any }>> {
-    // Validate date format
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(messageContent.trim())) {
+    try {
+      // Get bot configuration for customized prompts
+      const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+      const botSettings = configResult.success ? configResult.data! : null;
+
+      // Validate date format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(messageContent.trim())) {
+        const invalidInputMessage = this.getConfiguredResponse(
+          botSettings,
+          'invalidInputMessage',
+          'Please enter a valid date in YYYY-MM-DD format (e.g., 2024-01-15):'
+        );
+        
+        const response: BotResponse = {
+          content: invalidInputMessage,
+          messageType: 'text',
+        };
+
+        return {
+          success: true,
+          data: {
+            response,
+            contextData,
+          },
+        };
+      }
+
+      const selectedDate = messageContent.trim();
+      const date = new Date(selectedDate);
+      
+      // Check if date is in the future
+      if (date <= new Date()) {
+        const response: BotResponse = {
+          content: 'Please select a future date. What date would you prefer?',
+          messageType: 'text',
+        };
+
+        return {
+          success: true,
+          data: {
+            response,
+            contextData,
+          },
+        };
+      }
+
+      // Use configured time selection prompt
+      const timePrompt = this.getConfiguredResponse(
+        botSettings,
+        'timeSelectionPrompt',
+        'What time would you prefer? Please enter in HH:MM format (e.g., 14:30 for 2:30 PM):'
+      );
+
       const response: BotResponse = {
-        content: 'Please enter a valid date in YYYY-MM-DD format (e.g., 2024-01-15):',
+        content: `Perfect! You've selected ${selectedDate}. ${timePrompt}`,
         messageType: 'text',
       };
+
+      // Determine next state from conversation flow
+      const nextStep = this.getNextConversationStep(botSettings, 'date_selection');
+      const newState = nextStep?.id || 'awaiting_time';
 
       return {
         success: true,
         data: {
+          newState,
           response,
-          contextData,
+          contextData: {
+            ...contextData,
+            selectedDate,
+          },
         },
       };
-    }
-
-    const selectedDate = messageContent.trim();
-    const date = new Date(selectedDate);
-    
-    // Check if date is in the future
-    if (date <= new Date()) {
-      const response: BotResponse = {
-        content: 'Please select a future date. What date would you prefer?',
-        messageType: 'text',
-      };
-
+    } catch (error) {
+      console.error('Error in handleDateSelectionState:', error);
       return {
-        success: true,
-        data: {
-          response,
-          contextData,
+        success: false,
+        error: {
+          code: 'DATE_SELECTION_ERROR',
+          message: 'Failed to handle date selection',
         },
       };
     }
-
-    const response: BotResponse = {
-      content: `Perfect! You've selected ${selectedDate}. What time would you prefer? Please enter in HH:MM format (e.g., 14:30 for 2:30 PM):`,
-      messageType: 'text',
-    };
-
-    return {
-      success: true,
-      data: {
-        newState: 'awaiting_time',
-        response,
-        contextData: {
-          ...contextData,
-          selectedDate,
-        },
-      },
-    };
   }
 
   /**
@@ -729,6 +844,10 @@ To confirm your booking, please reply with "CONFIRM". To cancel, reply with "CAN
     messageContent: string,
     contextData: any
   ): Promise<ServiceResponse<{ newState?: string; response?: BotResponse; contextData?: any }>> {
+    // Get bot configuration for customized messages
+    const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+    const botSettings = configResult.success ? configResult.data! : null;
+    
     const content = messageContent.trim().toLowerCase();
 
     if (content === 'confirm') {
@@ -744,14 +863,23 @@ To confirm your booking, please reply with "CONFIRM". To cancel, reply with "CAN
         appointmentTime: contextData.selectedTime,
       };
 
+      // Use configured booking confirmation message
+      const confirmationMessage = this.getConfiguredResponse(
+        botSettings,
+        'bookingConfirmedMessage',
+        'Your booking has been confirmed! Thank you for choosing us!'
+      );
+
+      const currency = botSettings?.paymentSettings.currency || 'USD';
+
       // In a real implementation, would save to bookings table
       const response: BotResponse = {
-        content: `🎉 Your booking has been confirmed!
+        content: `🎉 ${confirmationMessage}
 
 Service: ${contextData.selectedServiceName}
 Date: ${contextData.selectedDate}
 Time: ${contextData.selectedTime}
-Price: $${contextData.selectedServicePrice}
+Price: ${contextData.selectedServicePrice} ${currency}
 
 We'll send you a reminder before your appointment. Thank you for choosing us!`,
         messageType: 'text',
@@ -787,8 +915,15 @@ We'll send you a reminder before your appointment. Thank you for choosing us!`,
       };
     }
 
+    // Use configured confirmation prompt
+    const confirmationPrompt = this.getConfiguredResponse(
+      botSettings,
+      'confirmationMessage',
+      'Please reply with "CONFIRM" to confirm your booking or "CANCEL" to cancel.'
+    );
+
     const response: BotResponse = {
-      content: 'Please reply with "CONFIRM" to confirm your booking or "CANCEL" to cancel.',
+      content: confirmationPrompt,
       messageType: 'text',
     };
 
@@ -937,10 +1072,117 @@ We'll send you a reminder before your appointment. Thank you for choosing us!`,
     return stateTransitions[currentState] || [];
   }
 
+  // ===== DYNAMIC CONFIGURATION HELPERS =====
+
+  /**
+   * Check if current time is within business hours
+   */
+  private checkBusinessHours(businessHours: any): boolean {
+    try {
+      if (!businessHours.enabled) {
+        return true; // Always open if business hours not enabled
+      }
+
+      const now = new Date();
+      const timezone = businessHours.timezone || 'UTC';
+      
+      // Convert current time to tenant's timezone
+      const currentTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        weekday: 'long',
+      });
+
+      const parts = currentTime.formatToParts(now);
+      const weekday = parts.find(p => p.type === 'weekday')?.value.toLowerCase();
+      const hour = parts.find(p => p.type === 'hour')?.value;
+      const minute = parts.find(p => p.type === 'minute')?.value;
+      const currentTimeStr = `${hour}:${minute}`;
+
+      if (!weekday) return true;
+
+      // Map weekday names
+      const dayMap: Record<string, string> = {
+        'monday': 'monday',
+        'tuesday': 'tuesday', 
+        'wednesday': 'wednesday',
+        'thursday': 'thursday',
+        'friday': 'friday',
+        'saturday': 'saturday',
+        'sunday': 'sunday',
+      };
+
+      const dayKey = dayMap[weekday];
+      if (!dayKey) return true;
+
+      const daySchedule = businessHours.schedule[dayKey];
+      if (!daySchedule || !daySchedule.isOpen) {
+        return false;
+      }
+
+      // Check if current time is within open hours
+      const openTime = daySchedule.openTime;
+      const closeTime = daySchedule.closeTime;
+
+      if (!openTime || !closeTime) return true;
+
+      return currentTimeStr >= openTime && currentTimeStr <= closeTime;
+    } catch (error) {
+      console.error('Error checking business hours:', error);
+      return true; // Default to open on error
+    }
+  }
+
+  /**
+   * Get next conversation step from bot configuration
+   */
+  private getNextConversationStep(botSettings: BotSettings | null, currentStepType: string): ConversationStep | null {
+    try {
+      if (!botSettings?.conversationFlow?.steps) {
+        return null;
+      }
+
+      const currentStep = botSettings.conversationFlow.steps.find(step => step.type === currentStepType);
+      if (!currentStep?.nextStep) {
+        return null;
+      }
+
+      return botSettings.conversationFlow.steps.find(step => step.id === currentStep.nextStep) || null;
+    } catch (error) {
+      console.error('Error getting next conversation step:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get configured response message
+   */
+  private getConfiguredResponse(botSettings: BotSettings | null, responseKey: keyof any, fallback: string): string {
+    try {
+      return botSettings?.autoResponses?.[responseKey] || fallback;
+    } catch (error) {
+      console.error('Error getting configured response:', error);
+      return fallback;
+    }
+  }
+
+  /**
+   * Subscribe to configuration changes for real-time updates
+   */
+  subscribeToConfigurationChanges(tenantId: string): () => void {
+    return this.botConfigService.subscribeToConfigurationChanges(tenantId, (event) => {
+      console.log(`Configuration changed for tenant ${tenantId}:`, event.configType);
+      // Could implement cache invalidation or other real-time updates here
+    });
+  }
+
   /**
    * Close database connection
    */
   async close(): Promise<void> {
+    await this.botConfigService.close();
     await this.pool.end();
   }
 }

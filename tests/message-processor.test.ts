@@ -34,12 +34,80 @@ vi.mock('@neondatabase/serverless', () => ({
   })),
 }));
 
+// Mock BotConfigurationService
+vi.mock('../server/services/bot-configuration.service', () => ({
+  BotConfigurationService: vi.fn(() => ({
+    getBotConfiguration: vi.fn(),
+    subscribeToConfigurationChanges: vi.fn(() => () => {}),
+    close: vi.fn(),
+  })),
+}));
+
 describe('MessageProcessorService', () => {
   let messageProcessor: MessageProcessorService;
   let mockTenantContext: TenantContext;
 
   beforeEach(() => {
     messageProcessor = new MessageProcessorService(mockConnectionString);
+    
+    // Mock bot configuration service responses
+    const mockBotConfig = {
+      greetingMessage: 'Hello! Welcome to Test Business.',
+      businessHours: {
+        enabled: false,
+        timezone: 'UTC',
+        schedule: {},
+        closedMessage: 'We are currently closed.',
+      },
+      autoResponses: {
+        welcomeMessage: 'How can I help you today?',
+        serviceSelectionPrompt: 'Please select a service:',
+        dateSelectionPrompt: 'Please select your preferred date:',
+        timeSelectionPrompt: 'Please select your preferred time:',
+        confirmationMessage: 'Please confirm your booking:',
+        paymentInstructions: 'Please proceed with payment:',
+        bookingConfirmedMessage: 'Your booking has been confirmed!',
+        errorMessage: 'Sorry, something went wrong.',
+        invalidInputMessage: 'Invalid input, please try again.',
+      },
+      conversationFlow: {
+        steps: [],
+        fallbackBehavior: 'restart',
+        maxRetries: 3,
+        sessionTimeout: 30,
+      },
+      paymentSettings: {
+        enabled: false,
+        methods: [],
+        currency: 'USD',
+        requirePayment: false,
+      },
+      notificationSettings: {
+        emailNotifications: { enabled: false, recipientEmails: [], events: [] },
+        smsNotifications: { enabled: false, recipientPhones: [], events: [] },
+        webhookNotifications: { enabled: false, endpoints: [], events: [] },
+      },
+      customization: {
+        brandColors: {
+          primary: '#007bff',
+          secondary: '#6c757d',
+          accent: '#28a745',
+          background: '#ffffff',
+          text: '#212529',
+        },
+        companyInfo: {
+          name: 'Test Business',
+          email: 'test@business.com',
+        },
+        customFields: [],
+      },
+    };
+
+    // Mock the bot configuration service
+    vi.mocked(messageProcessor['botConfigService'].getBotConfiguration).mockResolvedValue({
+      success: true,
+      data: mockBotConfig,
+    });
     
     mockTenantContext = {
       tenantId: 'tenant-123',
@@ -184,14 +252,14 @@ describe('MessageProcessorService', () => {
     });
 
     it('should use default business name when tenant not found', async () => {
-      // Mock empty tenant result
-      vi.spyOn(messageProcessor['db'], 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      } as any);
+      // Mock failed bot configuration
+      vi.mocked(messageProcessor['botConfigService'].getBotConfiguration).mockResolvedValueOnce({
+        success: false,
+        error: {
+          code: 'CONFIG_NOT_FOUND',
+          message: 'Configuration not found',
+        },
+      });
 
       const result = await messageProcessor['handleGreetingState']('tenant-123', 'Hello', {});
 
@@ -330,7 +398,7 @@ describe('MessageProcessorService', () => {
 
       expect(invalidDateResult.success).toBe(true);
       expect(invalidDateResult.data!.newState).toBeUndefined(); // Should stay in same state
-      expect(invalidDateResult.data!.response?.content).toContain('valid date in YYYY-MM-DD format');
+      expect(invalidDateResult.data!.response?.content).toContain('Invalid input, please try again');
     });
 
     it('should reject past dates', async () => {
@@ -427,7 +495,7 @@ describe('MessageProcessorService', () => {
 
       expect(invalidResult.success).toBe(true);
       expect(invalidResult.data!.newState).toBeUndefined(); // Should stay in same state
-      expect(invalidResult.data!.response?.content).toContain('CONFIRM" to confirm');
+      expect(invalidResult.data!.response?.content).toContain('Please confirm your booking:');
     });
   });
 
