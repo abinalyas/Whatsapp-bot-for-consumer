@@ -823,8 +823,27 @@ function serveStatic(app2) {
       } else if (path2.endsWith(".css")) {
         res.setHeader("Content-Type", "text/css");
       }
+      if (path2.includes("/assets/")) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
     }
   }));
+  app2.get("/debug/assets", (req, res) => {
+    try {
+      const assetsPath = path.join(distPath, "assets");
+      const files = fs.existsSync(assetsPath) ? fs.readdirSync(assetsPath) : [];
+      res.json({
+        distPath,
+        assetsPath,
+        files,
+        exists: fs.existsSync(assetsPath)
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
   app2.get("/assets/*", (req, res, next) => {
     const assetPath = path.join(distPath, req.path);
     console.log(`Asset request: ${req.path} -> ${assetPath}`);
@@ -834,6 +853,7 @@ function serveStatic(app2) {
       } else if (req.path.endsWith(".css")) {
         res.setHeader("Content-Type", "text/css");
       }
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       res.sendFile(assetPath);
     } else {
       console.log(`Asset not found: ${assetPath}`);
