@@ -52,7 +52,7 @@ This implementation plan transforms the multi-tenant SaaS platform from a servic
     - _Requirements: 2.5, 3.3, 7.1_
 
 - [ ] 4. Generalized Transaction System
-  - [ ] 4.1 Refactor bookings to flexible transactions
+  - [x] 4.1 Refactor bookings to flexible transactions
     - Create TransactionService to replace BookingManagementService
     - Implement configurable transaction types and terminology
     - Add custom field support for transaction data
