@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import { BusinessConfigurationPage } from "@/pages/business-configuration";
+import { SimpleTestPage } from "@/pages/simple-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -12,7 +13,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/business-config" component={BusinessConfigurationPage} />
-      <Route path="/test" component={() => <div className="p-8"><h1 className="text-2xl">Test Route Works!</h1><p>If you see this, routing is working correctly.</p></div>} />
+      <Route path="/test" component={SimpleTestPage} />
       <Route component={NotFound} />
     </Switch>
   );

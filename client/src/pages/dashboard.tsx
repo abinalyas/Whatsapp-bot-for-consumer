@@ -43,6 +43,11 @@ export default function Dashboard() {
                 <i className="fas fa-clock"></i>
                 <span>Last sync: 2 min ago</span>
               </div>
+              <Link href="/test">
+                <Button variant="outline">
+                  Test Routing
+                </Button>
+              </Link>
               <Link href="/business-config">
                 <Button variant="outline">
                   <Settings className="mr-2 h-4 w-4" />
