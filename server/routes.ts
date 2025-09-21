@@ -435,6 +435,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update service endpoint
+  app.patch("/api/services/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const updatedService = await storage.updateService(id, updateData);
+      if (!updatedService) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      res.json(updatedService);
+    } catch (error) {
+      console.error("Error updating service:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Delete service endpoint
+  app.delete("/api/services/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await storage.deleteService(id);
+      if (!success) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Settings endpoints for UPI ID
+  app.get("/api/settings", async (req, res) => {
+    try {
+      // For now, return default settings. In a real app, this would be stored in database
+      const settings = {
+        upiId: "salon@upi",
+        businessName: "Spark Salon",
+        currency: "INR"
+      };
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const { upiId, businessName } = req.body;
+      
+      // For now, just return the updated settings
+      // In a real app, this would be stored in database
+      const settings = {
+        upiId: upiId || "salon@upi",
+        businessName: businessName || "Spark Salon",
+        currency: "INR"
+      };
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/stats", async (req, res) => {
     try {
       const todayBookings = await storage.getTodayBookings();

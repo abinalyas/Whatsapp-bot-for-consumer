@@ -9,6 +9,7 @@ export interface IStorage {
   getService(id: string): Promise<Service | undefined>;
   createService(service: InsertService): Promise<Service>;
   updateService(id: string, service: Partial<InsertService>): Promise<Service | undefined>;
+  deleteService(id: string): Promise<boolean>;
   
   // Conversations
   getConversation(phoneNumber: string): Promise<Conversation | undefined>;
@@ -96,6 +97,14 @@ class InMemoryStorage implements IStorage {
     
     this.services[index] = { ...this.services[index], ...updateData };
     return this.services[index];
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    const index = this.services.findIndex(service => service.id === id);
+    if (index === -1) return false;
+    
+    this.services.splice(index, 1);
+    return true;
   }
 
   async getConversation(phoneNumber: string): Promise<Conversation | undefined> {
@@ -257,6 +266,13 @@ export class DatabaseStorageImpl implements IStorage {
       .where(eq(services.id, id))
       .returning();
     return service || undefined;
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    const result = await database
+      .delete(services)
+      .where(eq(services.id, id));
+    return result.rowCount > 0;
   }
 
   async getConversation(phoneNumber: string): Promise<Conversation | undefined> {

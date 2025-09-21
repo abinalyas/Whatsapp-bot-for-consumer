@@ -163,6 +163,12 @@ var InMemoryStorage = class {
     this.services[index] = { ...this.services[index], ...updateData };
     return this.services[index];
   }
+  async deleteService(id) {
+    const index = this.services.findIndex((service) => service.id === id);
+    if (index === -1) return false;
+    this.services.splice(index, 1);
+    return true;
+  }
   async getConversation(phoneNumber) {
     return this.conversations.find((conversation) => conversation.phoneNumber === phoneNumber);
   }
@@ -285,6 +291,10 @@ var DatabaseStorageImpl = class {
   async updateService(id, updateData) {
     const [service] = await db.update(services).set(updateData).where(eq(services.id, id)).returning();
     return service || void 0;
+  }
+  async deleteService(id) {
+    const result = await db.delete(services).where(eq(services.id, id));
+    return result.rowCount > 0;
   }
   async getConversation(phoneNumber) {
     const [conversation] = await db.select().from(conversations).where(eq(conversations.phoneNumber, phoneNumber));
@@ -691,6 +701,60 @@ async function registerRoutes(app2) {
       res.json(updatedBooking);
     } catch (error) {
       console.error("Error updating booking:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.patch("/api/services/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const updatedService = await storage.updateService(id, updateData);
+      if (!updatedService) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(updatedService);
+    } catch (error) {
+      console.error("Error updating service:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.delete("/api/services/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteService(id);
+      if (!success) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.get("/api/settings", async (req, res) => {
+    try {
+      const settings = {
+        upiId: "salon@upi",
+        businessName: "Spark Salon",
+        currency: "INR"
+      };
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.patch("/api/settings", async (req, res) => {
+    try {
+      const { upiId, businessName } = req.body;
+      const settings = {
+        upiId: upiId || "salon@upi",
+        businessName: businessName || "Spark Salon",
+        currency: "INR"
+      };
+      res.json(settings);
+    } catch (error) {
+      console.error("Error updating settings:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
