@@ -57,7 +57,7 @@ export interface User {
   updatedAt: Date;
 }
 
-export type UserRole = 'admin' | 'user' | 'viewer';
+export type UserRole = 'admin' | 'manager' | 'user' | 'viewer';
 
 export interface CreateUserRequest {
   email: string;
@@ -127,7 +127,13 @@ export type ApiPermission =
   | 'read:bookings'
   | 'write:bookings'
   | 'read:analytics'
+  | 'manage:settings'
+  | 'read:users'
+  | 'write:users'
+  | 'read:billing'
+  | 'manage:billing'
   | 'webhook:receive'
+  | 'manage:webhooks'
   | 'admin:all';
 
 // ===== SUBSCRIPTION TYPES =====

@@ -642,7 +642,7 @@ export class AuthService {
     switch (role) {
       case 'admin':
         return ['admin:all'];
-      case 'user':
+      case 'manager':
         return [
           'read:services',
           'write:services',
@@ -651,6 +651,17 @@ export class AuthService {
           'read:bookings',
           'write:bookings',
           'read:analytics',
+          'read:users',
+          'manage:settings',
+        ];
+      case 'user':
+        return [
+          'read:services',
+          'write:services',
+          'read:conversations',
+          'write:conversations',
+          'read:bookings',
+          'write:bookings',
         ];
       case 'viewer':
         return [

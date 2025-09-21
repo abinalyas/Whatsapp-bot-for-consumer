@@ -44,7 +44,7 @@
     - Write integration tests for API key authentication and authorization
     - _Requirements: 8.1, 8.3, 1.3_
 
-  - [ ] 3.3 Create role-based access control (RBAC) system
+  - [x] 3.3 Create role-based access control (RBAC) system
     - Implement user roles and permissions framework
     - Add tenant admin and user role management
     - Create permission-based route protection middleware
