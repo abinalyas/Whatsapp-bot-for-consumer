@@ -81,7 +81,7 @@
     - Write integration tests for webhook routing with multiple tenant scenarios
     - _Requirements: 4.2, 4.3, 4.4, 1.3_
 
-  - [ ] 5.2 Build tenant-specific WhatsApp message sending
+  - [x] 5.2 Build tenant-specific WhatsApp message sending
     - Implement message sending using tenant-specific WhatsApp credentials
     - Add message queuing and retry logic for failed deliveries
     - Create rate limiting and abuse prevention per tenant
