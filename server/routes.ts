@@ -93,6 +93,7 @@ function generateUPILink(amount: number, serviceName: string): string {
 // Process incoming WhatsApp message
 async function processWhatsAppMessage(from: string, messageText: string): Promise<void> {
   try {
+    console.log("WhatsApp: Processing message from", from, ":", messageText);
     const text = messageText.toLowerCase().trim();
     
     // Get or create conversation
@@ -110,6 +111,7 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
       content: messageText,
       isFromBot: false,
     });
+    console.log("WhatsApp: Stored user message for conversation", conversation.id);
 
     let response = "";
     let newState = conversation.currentState;
@@ -317,6 +319,7 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
       content: response,
       isFromBot: true,
     });
+    console.log("WhatsApp: Stored bot response for conversation", conversation.id);
 
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
@@ -380,6 +383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/services", async (req, res) => {
     try {
       const services = await storage.getServices();
+      console.log("API: Fetching services, found:", services.length);
       res.json(services);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -401,6 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/bookings", async (req, res) => {
     try {
       const bookings = await storage.getBookings();
+      console.log("API: Fetching bookings, found:", bookings.length);
       res.json(bookings);
     } catch (error) {
       console.error("Error fetching bookings:", error);

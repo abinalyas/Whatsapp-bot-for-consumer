@@ -409,6 +409,7 @@ function generateUPILink(amount, serviceName) {
 }
 async function processWhatsAppMessage(from, messageText) {
   try {
+    console.log("WhatsApp: Processing message from", from, ":", messageText);
     const text2 = messageText.toLowerCase().trim();
     let conversation = await storage.getConversation(from);
     if (!conversation) {
@@ -422,6 +423,7 @@ async function processWhatsAppMessage(from, messageText) {
       content: messageText,
       isFromBot: false
     });
+    console.log("WhatsApp: Stored user message for conversation", conversation.id);
     let response = "";
     let newState = conversation.currentState;
     if (text2 === "hi" || text2 === "hello" || conversation.currentState === "greeting") {
@@ -598,6 +600,7 @@ ${upiLink}
       content: response,
       isFromBot: true
     });
+    console.log("WhatsApp: Stored bot response for conversation", conversation.id);
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
     await sendWhatsAppMessage(from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
@@ -647,6 +650,7 @@ async function registerRoutes(app2) {
   app2.get("/api/services", async (req, res) => {
     try {
       const services2 = await storage.getServices();
+      console.log("API: Fetching services, found:", services2.length);
       res.json(services2);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -666,6 +670,7 @@ async function registerRoutes(app2) {
   app2.get("/api/bookings", async (req, res) => {
     try {
       const bookings2 = await storage.getBookings();
+      console.log("API: Fetching bookings, found:", bookings2.length);
       res.json(bookings2);
     } catch (error) {
       console.error("Error fetching bookings:", error);
