@@ -36,7 +36,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
-              <p className="text-muted-foreground">Manage your WhatsApp bot and monitor conversations</p>
+              <p className="text-muted-foreground">Manage your WhatsApp bot and monitor conversations - Updated!</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
