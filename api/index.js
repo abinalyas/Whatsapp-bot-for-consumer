@@ -797,20 +797,54 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 function serveStatic(app2) {
-  let distPath = path.resolve(import.meta.dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  const possiblePaths = [
+    path.resolve(import.meta.dirname, "public"),
+    path.resolve(import.meta.dirname, "..", "dist", "public"),
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve("/var/task/dist/public")
+  ];
+  let distPath = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      console.log(`Static files found at: ${distPath}`);
+      break;
+    }
   }
-  if (!fs.existsSync(distPath)) {
+  if (!distPath) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `Could not find the build directory. Tried: ${possiblePaths.join(", ")}`
     );
   }
-  app2.use(express.static(distPath));
+  app2.use(express.static(distPath, {
+    setHeaders: (res, path2) => {
+      if (path2.endsWith(".js")) {
+        res.setHeader("Content-Type", "application/javascript");
+      } else if (path2.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css");
+      }
+    }
+  }));
+  app2.get("/assets/*", (req, res, next) => {
+    const assetPath = path.join(distPath, req.path);
+    console.log(`Asset request: ${req.path} -> ${assetPath}`);
+    if (fs.existsSync(assetPath)) {
+      if (req.path.endsWith(".js")) {
+        res.setHeader("Content-Type", "application/javascript");
+      } else if (req.path.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css");
+      }
+      res.sendFile(assetPath);
+    } else {
+      console.log(`Asset not found: ${assetPath}`);
+      res.status(404).send("Asset not found");
+    }
+  });
   app2.get("*", (req, res, next) => {
     if (req.path.startsWith("/assets/") || req.path.endsWith(".js") || req.path.endsWith(".css") || req.path.endsWith(".ico") || req.path.endsWith(".png") || req.path.endsWith(".jpg") || req.path.endsWith(".svg")) {
       return next();
     }
+    console.log(`Serving index.html for route: ${req.path}`);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

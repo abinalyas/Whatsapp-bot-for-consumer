@@ -3,22 +3,57 @@ import fs from "fs";
 import path from "path";
 
 export function serveStatic(app: Express) {
-  // In Vercel, the API is at /var/task/api/ but static files are at /var/task/dist/public/
-  // In local build, both are relative to the same dist folder
-  let distPath = path.resolve(import.meta.dirname, "public");
+  // Try multiple possible paths for static files
+  const possiblePaths = [
+    path.resolve(import.meta.dirname, "public"),
+    path.resolve(import.meta.dirname, "..", "dist", "public"),
+    path.resolve(process.cwd(), "dist", "public"),
+    path.resolve("/var/task/dist/public")
+  ];
   
-  // If we're in a Vercel environment (api folder), look for dist/public instead
-  if (!fs.existsSync(distPath)) {
-    distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  let distPath = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      console.log(`Static files found at: ${distPath}`);
+      break;
+    }
   }
-
-  if (!fs.existsSync(distPath)) {
+  
+  if (!distPath) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the build directory. Tried: ${possiblePaths.join(", ")}`
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files with proper MIME types
+  app.use(express.static(distPath, {
+    setHeaders: (res, path) => {
+      if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    }
+  }));
+
+  // Add specific route for assets to ensure they're served correctly
+  app.get('/assets/*', (req, res, next) => {
+    const assetPath = path.join(distPath, req.path);
+    console.log(`Asset request: ${req.path} -> ${assetPath}`);
+    
+    if (fs.existsSync(assetPath)) {
+      if (req.path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (req.path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+      res.sendFile(assetPath);
+    } else {
+      console.log(`Asset not found: ${assetPath}`);
+      res.status(404).send('Asset not found');
+    }
+  });
 
   // Only serve index.html for non-asset routes (SPA fallback)
   app.get("*", (req, res, next) => {
@@ -33,6 +68,7 @@ export function serveStatic(app: Express) {
       return next();
     }
     
+    console.log(`Serving index.html for route: ${req.path}`);
     // Serve index.html for all other routes (SPA routing)
     res.sendFile(path.resolve(distPath, "index.html"));
   });
