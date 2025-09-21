@@ -66,7 +66,7 @@
     - Write unit tests for dynamic configuration loading and validation
     - _Requirements: 3.1, 3.2, 3.4, 3.5_
 
-  - [ ] 4.3 Build tenant-specific service and booking management
+  - [x] 4.3 Build tenant-specific service and booking management
     - Update service management to be tenant-scoped
     - Implement tenant-specific booking workflows and payment processing
     - Add custom business logic support for different tenant requirements
@@ -74,7 +74,7 @@
     - _Requirements: 1.1, 1.3, 3.1, 3.2_
 
 - [ ] 5. WhatsApp Integration Multi-Tenant Support
-  - [ ] 5.1 Implement webhook routing and tenant identification
+  - [x] 5.1 Implement webhook routing and tenant identification
     - Create webhook routing system to identify tenant from phone number
     - Implement tenant-specific WhatsApp credential management
     - Add webhook verification and security for multiple tenants
