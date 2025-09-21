@@ -968,8 +968,6 @@ export class TenantBusinessConfigService {
       console.error('Error cleaning up tenant business config service:', error);
     }
   }
-}
-      };
 
     } catch (error) {
       console.error('Error getting configured tenants:', error);

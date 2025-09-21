@@ -102,8 +102,9 @@ export class WorkflowAutomationService {
     this.transactionService = new TransactionManagementService(connectionString);
     this.configService = new TenantBusinessConfigService(connectionString);
   }
-}  // 
-===== WORKFLOW RULE MANAGEMENT =====
+}
+
+  // ===== WORKFLOW RULE MANAGEMENT =====
 
   /**
    * Create workflow rule
@@ -347,8 +348,9 @@ export class WorkflowAutomationService {
         },
       };
     }
-  }  /
-**
+  }
+
+  /**
    * Execute individual action
    */
   private async executeAction(
