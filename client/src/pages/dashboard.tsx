@@ -6,8 +6,9 @@ import { BotConfig } from "@/components/bot-config";
 import { ActivityFeed } from "@/components/activity-feed";
 import { BookingsManagement } from "@/components/bookings-management";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 interface Stats {
   todayMessages: number;
@@ -42,6 +43,12 @@ export default function Dashboard() {
                 <i className="fas fa-clock"></i>
                 <span>Last sync: 2 min ago</span>
               </div>
+              <Link href="/business-config">
+                <Button variant="outline">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Business Config
+                </Button>
+              </Link>
               <Button onClick={handleRefresh} data-testid="button-refresh">
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh

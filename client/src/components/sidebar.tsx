@@ -6,6 +6,7 @@ export function Sidebar() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
+    { href: "/business-config", label: "Business Config", icon: "fas fa-building" },
     { href: "/conversations", label: "Conversations", icon: "fas fa-comments" },
     { href: "/services", label: "Services", icon: "fas fa-cut" },
     { href: "/analytics", label: "Analytics", icon: "fas fa-chart-bar" },
