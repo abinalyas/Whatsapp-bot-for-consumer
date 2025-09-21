@@ -43,7 +43,7 @@ This implementation plan transforms the multi-tenant SaaS platform from a servic
     - Write unit tests for offerings management with custom fields
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 6.1_
 
-  - [ ] 3.2 Implement flexible pricing and availability system
+  - [x] 3.2 Implement flexible pricing and availability system
     - Create PricingConfigService for different pricing models
     - Implement time-based, tiered, and variable pricing
     - Add availability configuration for scheduled offerings
