@@ -87,42 +87,81 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       setLoading(true);
       setError(null);
 
-      // Load business types
-      const businessTypesResponse = await fetch('/api/business-config/business-types', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Tenant-ID': tenantId,
+      // Mock data for demo
+      const mockBusinessTypes = [
+        {
+          id: '1',
+          name: 'Restaurant',
+          description: 'Food service business with table reservations and orders',
+          category: 'Food & Beverage',
+          terminology: {
+            offering: 'Menu Item',
+            transaction: 'Order',
+            customer: 'Diner',
+            booking: 'Reservation'
+          },
+          customFields: [
+            { name: 'Dietary Restrictions', type: 'text', isRequired: false },
+            { name: 'Party Size', type: 'number', isRequired: true }
+          ],
+          workflows: [
+            { name: 'Order Processing', states: ['pending', 'confirmed', 'preparing', 'ready', 'delivered'] }
+          ],
+          metadata: { hasInventory: true, requiresScheduling: true }
         },
-      });
-
-      if (!businessTypesResponse.ok) {
-        throw new Error('Failed to load business types');
-      }
-
-      const businessTypesData = await businessTypesResponse.json();
-      setBusinessTypes(businessTypesData.data || []);
-
-      // Load tenant configuration
-      const tenantConfigResponse = await fetch('/api/business-config/tenant-config', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Tenant-ID': tenantId,
-        },
-      });
-
-      if (tenantConfigResponse.ok) {
-        const tenantConfigData = await tenantConfigResponse.json();
-        const config = tenantConfigData.data;
-        setTenantConfig(config);
-
-        // Find and set the selected business type
-        if (config?.businessTypeId) {
-          const businessType = businessTypesData.data?.find(
-            (bt: BusinessType) => bt.id === config.businessTypeId
-          );
-          setSelectedBusinessType(businessType || null);
+        {
+          id: '2',
+          name: 'Beauty Salon',
+          description: 'Beauty and wellness services with appointment booking',
+          category: 'Beauty & Wellness',
+          terminology: {
+            offering: 'Service',
+            transaction: 'Appointment',
+            customer: 'Client',
+            booking: 'Appointment'
+          },
+          customFields: [
+            { name: 'Hair Type', type: 'select', isRequired: false, options: ['Straight', 'Wavy', 'Curly', 'Coily'] },
+            { name: 'Allergies', type: 'text', isRequired: false }
+          ],
+          workflows: [
+            { name: 'Appointment Flow', states: ['booked', 'confirmed', 'in_progress', 'completed', 'no_show'] }
+          ],
+          metadata: { hasInventory: false, requiresScheduling: true }
         }
-      }
+      ];
+
+      setBusinessTypes(mockBusinessTypes);
+
+      // Mock tenant config
+      const mockTenantConfig = {
+        id: '1',
+        tenantId: tenantId,
+        businessTypeId: '2',
+        businessName: 'Spark Beauty Salon',
+        customTerminology: {
+          offering: 'Service',
+          transaction: 'Appointment',
+          customer: 'Client',
+          booking: 'Appointment'
+        },
+        branding: {
+          primaryColor: '#3b82f6',
+          secondaryColor: '#64748b'
+        },
+        customFields: [
+          { name: 'Hair Type', type: 'select', isRequired: false, options: ['Straight', 'Wavy', 'Curly', 'Coily'] }
+        ],
+        settings: { hasInventory: false, requiresScheduling: true },
+        isConfigured: false
+      };
+
+      setTenantConfig(mockTenantConfig);
+      
+      // Find and set the selected business type
+      const businessType = mockBusinessTypes.find(bt => bt.id === mockTenantConfig.businessTypeId);
+      setSelectedBusinessType(businessType || null);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load configuration');
     } finally {
@@ -135,14 +174,14 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       setSaving(true);
       setError(null);
 
-      const configData = {
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const updatedConfig = {
+        ...tenantConfig!,
         businessTypeId: businessType.id,
-        businessName: tenantConfig?.businessName || `My ${businessType.name}`,
+        businessName: `My ${businessType.name}`,
         customTerminology: { ...businessType.terminology },
-        branding: tenantConfig?.branding || {
-          primaryColor: '#3b82f6',
-          secondaryColor: '#64748b',
-        },
         customFields: [...businessType.customFields],
         settings: {
           ...businessType.metadata,
@@ -150,22 +189,7 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
         },
       };
 
-      const response = await fetch('/api/business-config/tenant-config', {
-        method: tenantConfig ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Tenant-ID': tenantId,
-        },
-        body: JSON.stringify(configData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save business type selection');
-      }
-
-      const result = await response.json();
-      setTenantConfig(result.data);
+      setTenantConfig(updatedConfig);
       setSelectedBusinessType(businessType);
       setSuccess(`Business type set to ${businessType.name}`);
       
@@ -183,26 +207,15 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       setSaving(true);
       setError(null);
 
-      const response = await fetch('/api/business-config/tenant-config', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Tenant-ID': tenantId,
-        },
-        body: JSON.stringify(updates),
-      });
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!response.ok) {
-        throw new Error('Failed to update configuration');
-      }
-
-      const result = await response.json();
-      setTenantConfig(result.data);
+      const updatedConfig = { ...tenantConfig!, ...updates };
+      setTenantConfig(updatedConfig);
       setSuccess('Configuration updated successfully');
 
-      if (onConfigurationComplete && result.data.isConfigured) {
-        onConfigurationComplete(result.data);
+      if (onConfigurationComplete && updatedConfig.isConfigured) {
+        onConfigurationComplete(updatedConfig);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update configuration');
@@ -227,32 +240,32 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
 
   if (loading) {
     return (
-      <div className=\"flex items-center justify-center h-64\">
-        <Loader2 className=\"h-8 w-8 animate-spin\" />
-        <span className=\"ml-2\">Loading business configuration...</span>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading business configuration...</span>
       </div>
     );
   }
 
   return (
-    <div className=\"space-y-6\">
+    <div className="space-y-6">
       {/* Header */}
-      <div className=\"flex items-center justify-between\">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className=\"text-3xl font-bold tracking-tight\">Business Configuration</h1>
-          <p className=\"text-muted-foreground\">
+          <h1 className="text-3xl font-bold tracking-tight">Business Configuration</h1>
+          <p className="text-muted-foreground">
             Configure your business type, terminology, and settings
           </p>
         </div>
         
         {tenantConfig && (
-          <div className=\"flex items-center space-x-4\">
-            <div className=\"text-sm text-muted-foreground\">
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-muted-foreground">
               Progress: {getConfigurationProgress()}%
             </div>
-            <div className=\"w-32 bg-gray-200 rounded-full h-2\">
+            <div className="w-32 bg-gray-200 rounded-full h-2">
               <div 
-                className=\"bg-blue-600 h-2 rounded-full transition-all duration-300\"
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${getConfigurationProgress()}%` }}
               />
             </div>
@@ -262,7 +275,7 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
 
       {/* Alerts */}
       {error && (
-        <Alert variant=\"destructive\">
+        <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -277,31 +290,31 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       {tenantConfig && selectedBusinessType && (
         <Card>
           <CardHeader>
-            <CardTitle className=\"flex items-center space-x-2\">
-              <Building2 className=\"h-5 w-5\" />
+            <CardTitle className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5" />
               <span>Current Configuration</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className=\"grid grid-cols-1 md:grid-cols-3 gap-4\">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className=\"text-sm font-medium text-muted-foreground\">Business Type</div>
-                <div className=\"flex items-center space-x-2 mt-1\">
-                  <Badge variant=\"secondary\">{selectedBusinessType.name}</Badge>
-                  <span className=\"text-sm text-muted-foreground\">
+                <div className="text-sm font-medium text-muted-foreground">Business Type</div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge variant="secondary">{selectedBusinessType.name}</Badge>
+                  <span className="text-sm text-muted-foreground">
                     {selectedBusinessType.category}
                   </span>
                 </div>
               </div>
               <div>
-                <div className=\"text-sm font-medium text-muted-foreground\">Business Name</div>
-                <div className=\"mt-1 font-medium\">{tenantConfig.businessName}</div>
+                <div className="text-sm font-medium text-muted-foreground">Business Name</div>
+                <div className="mt-1 font-medium">{tenantConfig.businessName}</div>
               </div>
               <div>
-                <div className=\"text-sm font-medium text-muted-foreground\">Status</div>
-                <div className=\"mt-1\">
-                  <Badge variant={tenantConfig.isConfigured ? \"default\" : \"secondary\"}>
-                    {tenantConfig.isConfigured ? \"Configured\" : \"In Progress\"}
+                <div className="text-sm font-medium text-muted-foreground">Status</div>
+                <div className="mt-1">
+                  <Badge variant={tenantConfig.isConfigured ? "default" : "secondary"}>
+                    {tenantConfig.isConfigured ? "Configured" : "In Progress"}
                   </Badge>
                 </div>
               </div>
@@ -311,27 +324,27 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
       )}
 
       {/* Configuration Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className=\"space-y-6\">
-        <TabsList className=\"grid w-full grid-cols-4\">
-          <TabsTrigger value=\"business-type\" className=\"flex items-center space-x-2\">
-            <Building2 className=\"h-4 w-4\" />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="business-type" className="flex items-center space-x-2">
+            <Building2 className="h-4 w-4" />
             <span>Business Type</span>
           </TabsTrigger>
-          <TabsTrigger value=\"terminology\" className=\"flex items-center space-x-2\">
-            <Settings className=\"h-4 w-4\" />
+          <TabsTrigger value="terminology" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
             <span>Terminology</span>
           </TabsTrigger>
-          <TabsTrigger value=\"branding\" className=\"flex items-center space-x-2\">
-            <Palette className=\"h-4 w-4\" />
+          <TabsTrigger value="branding" className="flex items-center space-x-2">
+            <Palette className="h-4 w-4" />
             <span>Branding</span>
           </TabsTrigger>
-          <TabsTrigger value=\"fields\" className=\"flex items-center space-x-2\">
-            <Users className=\"h-4 w-4\" />
+          <TabsTrigger value="fields" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
             <span>Custom Fields</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value=\"business-type\" className=\"space-y-6\">
+        <TabsContent value="business-type" className="space-y-6">
           <BusinessTypeSelector
             businessTypes={businessTypes}
             selectedBusinessType={selectedBusinessType}
@@ -340,7 +353,7 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
           />
         </TabsContent>
 
-        <TabsContent value=\"terminology\" className=\"space-y-6\">
+        <TabsContent value="terminology" className="space-y-6">
           {selectedBusinessType && tenantConfig && (
             <BusinessTerminologyEditor
               businessType={selectedBusinessType}
@@ -351,7 +364,7 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
           )}
         </TabsContent>
 
-        <TabsContent value=\"branding\" className=\"space-y-6\">
+        <TabsContent value="branding" className="space-y-6">
           {tenantConfig && (
             <BusinessBrandingEditor
               tenantConfig={tenantConfig}
@@ -361,7 +374,7 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
           )}
         </TabsContent>
 
-        <TabsContent value=\"fields\" className=\"space-y-6\">
+        <TabsContent value="fields" className="space-y-6">
           {selectedBusinessType && tenantConfig && (
             <CustomFieldsManager
               businessType={selectedBusinessType}
@@ -375,18 +388,18 @@ export const BusinessConfiguration: React.FC<BusinessConfigurationProps> = ({
 
       {/* Action Buttons */}
       {tenantConfig && (
-        <div className=\"flex justify-between pt-6 border-t\">
-          <Button variant=\"outline\" onClick={loadBusinessConfiguration}>
+        <div className="flex justify-between pt-6 border-t">
+          <Button variant="outline" onClick={loadBusinessConfiguration}>
             Refresh Configuration
           </Button>
           
-          <div className=\"space-x-2\">
+          <div className="space-x-2">
             {!tenantConfig.isConfigured && getConfigurationProgress() >= 75 && (
               <Button
                 onClick={() => handleConfigurationUpdate({ isConfigured: true })}
                 disabled={saving}
               >
-                {saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Complete Configuration
               </Button>
             )}

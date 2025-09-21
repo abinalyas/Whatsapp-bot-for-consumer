@@ -1,19 +1,18 @@
 /**
  * Business Configuration Page
- * Full business configuration with all components
+ * Main page for business configuration setup
  */
 
 import React from 'react';
-import { BusinessConfiguration } from '@/components/business-configuration';
+import { BusinessConfiguration } from '../components/business-configuration';
 
 export const BusinessConfigurationPage: React.FC = () => {
-  // For demo purposes, using a mock tenant ID
-  // In a real app, this would come from authentication context
-  const tenantId = 'demo-tenant-001';
+  // In a real app, you'd get this from auth context or URL params
+  const tenantId = 'demo-tenant-id';
 
   const handleConfigurationComplete = (config: any) => {
     console.log('Configuration completed:', config);
-    // Here you could redirect to dashboard or show success message
+    // You could redirect to dashboard or show success message
   };
 
   return (
@@ -27,5 +26,3 @@ export const BusinessConfigurationPage: React.FC = () => {
     </div>
   );
 };
-
-export default BusinessConfigurationPage;
