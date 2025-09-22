@@ -845,8 +845,7 @@ var compatibleConversations = pgTable2("conversations", {
   selectedService: varchar2("selected_service"),
   selectedDate: text2("selected_date"),
   selectedTime: text2("selected_time"),
-  // Temporarily commenting out context_data to avoid schema errors
-  // contextData: jsonb("context_data").default(sql`'{}'::jsonb`),
+  contextData: jsonb2("context_data").default(sql2`'{}'::jsonb`),
   createdAt: timestamp2("created_at").notNull().defaultNow(),
   updatedAt: timestamp2("updated_at").notNull().defaultNow()
 });
@@ -1049,8 +1048,7 @@ var CompatibleDatabaseStorage = class {
         selectedService: conversation.selectedService,
         selectedDate: conversation.selectedDate,
         selectedTime: conversation.selectedTime,
-        // Temporarily commenting out contextData to avoid schema errors
-        // contextData: conversation.contextData,
+        contextData: conversation.contextData,
         createdAt: conversation.createdAt,
         updatedAt: conversation.updatedAt
       };
@@ -1066,7 +1064,7 @@ var CompatibleDatabaseStorage = class {
         selectedService: conversation.selectedService || null,
         selectedDate: conversation.selectedDate || null,
         selectedTime: conversation.selectedTime || null,
-        // contextData: conversation.contextData || {},
+        contextData: conversation.contextData || {},
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       };
@@ -1082,9 +1080,7 @@ var CompatibleDatabaseStorage = class {
           return void 0;
         }
       }
-      const safeUpdateData = { ...conversation, updatedAt: /* @__PURE__ */ new Date() };
-      delete safeUpdateData.contextData;
-      const [updatedConversation] = await db.update(compatibleConversations).set(safeUpdateData).where(eq(compatibleConversations.id, id)).returning();
+      const [updatedConversation] = await db.update(compatibleConversations).set({ ...conversation, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleConversations.id, id)).returning();
       if (!updatedConversation) {
         console.warn(`No conversation found with ID: ${id} for update`);
         return void 0;
@@ -1092,16 +1088,7 @@ var CompatibleDatabaseStorage = class {
       return updatedConversation;
     } catch (error) {
       console.error("Error updating conversation:", error);
-      try {
-        const currentConv = await this.getConversation(conversation.phoneNumber || "");
-        if (currentConv && conversation) {
-          const { contextData, ...updateWithoutContext } = conversation;
-          return { ...currentConv, ...updateWithoutContext };
-        }
-        return void 0;
-      } catch {
-        return void 0;
-      }
+      return void 0;
     }
   }
   async getMessages(conversationId) {

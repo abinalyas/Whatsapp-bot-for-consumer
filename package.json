@@ -11,6 +11,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "migrate": "tsx scripts/migrate.ts",
+    "direct-migrate": "tsx scripts/direct-migrate.ts",
     "db:migrate:up": "npm run migrate up",
     "db:migrate:down": "npm run migrate down",
     "db:migrate:status": "npm run migrate status",
