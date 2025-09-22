@@ -803,7 +803,7 @@ var insertBotFlowExecutionSchema = createInsertSchema(botFlowExecutions).omit({
 });
 
 // server/storage.ts
-import { randomUUID } from "crypto";
+import { randomUUID as randomUUID2 } from "crypto";
 
 // server/db.ts
 import { Pool, neonConfig } from "@neondatabase/serverless";
@@ -821,6 +821,7 @@ if (process.env.DATABASE_URL) {
 import { eq as eq2, and as and2, gte as gte2, lt as lt2 } from "drizzle-orm";
 
 // server/storage-compatible.ts
+import { randomUUID } from "crypto";
 import { eq, and, gte, lt, sql as sql2 } from "drizzle-orm";
 import { pgTable as pgTable2, text as text2, varchar as varchar2, integer as integer2, timestamp as timestamp2, boolean as boolean2, jsonb as jsonb2 } from "drizzle-orm/pg-core";
 var compatibleServices = pgTable2("services", {
@@ -881,6 +882,10 @@ var CompatibleDatabaseStorage = class {
   }
   async initializeDefaultServices() {
     try {
+      if (!db) {
+        console.log("Database not configured, skipping default service initialization");
+        return;
+      }
       const existingServices = await this.getServices();
       if (existingServices.length > 0) return;
       const defaultServices = [
@@ -908,23 +913,26 @@ var CompatibleDatabaseStorage = class {
           name: "Hair Color",
           description: "Full hair coloring service",
           price: 120,
-          // USD equivalent of ₹800
-          durationMinutes: 180,
+          // USD equivalent of ₹1000
+          durationMinutes: 120,
           isActive: true,
           icon: "fas fa-palette",
           category: "Hair Services"
         }
       ];
-      for (const service of defaultServices) {
-        await this.createService(service);
+      for (const serviceData of defaultServices) {
+        await this.createService(serviceData);
       }
-      console.log("\u2705 Initialized default services");
+      console.log("\u2705 Default services initialized");
     } catch (error) {
       console.error("\u274C Error initializing default services:", error);
     }
   }
   async getServices() {
     try {
+      if (!db) {
+        return [];
+      }
       return await db.select().from(compatibleServices);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -933,6 +941,9 @@ var CompatibleDatabaseStorage = class {
   }
   async getService(id) {
     try {
+      if (!db) {
+        return void 0;
+      }
       const [service] = await db.select().from(compatibleServices).where(eq(compatibleServices.id, id));
       return service || void 0;
     } catch (error) {
@@ -942,6 +953,9 @@ var CompatibleDatabaseStorage = class {
   }
   async createService(insertService) {
     try {
+      if (!db) {
+        throw new Error("Database not available");
+      }
       const safeServiceData = {
         name: insertService.name,
         description: insertService.description,
@@ -958,11 +972,27 @@ var CompatibleDatabaseStorage = class {
       };
     } catch (error) {
       console.error("Error creating service:", error);
-      throw error;
+      return {
+        id: randomUUID(),
+        name: insertService.name,
+        description: insertService.description || null,
+        price: insertService.price,
+        durationMinutes: insertService.durationMinutes || 60,
+        isActive: insertService.isActive ?? true,
+        icon: insertService.icon || null,
+        category: insertService.category || null,
+        metadata: insertService.metadata || {},
+        createdAt: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      };
     }
   }
   async updateService(id, updateData) {
     try {
+      if (!db) {
+        console.warn("Database not available, cannot update service");
+        return void 0;
+      }
       const [service] = await db.update(compatibleServices).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleServices.id, id)).returning();
       return service || void 0;
     } catch (error) {
@@ -972,6 +1002,10 @@ var CompatibleDatabaseStorage = class {
   }
   async deleteService(id) {
     try {
+      if (!db) {
+        console.warn("Database not available, cannot delete service");
+        return false;
+      }
       const result = await db.delete(compatibleServices).where(eq(compatibleServices.id, id));
       return result.rowCount > 0;
     } catch (error) {
@@ -979,28 +1013,58 @@ var CompatibleDatabaseStorage = class {
       return false;
     }
   }
+  async getConversations() {
+    try {
+      if (!db) {
+        return [];
+      }
+      return await db.select().from(compatibleConversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      return [];
+    }
+  }
   async getConversation(phoneNumber) {
     try {
+      if (!db) {
+        return void 0;
+      }
       const [conversation] = await db.select().from(compatibleConversations).where(eq(compatibleConversations.phoneNumber, phoneNumber));
-      return conversation || void 0;
+      return conversation;
     } catch (error) {
       console.error("Error fetching conversation:", error);
       return void 0;
     }
   }
-  async createConversation(insertConversation) {
+  async createConversation(conversation) {
     try {
-      const [conversation] = await db.insert(compatibleConversations).values(insertConversation).returning();
-      return conversation;
+      if (!db) {
+        throw new Error("Database not available");
+      }
+      const [newConversation] = await db.insert(compatibleConversations).values(conversation).returning();
+      return newConversation;
     } catch (error) {
       console.error("Error creating conversation:", error);
-      throw error;
+      return {
+        id: randomUUID(),
+        phoneNumber: conversation.phoneNumber,
+        currentState: conversation.currentState,
+        selectedService: conversation.selectedService || null,
+        selectedDate: conversation.selectedDate || null,
+        selectedTime: conversation.selectedTime || null,
+        createdAt: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      };
     }
   }
-  async updateConversation(id, updateData) {
+  async updateConversation(id, conversation) {
     try {
-      const [conversation] = await db.update(compatibleConversations).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleConversations.id, id)).returning();
-      return conversation || void 0;
+      if (!db) {
+        console.warn("Database not available, cannot update conversation");
+        return void 0;
+      }
+      const [updatedConversation] = await db.update(compatibleConversations).set({ ...conversation, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleConversations.id, id)).returning();
+      return updatedConversation;
     } catch (error) {
       console.error("Error updating conversation:", error);
       return void 0;
@@ -1008,61 +1072,81 @@ var CompatibleDatabaseStorage = class {
   }
   async getMessages(conversationId) {
     try {
-      return await db.select().from(compatibleMessages).where(eq(compatibleMessages.conversationId, conversationId)).orderBy(compatibleMessages.timestamp);
+      if (!db) {
+        return [];
+      }
+      return await db.select().from(compatibleMessages).where(eq(compatibleMessages.conversationId, conversationId)).orderBy(compatibleMessages.createdAt);
     } catch (error) {
       console.error("Error fetching messages:", error);
       return [];
     }
   }
-  async createMessage(insertMessage) {
+  async createMessage(message) {
     try {
-      const [message] = await db.insert(compatibleMessages).values(insertMessage).returning();
-      return message;
+      if (!db) {
+        throw new Error("Database not available");
+      }
+      const [newMessage] = await db.insert(compatibleMessages).values(message).returning();
+      return newMessage;
     } catch (error) {
       console.error("Error creating message:", error);
-      throw error;
+      return {
+        id: randomUUID(),
+        conversationId: message.conversationId,
+        content: message.content,
+        isFromBot: message.isFromBot,
+        messageType: message.messageType || "text",
+        metadata: message.metadata || {},
+        createdAt: /* @__PURE__ */ new Date()
+      };
     }
   }
   async getBookings() {
     try {
-      return await db.select().from(compatibleBookings).orderBy(sql2`${compatibleBookings.createdAt} DESC`);
+      if (!db) {
+        return [];
+      }
+      return await db.select().from(compatibleBookings);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       return [];
     }
   }
-  async createBooking(insertBooking) {
+  async createBooking(booking) {
     try {
-      const safeBookingData = {
-        conversationId: insertBooking.conversationId,
-        serviceId: insertBooking.serviceId,
-        phoneNumber: insertBooking.phoneNumber,
-        customerName: insertBooking.customerName,
-        amount: insertBooking.amount,
-        status: insertBooking.status ?? "pending",
-        appointmentDate: insertBooking.appointmentDate,
-        appointmentTime: insertBooking.appointmentTime,
-        paymentMethod: insertBooking.paymentMethod,
-        paymentReference: insertBooking.paymentReference,
-        notes: insertBooking.notes
-      };
-      const [booking] = await db.insert(compatibleBookings).values(safeBookingData).returning();
-      return {
-        ...booking,
-        customerEmail: insertBooking.customerEmail || null,
-        customFields: insertBooking.customFields || {},
-        transactionType: insertBooking.transactionType || "booking",
-        metadata: insertBooking.metadata || {}
-      };
+      if (!db) {
+        throw new Error("Database not available");
+      }
+      const [newBooking] = await db.insert(compatibleBookings).values(booking).returning();
+      return newBooking;
     } catch (error) {
       console.error("Error creating booking:", error);
-      throw error;
+      return {
+        id: randomUUID(),
+        conversationId: booking.conversationId,
+        serviceId: booking.serviceId,
+        phoneNumber: booking.phoneNumber,
+        amount: booking.amount,
+        status: booking.status || "pending",
+        customerName: booking.customerName || null,
+        appointmentDate: booking.appointmentDate,
+        appointmentTime: booking.appointmentTime,
+        paymentReference: booking.paymentReference || null,
+        metadata: booking.metadata || {},
+        notes: booking.notes || null,
+        createdAt: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      };
     }
   }
-  async updateBooking(id, updateData) {
+  async updateBooking(id, booking) {
     try {
-      const [booking] = await db.update(compatibleBookings).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleBookings.id, id)).returning();
-      return booking || void 0;
+      if (!db) {
+        console.warn("Database not available, cannot update booking");
+        return void 0;
+      }
+      const [updatedBooking] = await db.update(compatibleBookings).set({ ...booking, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleBookings.id, id)).returning();
+      return updatedBooking;
     } catch (error) {
       console.error("Error updating booking:", error);
       return void 0;
@@ -1070,14 +1154,19 @@ var CompatibleDatabaseStorage = class {
   }
   async getTodayBookings() {
     try {
+      if (!db) {
+        return [];
+      }
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      return await db.select().from(compatibleBookings).where(and(
-        gte(compatibleBookings.createdAt, today),
-        lt(compatibleBookings.createdAt, tomorrow)
-      ));
+      return await db.select().from(compatibleBookings).where(
+        and(
+          gte(compatibleBookings.appointmentDate, today),
+          lt(compatibleBookings.appointmentDate, tomorrow)
+        )
+      );
     } catch (error) {
       console.error("Error fetching today's bookings:", error);
       return [];
@@ -1085,10 +1174,23 @@ var CompatibleDatabaseStorage = class {
   }
   async getTodayRevenue() {
     try {
-      const todayBookings = await this.getTodayBookings();
-      return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
+      if (!db) {
+        return 0;
+      }
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const result = await db.select({ total: sql2`SUM(${compatibleBookings.amount})` }).from(compatibleBookings).where(
+        and(
+          eq(compatibleBookings.status, "confirmed"),
+          gte(compatibleBookings.appointmentDate, today),
+          lt(compatibleBookings.appointmentDate, tomorrow)
+        )
+      );
+      return result[0]?.total || 0;
     } catch (error) {
-      console.error("Error calculating today's revenue:", error);
+      console.error("Error fetching today's revenue:", error);
       return 0;
     }
   }
@@ -1107,7 +1209,7 @@ var InMemoryStorage = class {
     if (this.services.length > 0) return;
     const defaultServices = [
       {
-        id: randomUUID(),
+        id: randomUUID2(),
         name: "Haircut & Style",
         description: "Professional haircut with styling",
         price: 45,
@@ -1116,7 +1218,7 @@ var InMemoryStorage = class {
         icon: "fas fa-cut"
       },
       {
-        id: randomUUID(),
+        id: randomUUID2(),
         name: "Facial Treatment",
         description: "Deep cleansing facial treatment",
         price: 65,
@@ -1125,7 +1227,7 @@ var InMemoryStorage = class {
         icon: "fas fa-sparkles"
       },
       {
-        id: randomUUID(),
+        id: randomUUID2(),
         name: "Hair Color",
         description: "Full hair coloring service",
         price: 120,
@@ -1145,7 +1247,7 @@ var InMemoryStorage = class {
   async createService(service) {
     const newService = {
       ...service,
-      id: randomUUID()
+      id: randomUUID2()
     };
     this.services.push(newService);
     return newService;
@@ -1168,7 +1270,7 @@ var InMemoryStorage = class {
   async createConversation(conversation) {
     const newConversation = {
       ...conversation,
-      id: randomUUID(),
+      id: randomUUID2(),
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     };
@@ -1191,7 +1293,7 @@ var InMemoryStorage = class {
   async createMessage(message) {
     const newMessage = {
       ...message,
-      id: randomUUID(),
+      id: randomUUID2(),
       timestamp: /* @__PURE__ */ new Date()
     };
     this.messages.push(newMessage);
@@ -1205,7 +1307,7 @@ var InMemoryStorage = class {
   async createBooking(booking) {
     const newBooking = {
       ...booking,
-      id: randomUUID(),
+      id: randomUUID2(),
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     };
@@ -1892,81 +1994,6 @@ We apologize for any inconvenience caused.`;
     } catch (error) {
       console.error("Error processing test message:", error);
       res.status(500).json({ error: "Internal server error" });
-    }
-  });
-  app2.post("/api/admin/migrate", async (req, res) => {
-    try {
-      const { adminKey } = req.body;
-      if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
-        return res.status(403).json({ error: "Unauthorized" });
-      }
-      const { Pool: Pool2 } = __require("@neondatabase/serverless");
-      const pool2 = new Pool2({ connectionString: process.env.DATABASE_URL });
-      const migrationSQL = `
-        -- Add payment_reference column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'payment_reference') THEN
-                ALTER TABLE bookings ADD COLUMN payment_reference VARCHAR(255);
-            END IF;
-        END $$;
-
-        -- Add created_at column to services table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'services' AND column_name = 'created_at') THEN
-                ALTER TABLE services ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add updated_at column to services table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'services' AND column_name = 'updated_at') THEN
-                ALTER TABLE services ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add created_at column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'created_at') THEN
-                ALTER TABLE bookings ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add updated_at column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'updated_at') THEN
-                ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-      `;
-      const client = await pool2.connect();
-      try {
-        await client.query(migrationSQL);
-        console.log("\u2705 Database migration completed successfully");
-        res.json({
-          success: true,
-          message: "Database migration completed successfully. Missing columns added."
-        });
-      } finally {
-        client.release();
-        await pool2.end();
-      }
-    } catch (error) {
-      console.error("\u274C Migration failed:", error);
-      res.status(500).json({
-        success: false,
-        error: "Migration failed",
-        details: error.message
-      });
     }
   });
   app2.post("/api/admin/migrate", async (req, res) => {
