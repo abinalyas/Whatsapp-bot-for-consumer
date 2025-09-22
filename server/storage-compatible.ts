@@ -27,7 +27,8 @@ const compatibleConversations = pgTable("conversations", {
   selectedService: varchar("selected_service"),
   selectedDate: text("selected_date"),
   selectedTime: text("selected_time"),
-  contextData: jsonb("context_data").default(sql`'{}'::jsonb`),
+  // Temporarily commenting out context_data to avoid schema errors
+  // contextData: jsonb("context_data").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -296,9 +297,23 @@ export class CompatibleDatabaseStorage implements IStorage {
         throw new Error("Database not available");
       }
       
+      // Only use columns that definitely exist in production
+      const safeConversationData = {
+        phoneNumber: conversation.phoneNumber,
+        customerName: conversation.customerName,
+        currentState: conversation.currentState,
+        selectedService: conversation.selectedService,
+        selectedDate: conversation.selectedDate,
+        selectedTime: conversation.selectedTime,
+        // Temporarily commenting out contextData to avoid schema errors
+        // contextData: conversation.contextData,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      };
+
       const [newConversation] = await database
         .insert(compatibleConversations)
-        .values(conversation)
+        .values(safeConversationData)
         .returning();
       return newConversation;
     } catch (error) {
@@ -307,10 +322,12 @@ export class CompatibleDatabaseStorage implements IStorage {
       return {
         id: randomUUID(),
         phoneNumber: conversation.phoneNumber,
+        customerName: conversation.customerName || null,
         currentState: conversation.currentState,
         selectedService: conversation.selectedService || null,
         selectedDate: conversation.selectedDate || null,
         selectedTime: conversation.selectedTime || null,
+        // contextData: conversation.contextData || {},
         createdAt: new Date(),
         updatedAt: new Date(),
       } as Conversation;
@@ -330,12 +347,14 @@ export class CompatibleDatabaseStorage implements IStorage {
         }
       }
       
+      // Prepare safe update data without contextData
+      const safeUpdateData: any = { ...conversation, updatedAt: new Date() };
+      // Remove contextData if it exists to avoid schema errors
+      delete safeUpdateData.contextData;
+      
       const [updatedConversation] = await database
         .update(compatibleConversations)
-        .set({ 
-          ...conversation, 
-          updatedAt: new Date() 
-        })
+        .set(safeUpdateData)
         .where(eq(compatibleConversations.id, id))
         .returning();
         
@@ -346,11 +365,16 @@ export class CompatibleDatabaseStorage implements IStorage {
       
       return updatedConversation;
     } catch (error) {
-      console.error("Error updating conversation with ID:", id, error);
+      console.error("Error updating conversation:", error);
       // Try to return current state from database on error
       try {
         const currentConv = await this.getConversation(conversation.phoneNumber || '');
-        return currentConv ? { ...currentConv, ...conversation } : undefined;
+        if (currentConv && conversation) {
+          // Merge current DB state with attempted updates (excluding contextData)
+          const { contextData, ...updateWithoutContext } = conversation;
+          return { ...currentConv, ...updateWithoutContext };
+        }
+        return undefined;
       } catch {
         return undefined;
       }

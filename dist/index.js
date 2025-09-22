@@ -845,7 +845,8 @@ var compatibleConversations = pgTable2("conversations", {
   selectedService: varchar2("selected_service"),
   selectedDate: text2("selected_date"),
   selectedTime: text2("selected_time"),
-  contextData: jsonb2("context_data").default(sql2`'{}'::jsonb`),
+  // Temporarily commenting out context_data to avoid schema errors
+  // contextData: jsonb("context_data").default(sql`'{}'::jsonb`),
   createdAt: timestamp2("created_at").notNull().defaultNow(),
   updatedAt: timestamp2("updated_at").notNull().defaultNow()
 });
@@ -1041,17 +1042,31 @@ var CompatibleDatabaseStorage = class {
       if (!db) {
         throw new Error("Database not available");
       }
-      const [newConversation] = await db.insert(compatibleConversations).values(conversation).returning();
+      const safeConversationData = {
+        phoneNumber: conversation.phoneNumber,
+        customerName: conversation.customerName,
+        currentState: conversation.currentState,
+        selectedService: conversation.selectedService,
+        selectedDate: conversation.selectedDate,
+        selectedTime: conversation.selectedTime,
+        // Temporarily commenting out contextData to avoid schema errors
+        // contextData: conversation.contextData,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt
+      };
+      const [newConversation] = await db.insert(compatibleConversations).values(safeConversationData).returning();
       return newConversation;
     } catch (error) {
       console.error("Error creating conversation:", error);
       return {
         id: randomUUID(),
         phoneNumber: conversation.phoneNumber,
+        customerName: conversation.customerName || null,
         currentState: conversation.currentState,
         selectedService: conversation.selectedService || null,
         selectedDate: conversation.selectedDate || null,
         selectedTime: conversation.selectedTime || null,
+        // contextData: conversation.contextData || {},
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
       };
@@ -1067,20 +1082,23 @@ var CompatibleDatabaseStorage = class {
           return void 0;
         }
       }
-      const [updatedConversation] = await db.update(compatibleConversations).set({
-        ...conversation,
-        updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq(compatibleConversations.id, id)).returning();
+      const safeUpdateData = { ...conversation, updatedAt: /* @__PURE__ */ new Date() };
+      delete safeUpdateData.contextData;
+      const [updatedConversation] = await db.update(compatibleConversations).set(safeUpdateData).where(eq(compatibleConversations.id, id)).returning();
       if (!updatedConversation) {
         console.warn(`No conversation found with ID: ${id} for update`);
         return void 0;
       }
       return updatedConversation;
     } catch (error) {
-      console.error("Error updating conversation with ID:", id, error);
+      console.error("Error updating conversation:", error);
       try {
         const currentConv = await this.getConversation(conversation.phoneNumber || "");
-        return currentConv ? { ...currentConv, ...conversation } : void 0;
+        if (currentConv && conversation) {
+          const { contextData, ...updateWithoutContext } = conversation;
+          return { ...currentConv, ...updateWithoutContext };
+        }
+        return void 0;
       } catch {
         return void 0;
       }
@@ -3543,7 +3561,8 @@ We apologize for any inconvenience caused.`;
           "ALTER TABLE services ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
           "ALTER TABLE services ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
           "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
-          "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"
+          "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
+          "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_data JSONB DEFAULT '{}';"
         ];
         const results = [];
         for (const sql4 of migrations) {
