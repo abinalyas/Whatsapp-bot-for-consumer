@@ -3448,7 +3448,7 @@ Your appointment has been confirmed by Spark Salon.
 
 \u{1F4CB} *Booking Details:*
 Service: ${serviceName}
-Date: ${appointmentDate}
+Date: ${appointmentDateStr}
 Time: ${appointmentTime}
 Amount: \u20B9${booking.amount}
 
