@@ -216,6 +216,8 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   }, []);
 
   const completeConnection = useCallback((targetNodeId: string) => {
+    console.log('Completing connection:', { connectionStart, targetNodeId });
+    
     if (connectionStart && connectionStart !== targetNodeId) {
       const newConnection: BotFlowConnection = {
         id: `conn_${Date.now()}`,
@@ -224,14 +226,22 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         label: 'Next'
       };
 
-      setFlow(prev => ({
-        ...prev,
-        nodes: prev.nodes.map(node => 
+      console.log('Creating new connection:', newConnection);
+
+      setFlow(prev => {
+        const updatedNodes = prev.nodes.map(node => 
           node.id === connectionStart 
             ? { ...node, connections: [...node.connections, newConnection] }
             : node
-        )
-      }));
+        );
+        
+        console.log('Updated nodes:', updatedNodes);
+        
+        return {
+          ...prev,
+          nodes: updatedNodes
+        };
+      });
     }
 
     setIsConnecting(false);
@@ -252,7 +262,10 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   // ===== DRAG AND DROP =====
 
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    
     if (isConnecting) {
+      console.log('Mouse down in connecting mode, completing connection to:', nodeId);
       completeConnection(nodeId);
       return;
     }
@@ -339,10 +352,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         const targetNode = flow.nodes.find(n => n.id === connection.targetNodeId);
         if (!targetNode) return;
 
-        const startX = (node.position.x + 100) * zoom + pan.x;
-        const startY = (node.position.y + 25) * zoom + pan.y;
-        const endX = targetNode.position.x * zoom + pan.x;
-        const endY = (targetNode.position.y + 25) * zoom + pan.y;
+        // Calculate connection points (right side of source to left side of target)
+        const startX = (node.position.x + 200) * zoom + pan.x; // Right edge of source node
+        const startY = (node.position.y + 30) * zoom + pan.y;  // Middle of source node
+        const endX = targetNode.position.x * zoom + pan.x;     // Left edge of target node
+        const endY = (targetNode.position.y + 30) * zoom + pan.y; // Middle of target node
+
+        // Create a curved path
+        const controlX1 = startX + 50;
+        const controlY1 = startY;
+        const controlX2 = endX - 50;
+        const controlY2 = endY;
 
         const midX = (startX + endX) / 2;
         const midY = (startY + endY) / 2;
@@ -350,7 +370,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         connections.push(
           <g key={connection.id}>
             <path
-              d={`M ${startX} ${startY} Q ${midX} ${startY} ${midX} ${midY} Q ${midX} ${endY} ${endX} ${endY}`}
+              d={`M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`}
               stroke="#6b7280"
               strokeWidth="2"
               fill="none"
@@ -361,7 +381,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 x={midX}
                 y={midY - 5}
                 textAnchor="middle"
-                className="text-xs fill-gray-600"
+                className="text-xs fill-gray-600 bg-white"
               >
                 {connection.label}
               </text>
@@ -403,7 +423,9 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
       <div
         key={node.id}
         className={`absolute bg-white rounded-lg shadow-lg border-2 cursor-pointer transition-all ${
-          isSelected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300'
+          isSelected ? 'border-blue-500 shadow-xl' : 
+          isConnecting ? 'border-green-300 hover:border-green-500' :
+          'border-gray-200 hover:border-gray-300'
         }`}
         style={{
           left: node.position.x * zoom + pan.x,
@@ -414,7 +436,10 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         onMouseDown={(e) => handleMouseDown(e, node.id)}
         onClick={(e) => {
           e.stopPropagation();
+          console.log('Node clicked:', node.id, 'isConnecting:', isConnecting);
+          
           if (isConnecting) {
+            console.log('Completing connection via click');
             completeConnection(node.id);
           } else {
             setSelectedNode(node);
@@ -432,6 +457,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               className="text-white hover:text-gray-200 p-1"
               onClick={(e) => {
                 e.stopPropagation();
+                console.log('Starting connection from node:', node.id);
                 startConnection(node.id);
               }}
               title="Create connection"
@@ -632,8 +658,20 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
             {/* Connection indicator */}
             {isConnecting && (
-              <div className="absolute top-4 left-4 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm">
-                Click on a node to connect
+              <div className="absolute top-4 left-4 bg-green-100 text-green-700 px-4 py-3 rounded-lg text-sm shadow-lg border border-green-200">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Click on a target node to create connection</span>
+                  <button 
+                    onClick={() => {
+                      setIsConnecting(false);
+                      setConnectionStart(null);
+                    }}
+                    className="ml-2 text-green-600 hover:text-green-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>

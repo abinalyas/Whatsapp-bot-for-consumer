@@ -8,132 +8,80 @@ import { useRoute, useLocation } from 'wouter';
 import { ArrowLeft, Save, Play, Download, Upload, Copy, Trash2 } from 'lucide-react';
 import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 
-// Mock API functions (replace with actual API calls)
-const mockApi = {
+// API functions
+const api = {
   async getBotFlow(tenantId: string, flowId: string): Promise<BotFlow | null> {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: flowId,
-          name: 'Sample Restaurant Bot Flow',
-          description: 'A sample bot flow for restaurant bookings',
-          businessType: 'restaurant',
-          isActive: false,
-          nodes: [
-            {
-              id: 'start_1',
-              type: 'start',
-              name: 'Start',
-              position: { x: 100, y: 100 },
-              configuration: {},
-              connections: [
-                {
-                  id: 'conn_1',
-                  sourceNodeId: 'start_1',
-                  targetNodeId: 'message_1',
-                  label: 'Begin'
-                }
-              ],
-              metadata: {}
-            },
-            {
-              id: 'message_1',
-              type: 'message',
-              name: 'Welcome Message',
-              position: { x: 400, y: 100 },
-              configuration: {
-                messageText: 'Welcome to our restaurant! I can help you make a reservation.'
-              },
-              connections: [
-                {
-                  id: 'conn_2',
-                  sourceNodeId: 'message_1',
-                  targetNodeId: 'question_1',
-                  label: 'Next'
-                }
-              ],
-              metadata: {}
-            },
-            {
-              id: 'question_1',
-              type: 'question',
-              name: 'Ask for Date',
-              position: { x: 700, y: 100 },
-              configuration: {
-                questionText: 'What date would you like to make a reservation for?',
-                inputType: 'date',
-                variableName: 'reservation_date'
-              },
-              connections: [],
-              metadata: {}
-            }
-          ],
-          variables: [
-            {
-              name: 'reservation_date',
-              type: 'date',
-              description: 'The date for the reservation'
-            },
-            {
-              name: 'party_size',
-              type: 'number',
-              description: 'Number of people'
-            }
-          ]
-        });
-      }, 500);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch bot flow');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching bot flow:', error);
+      return null;
+    }
   },
 
   async saveBotFlow(tenantId: string, flow: BotFlow): Promise<BotFlow> {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Saving bot flow:', flow);
-        resolve({ ...flow, id: flow.id || `flow_${Date.now()}` });
-      }, 1000);
-    });
+    try {
+      const method = flow.id ? 'PUT' : 'POST';
+      const url = flow.id ? `/api/bot-flows/${flow.id}` : '/api/bot-flows';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flow),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save bot flow');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error saving bot flow:', error);
+      throw error;
+    }
   },
 
   async testBotFlow(tenantId: string, flow: BotFlow): Promise<{ success: boolean; message: string }> {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          message: 'Bot flow test completed successfully!'
-        });
-      }, 2000);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows/${flow.id}/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flow),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to test bot flow');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error testing bot flow:', error);
+      return {
+        success: false,
+        message: 'Error testing bot flow. Please try again.'
+      };
+    }
   },
 
   async getBotFlowTemplates(businessType: string): Promise<BotFlow[]> {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: 'template_restaurant',
-            name: 'Restaurant Booking Template',
-            description: 'Complete flow for restaurant reservations',
-            businessType: 'restaurant',
-            isActive: false,
-            nodes: [],
-            variables: []
-          },
-          {
-            id: 'template_salon',
-            name: 'Salon Appointment Template',
-            description: 'Complete flow for salon appointments',
-            businessType: 'salon',
-            isActive: false,
-            nodes: [],
-            variables: []
-          }
-        ]);
-      }, 500);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows?businessType=${businessType}&templates=true`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch templates');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      return [];
+    }
   }
 };
 
@@ -163,7 +111,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
     setLoading(true);
     try {
       if (flowId && flowId !== 'new') {
-        const loadedFlow = await mockApi.getBotFlow(tenantId, flowId);
+        const loadedFlow = await api.getBotFlow(tenantId, flowId);
         setFlow(loadedFlow);
         if (loadedFlow) {
           setBusinessType(loadedFlow.businessType);
@@ -190,7 +138,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const handleSave = async (updatedFlow: BotFlow) => {
     setSaving(true);
     try {
-      const savedFlow = await mockApi.saveBotFlow(tenantId, updatedFlow);
+      const savedFlow = await api.saveBotFlow(tenantId, updatedFlow);
       setFlow(savedFlow);
       
       // If this was a new flow, redirect to the saved flow
@@ -211,7 +159,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const handleTest = async (flowToTest: BotFlow) => {
     setTesting(true);
     try {
-      const result = await mockApi.testBotFlow(tenantId, flowToTest);
+      const result = await api.testBotFlow(tenantId, flowToTest);
       alert(result.message);
     } catch (error) {
       console.error('Error testing flow:', error);
@@ -223,7 +171,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
 
   const loadTemplates = async () => {
     try {
-      const loadedTemplates = await mockApi.getBotFlowTemplates(businessType);
+      const loadedTemplates = await api.getBotFlowTemplates(businessType);
       setTemplates(loadedTemplates);
       setShowTemplates(true);
     } catch (error) {

@@ -736,6 +736,60 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Save/Update bot flow
+  app.post("/api/bot-flows", async (req, res) => {
+    try {
+      const flow = req.body;
+      flow.id = `flow_${Date.now()}`;
+      
+      console.log("Creating new bot flow:", flow);
+      
+      // In a real app, save to database
+      res.json(flow);
+    } catch (error) {
+      console.error("Error creating bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/bot-flows/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const flow = req.body;
+      flow.id = id;
+      
+      console.log("Updating bot flow:", flow);
+      
+      // In a real app, update in database
+      res.json(flow);
+    } catch (error) {
+      console.error("Error updating bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Test bot flow
+  app.post("/api/bot-flows/:id/test", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const flow = req.body;
+      
+      console.log("Testing bot flow:", id, flow);
+      
+      // In a real app, run flow validation and testing
+      res.json({
+        success: true,
+        message: "Bot flow test completed successfully!"
+      });
+    } catch (error) {
+      console.error("Error testing bot flow:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Error testing bot flow. Please try again."
+      });
+    }
+  });
+
   app.get("/api/bot-flows/:id", async (req, res) => {
     try {
       const { id } = req.params;
