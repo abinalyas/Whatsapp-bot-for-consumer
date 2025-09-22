@@ -217,21 +217,21 @@ export class DatabaseStorageImpl implements IStorage {
       {
         name: "Haircut & Style",
         description: "Professional haircut with styling",
-        price: 45, // USD equivalent
+        price: 3735, // INR value (45 USD * 83)
         isActive: true,
         icon: "fas fa-cut"
       },
       {
         name: "Facial Treatment",
         description: "Deep cleansing facial treatment",
-        price: 65, // USD equivalent
+        price: 5395, // INR value (65 USD * 83)
         isActive: true,
         icon: "fas fa-sparkles"
       },
       {
         name: "Hair Color",
         description: "Full hair coloring service",
-        price: 120, // USD equivalent
+        price: 9960, // INR value (120 USD * 83)
         isActive: true,
         icon: "fas fa-palette"
       }

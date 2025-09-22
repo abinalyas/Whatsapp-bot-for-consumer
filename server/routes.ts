@@ -44,16 +44,13 @@ const whatsAppMessageSchema = z.object({
 const createServiceSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  price: z.number().min(0),
+  price: z.number().int().min(1, "Price must be at least 1"),
   icon: z.string().optional(),
 });
 
 // WhatsApp Cloud API credentials
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID;
-
-// Currency conversion rate (USD to INR)
-const USD_TO_INR_RATE = 83;
 
 // Helper function to send WhatsApp message
 async function sendWhatsAppMessage(to: string, message: string): Promise<boolean> {
@@ -94,11 +91,11 @@ async function sendWhatsAppMessage(to: string, message: string): Promise<boolean
   }
 }
 
-// Generate UPI payment link (convert USD to INR for payment)
+// Generate UPI payment link (use INR amount directly)
 function generateUPILink(amount: number, serviceName: string): string {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  const inrAmount = Math.round(amount * USD_TO_INR_RATE); // Convert USD to INR (approximate rate)
-  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
+  // Amount is already in INR, no conversion needed
+  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${amount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 
 // Process incoming WhatsApp message
@@ -202,10 +199,9 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       
       response = "👋 Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach(service => {
-        const inrPrice = Math.round(service.price * USD_TO_INR_RATE); // Convert USD to INR for display
-        response += `💇‍♀️ ${service.name} – ₹${inrPrice}\n`;
+        response += `💇‍♀️ ${service.name} – ₹${service.price}\n`;
       });
-      response += "\nReply with service name to book.";
+      response += "\nReply with the number or name of the service to book.";
       newState = "awaiting_service";
       
     } else if (conversation.currentState === "awaiting_service") {
@@ -217,8 +213,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       
       if (selectedService) {
         // Move to appointment scheduling
-        const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE); // Convert USD to INR for display
-        response = `Perfect! You've selected ${selectedService.name} (₹${inrPrice}).\n\n`;
+        response = `Perfect! You've selected ${selectedService.name} (₹${selectedService.price}).\n\n`;
         response += "📅 Now, please select your preferred appointment date.\n\n";
         response += "Available dates:\n";
         
@@ -366,8 +361,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
               response += `Service: ${selectedService.name}\n`;
               response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
               response += `Time: ${selectedTime}\n`;
-              const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE); // Convert USD to INR for display
-              response += `Amount: ₹${inrPrice}\n\n`;
+              response += `Amount: ₹${selectedService.price}\n\n`;
               response += `💳 Please complete your payment:\n${upiLink}\n\n`;
               response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
               
@@ -378,7 +372,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
                 conversationId: conversation.id,
                 serviceId: selectedService.id,
                 phoneNumber: from,
-                amount: selectedService.price,
+                amount: selectedService.price, // Already in INR
                 status: "pending",
                 appointmentDate: appointmentDateTime,
                 appointmentTime: selectedTime,
@@ -727,11 +721,10 @@ We apologize for any inconvenience caused.`;
       // Get today's bookings
       const todayBookings = await storage.getTodayBookings();
       
-      // Calculate today's revenue (convert USD to INR like in WhatsApp bot)
-      const todayRevenueUSD = todayBookings
+      // Calculate today's revenue (already in INR)
+      const todayRevenueINR = todayBookings
         .filter(booking => booking.status === "confirmed")
         .reduce((total, booking) => total + booking.amount, 0);
-      const todayRevenueINR = Math.round(todayRevenueUSD * USD_TO_INR_RATE); // Convert USD to INR using constant
       
       // Get all bookings for total count
       const allBookings = await storage.getBookings();
@@ -756,7 +749,7 @@ We apologize for any inconvenience caused.`;
       const stats = {
         todayMessages,
         todayBookings: todayBookings.length,
-        todayRevenue: todayRevenueINR, // Return INR value to match dashboard display
+        todayRevenue: todayRevenueINR, // Already in INR
         responseRate,
         totalBookings: allBookings.length,
       };

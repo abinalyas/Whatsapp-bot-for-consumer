@@ -2992,12 +2992,11 @@ var whatsAppMessageSchema = z.object({
 var createServiceSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  price: z.number().min(0),
+  price: z.number().int().min(1, "Price must be at least 1"),
   icon: z.string().optional()
 });
 var WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 var PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID;
-var USD_TO_INR_RATE = 83;
 async function sendWhatsAppMessage(to, message) {
   try {
     const phoneNumberId = process.env.WHATSAPP_PHONE_ID;
@@ -3032,8 +3031,7 @@ async function sendWhatsAppMessage(to, message) {
 }
 function generateUPILink(amount, serviceName) {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  const inrAmount = Math.round(amount * USD_TO_INR_RATE);
-  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
+  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${amount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 async function processWhatsAppMessage(from, messageText) {
   try {
@@ -3100,11 +3098,10 @@ async function processStaticWhatsAppMessage(from, messageText) {
       const activeServices = services2.filter((s) => s.isActive);
       response = "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach((service) => {
-        const inrPrice = Math.round(service.price * USD_TO_INR_RATE);
-        response += `\u{1F487}\u200D\u2640\uFE0F ${service.name} \u2013 \u20B9${inrPrice}
+        response += `\u{1F487}\u200D\u2640\uFE0F ${service.name} \u2013 \u20B9${service.price}
 `;
       });
-      response += "\nReply with service name to book.";
+      response += "\nReply with the number or name of the service to book.";
       newState = "awaiting_service";
     } else if (conversation.currentState === "awaiting_service") {
       const services2 = await withTimeout(storage.getServices(), 5e3);
@@ -3112,8 +3109,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
         (s) => s.isActive && s.name.toLowerCase() === text3.toLowerCase()
       );
       if (selectedService) {
-        const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE);
-        response = `Perfect! You've selected ${selectedService.name} (\u20B9${inrPrice}).
+        response = `Perfect! You've selected ${selectedService.name} (\u20B9${selectedService.price}).
 
 `;
         response += "\u{1F4C5} Now, please select your preferred appointment date.\n\n";
@@ -3239,8 +3235,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
 `;
               response += `Time: ${selectedTime}
 `;
-              const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE);
-              response += `Amount: \u20B9${inrPrice}
+              response += `Amount: \u20B9${selectedService.price}
 
 `;
               response += `\u{1F4B3} Please complete your payment:
@@ -3254,6 +3249,7 @@ ${upiLink}
                 serviceId: selectedService.id,
                 phoneNumber: from,
                 amount: selectedService.price,
+                // Already in INR
                 status: "pending",
                 appointmentDate: appointmentDateTime,
                 appointmentTime: selectedTime
@@ -3540,8 +3536,7 @@ We apologize for any inconvenience caused.`;
   app2.get("/api/stats", async (req, res) => {
     try {
       const todayBookings = await storage.getTodayBookings();
-      const todayRevenueUSD = todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
-      const todayRevenueINR = Math.round(todayRevenueUSD * USD_TO_INR_RATE);
+      const todayRevenueINR = todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
       const allBookings = await storage.getBookings();
       let todayMessages = 0;
       for (const booking of todayBookings) {
@@ -3557,7 +3552,7 @@ We apologize for any inconvenience caused.`;
         todayMessages,
         todayBookings: todayBookings.length,
         todayRevenue: todayRevenueINR,
-        // Return INR value to match dashboard display
+        // Already in INR
         responseRate,
         totalBookings: allBookings.length
       };
