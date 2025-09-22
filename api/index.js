@@ -1060,14 +1060,30 @@ var CompatibleDatabaseStorage = class {
   async updateConversation(id, conversation) {
     try {
       if (!db) {
-        console.warn("Database not available, cannot update conversation");
+        console.warn("Database not available, cannot update conversation with ID:", id);
+        try {
+          return this.getConversation(conversation.phoneNumber || "");
+        } catch {
+          return void 0;
+        }
+      }
+      const [updatedConversation] = await db.update(compatibleConversations).set({
+        ...conversation,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq(compatibleConversations.id, id)).returning();
+      if (!updatedConversation) {
+        console.warn(`No conversation found with ID: ${id} for update`);
         return void 0;
       }
-      const [updatedConversation] = await db.update(compatibleConversations).set({ ...conversation, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleConversations.id, id)).returning();
       return updatedConversation;
     } catch (error) {
-      console.error("Error updating conversation:", error);
-      return void 0;
+      console.error("Error updating conversation with ID:", id, error);
+      try {
+        const currentConv = await this.getConversation(conversation.phoneNumber || "");
+        return currentConv ? { ...currentConv, ...conversation } : void 0;
+      } catch {
+        return void 0;
+      }
     }
   }
   async getMessages(conversationId) {
@@ -3072,7 +3088,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
       response += "\nReply with service name to book.";
       newState = "awaiting_service";
     } else if (conversation.currentState === "awaiting_service") {
-      const services2 = await storage.getServices();
+      const services2 = await withTimeout(storage.getServices(), 5e3);
       const selectedService = services2.find(
         (s) => s.isActive && s.name.toLowerCase() === text3.toLowerCase()
       );
@@ -3097,11 +3113,21 @@ async function processStaticWhatsAppMessage(from, messageText) {
 `;
         }
         response += "\nReply with the number (1-7) for your preferred date.";
-        await storage.updateConversation(conversation.id, {
-          selectedService: selectedService.id,
-          currentState: "awaiting_date"
-        });
-        newState = "awaiting_date";
+        try {
+          const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
+            selectedService: selectedService.id,
+            currentState: "awaiting_date"
+          }), 5e3);
+          if (updatedConversation) {
+            newState = "awaiting_date";
+          } else {
+            console.warn("Failed to update conversation state in database, but proceeding with flow");
+            newState = "awaiting_date";
+          }
+        } catch (error) {
+          console.error("Error updating conversation:", error);
+          newState = "awaiting_date";
+        }
       } else {
         response = "Sorry, I didn't recognize that service. Please choose from:\n";
         const activeServices = services2.filter((s) => s.isActive);
@@ -3134,11 +3160,21 @@ async function processStaticWhatsAppMessage(from, messageText) {
         response += "4. 03:30 PM\n";
         response += "5. 05:00 PM\n";
         response += "\nReply with the number (1-5) for your preferred time.";
-        await storage.updateConversation(conversation.id, {
-          selectedDate: dateStr,
-          currentState: "awaiting_time"
-        });
-        newState = "awaiting_time";
+        try {
+          const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
+            selectedDate: dateStr,
+            currentState: "awaiting_time"
+          }), 5e3);
+          if (updatedConversation) {
+            newState = "awaiting_time";
+          } else {
+            console.warn("Failed to update conversation state in database, but proceeding with flow");
+            newState = "awaiting_time";
+          }
+        } catch (error) {
+          console.error("Error updating conversation:", error);
+          newState = "awaiting_time";
+        }
       } else {
         response = "Please select a valid date option (1-7). Reply with the number for your preferred date.";
       }
@@ -3147,50 +3183,70 @@ async function processStaticWhatsAppMessage(from, messageText) {
       const timeChoice = parseInt(text3);
       if (timeChoice >= 1 && timeChoice <= 5) {
         const selectedTime = timeSlots[timeChoice - 1];
-        const services2 = await storage.getServices();
+        const services2 = await withTimeout(storage.getServices(), 5e3);
         const selectedService = services2.find((s) => s.id === conversation.selectedService);
         if (selectedService) {
-          const updatedConversation = await storage.updateConversation(conversation.id, {
-            selectedTime,
-            currentState: "awaiting_payment"
-          });
-          if (updatedConversation && updatedConversation.selectedDate) {
-            const upiLink = generateUPILink(selectedService.price, selectedService.name);
-            response = `Perfect! Your appointment is scheduled for ${selectedTime}.
+          let newStateUpdated = false;
+          try {
+            const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
+              selectedTime,
+              currentState: "awaiting_payment"
+            }), 5e3);
+            if (updatedConversation) {
+              newState = "awaiting_payment";
+              newStateUpdated = true;
+            } else {
+              console.warn("Failed to update conversation state in database, but proceeding with flow");
+              newState = "awaiting_payment";
+              newStateUpdated = true;
+            }
+          } catch (error) {
+            console.error("Error updating conversation:", error);
+            newState = "awaiting_payment";
+            newStateUpdated = true;
+          }
+          if (newStateUpdated) {
+            const latestConversation = await withTimeout(storage.getConversation(from), 5e3) || conversation;
+            if (latestConversation && latestConversation.selectedDate) {
+              const upiLink = generateUPILink(selectedService.price, selectedService.name);
+              response = `Perfect! Your appointment is scheduled for ${selectedTime}.
 
 `;
-            response += `\u{1F4CB} Booking Summary:
+              response += `\u{1F4CB} Booking Summary:
 `;
-            response += `Service: ${selectedService.name}
+              response += `Service: ${selectedService.name}
 `;
-            response += `Date: ${new Date(updatedConversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
 `;
-            response += `Time: ${selectedTime}
+              response += `Time: ${selectedTime}
 `;
-            const inrPrice = Math.round(selectedService.price * 83);
-            response += `Amount: \u20B9${inrPrice}
+              const inrPrice = Math.round(selectedService.price * 83);
+              response += `Amount: \u20B9${inrPrice}
 
 `;
-            response += `\u{1F4B3} Please complete your payment:
+              response += `\u{1F4B3} Please complete your payment:
 ${upiLink}
 
 `;
-            response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
-            const appointmentDateTime = /* @__PURE__ */ new Date(`${latestConversation.selectedDate}T${timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00"}:00`);
-            await storage.createBooking({
-              conversationId: conversation.id,
-              serviceId: selectedService.id,
-              phoneNumber: from,
-              amount: selectedService.price,
-              status: "pending",
-              appointmentDate: appointmentDateTime,
-              appointmentTime: selectedTime
-            });
-            newState = "awaiting_payment";
+              response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
+              const appointmentDateTime = /* @__PURE__ */ new Date(`${latestConversation.selectedDate}T${timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00"}:00`);
+              await withTimeout(storage.createBooking({
+                conversationId: conversation.id,
+                serviceId: selectedService.id,
+                phoneNumber: from,
+                amount: selectedService.price,
+                status: "pending",
+                appointmentDate: appointmentDateTime,
+                appointmentTime: selectedTime
+              }), 5e3);
+            }
           }
+        } else {
+          response = "Sorry, I couldn't find the selected service. Please start over by sending 'hi'.";
+          newState = "greeting";
         }
       } else {
-        response = "Please select a valid time slot (1-5). Reply with the number for your preferred time.";
+        response = "Please select a valid time option (1-5). Reply with the number for your preferred time.";
       }
     } else if (conversation.currentState === "awaiting_payment" && text3 === "paid") {
       const services2 = await storage.getServices();

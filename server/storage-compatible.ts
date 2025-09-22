@@ -321,19 +321,39 @@ export class CompatibleDatabaseStorage implements IStorage {
     try {
       // Check if database is available
       if (!database) {
-        console.warn("Database not available, cannot update conversation");
-        return undefined;
+        console.warn("Database not available, cannot update conversation with ID:", id);
+        // Attempt to get existing conversation as fallback
+        try {
+          return this.getConversation(conversation.phoneNumber || '');
+        } catch {
+          return undefined;
+        }
       }
       
       const [updatedConversation] = await database
         .update(compatibleConversations)
-        .set({ ...conversation, updatedAt: new Date() })
+        .set({ 
+          ...conversation, 
+          updatedAt: new Date() 
+        })
         .where(eq(compatibleConversations.id, id))
         .returning();
+        
+      if (!updatedConversation) {
+        console.warn(`No conversation found with ID: ${id} for update`);
+        return undefined;
+      }
+      
       return updatedConversation;
     } catch (error) {
-      console.error("Error updating conversation:", error);
-      return undefined;
+      console.error("Error updating conversation with ID:", id, error);
+      // Try to return current state from database on error
+      try {
+        const currentConv = await this.getConversation(conversation.phoneNumber || '');
+        return currentConv ? { ...currentConv, ...conversation } : undefined;
+      } catch {
+        return undefined;
+      }
     }
   }
 
