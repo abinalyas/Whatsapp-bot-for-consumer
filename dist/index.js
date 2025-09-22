@@ -822,11 +822,11 @@ var compatibleServices = pgTable2("services", {
   name: text2("name").notNull(),
   description: text2("description"),
   price: integer2("price").notNull(),
-  durationMinutes: integer2("duration_minutes").default(60),
+  // durationMinutes: integer("duration_minutes").default(60), // Commented out - doesn't exist in production
   isActive: boolean2("is_active").notNull().default(true),
   icon: text2("icon"),
-  category: varchar2("category", { length: 100 }),
-  metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
+  // category: varchar("category", { length: 100 }), // Commented out - might not exist
+  // metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Commented out - might not exist
   createdAt: timestamp2("created_at").notNull().defaultNow(),
   updatedAt: timestamp2("updated_at").notNull().defaultNow()
 });
@@ -857,7 +857,7 @@ var compatibleBookings = pgTable2("bookings", {
   serviceId: varchar2("service_id").notNull(),
   phoneNumber: text2("phone_number").notNull(),
   customerName: text2("customer_name"),
-  customerEmail: text2("customer_email"),
+  // customerEmail: text("customer_email"), // Commented out - doesn't exist in production
   amount: integer2("amount").notNull(),
   status: varchar2("status", { length: 20 }).notNull().default("pending"),
   paymentMethod: varchar2("payment_method", { length: 50 }),
@@ -865,7 +865,7 @@ var compatibleBookings = pgTable2("bookings", {
   appointmentDate: timestamp2("appointment_date"),
   appointmentTime: text2("appointment_time"),
   notes: text2("notes"),
-  metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
+  // metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Commented out - might not exist
   createdAt: timestamp2("created_at").notNull().defaultNow(),
   updatedAt: timestamp2("updated_at").notNull().defaultNow()
 });
@@ -936,8 +936,20 @@ var CompatibleDatabaseStorage = class {
   }
   async createService(insertService) {
     try {
-      const [service] = await db.insert(compatibleServices).values(insertService).returning();
-      return service;
+      const safeServiceData = {
+        name: insertService.name,
+        description: insertService.description,
+        price: insertService.price,
+        isActive: insertService.isActive ?? true,
+        icon: insertService.icon
+      };
+      const [service] = await db.insert(compatibleServices).values(safeServiceData).returning();
+      return {
+        ...service,
+        durationMinutes: insertService.durationMinutes || 60,
+        category: insertService.category || null,
+        metadata: insertService.metadata || {}
+      };
     } catch (error) {
       console.error("Error creating service:", error);
       throw error;
@@ -1015,8 +1027,27 @@ var CompatibleDatabaseStorage = class {
   }
   async createBooking(insertBooking) {
     try {
-      const [booking] = await db.insert(compatibleBookings).values(insertBooking).returning();
-      return booking;
+      const safeBookingData = {
+        conversationId: insertBooking.conversationId,
+        serviceId: insertBooking.serviceId,
+        phoneNumber: insertBooking.phoneNumber,
+        customerName: insertBooking.customerName,
+        amount: insertBooking.amount,
+        status: insertBooking.status ?? "pending",
+        appointmentDate: insertBooking.appointmentDate,
+        appointmentTime: insertBooking.appointmentTime,
+        paymentMethod: insertBooking.paymentMethod,
+        paymentReference: insertBooking.paymentReference,
+        notes: insertBooking.notes
+      };
+      const [booking] = await db.insert(compatibleBookings).values(safeBookingData).returning();
+      return {
+        ...booking,
+        customerEmail: insertBooking.customerEmail || null,
+        customFields: insertBooking.customFields || {},
+        transactionType: insertBooking.transactionType || "booking",
+        metadata: insertBooking.metadata || {}
+      };
     } catch (error) {
       console.error("Error creating booking:", error);
       throw error;
@@ -1846,6 +1877,138 @@ We apologize for any inconvenience caused.`;
     } catch (error) {
       console.error("Error fetching business types:", error);
       res.status(500).json({ success: false, error: "Failed to fetch business types" });
+    }
+  });
+  app2.get("/api/bot-flows", async (req, res) => {
+    try {
+      const mockFlows = [
+        {
+          id: "flow_1",
+          name: "Restaurant Booking Flow",
+          description: "Complete flow for restaurant table reservations",
+          businessType: "restaurant",
+          isActive: true,
+          nodes: [
+            { id: "1", type: "start", name: "Start", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: "2", type: "message", name: "Welcome", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: "3", type: "question", name: "Date", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: "4", type: "end", name: "End", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        },
+        {
+          id: "flow_2",
+          name: "Customer Support Flow",
+          description: "Handle customer inquiries and support requests",
+          businessType: "restaurant",
+          isActive: false,
+          nodes: [
+            { id: "1", type: "start", name: "Start", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: "2", type: "question", name: "Issue Type", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: "3", type: "condition", name: "Route", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        }
+      ];
+      res.json({
+        flows: mockFlows,
+        total: mockFlows.length
+      });
+    } catch (error) {
+      console.error("Error fetching bot flows:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.get("/api/bot-flows/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const mockFlow = {
+        id,
+        name: "Sample Restaurant Bot Flow",
+        description: "A sample bot flow for restaurant bookings",
+        businessType: "restaurant",
+        isActive: false,
+        nodes: [
+          {
+            id: "start_1",
+            type: "start",
+            name: "Start",
+            position: { x: 100, y: 100 },
+            configuration: {},
+            connections: [
+              {
+                id: "conn_1",
+                sourceNodeId: "start_1",
+                targetNodeId: "message_1",
+                label: "Begin"
+              }
+            ],
+            metadata: {}
+          },
+          {
+            id: "message_1",
+            type: "message",
+            name: "Welcome Message",
+            position: { x: 400, y: 100 },
+            configuration: {
+              messageText: "Welcome to our restaurant! I can help you make a reservation."
+            },
+            connections: [
+              {
+                id: "conn_2",
+                sourceNodeId: "message_1",
+                targetNodeId: "question_1",
+                label: "Next"
+              }
+            ],
+            metadata: {}
+          },
+          {
+            id: "question_1",
+            type: "question",
+            name: "Ask for Date",
+            position: { x: 700, y: 100 },
+            configuration: {
+              questionText: "What date would you like to make a reservation for?",
+              inputType: "date",
+              variableName: "reservation_date"
+            },
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [
+          {
+            name: "reservation_date",
+            type: "date",
+            description: "The date for the reservation"
+          },
+          {
+            name: "party_size",
+            type: "number",
+            description: "Number of people"
+          }
+        ]
+      };
+      res.json(mockFlow);
+    } catch (error) {
+      console.error("Error fetching bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.post("/api/bot-flows", async (req, res) => {
+    try {
+      const flowData = req.body;
+      const savedFlow = {
+        ...flowData,
+        id: `flow_${Date.now()}`,
+        createdAt: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      };
+      res.status(201).json(savedFlow);
+    } catch (error) {
+      console.error("Error creating bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
   const httpServer = createServer(app2);

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useRoute, useLocation } from 'wouter';
 import { ArrowLeft, Save, Play, Download, Upload, Copy, Trash2 } from 'lucide-react';
 import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 
@@ -140,8 +140,9 @@ const mockApi = {
 interface BotFlowBuilderPageProps {}
 
 export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
-  const { flowId } = useParams<{ flowId?: string }>();
-  const navigate = useNavigate();
+  const [match, params] = useRoute('/bot-flows/:flowId');
+  const [location, setLocation] = useLocation();
+  const flowId = params?.flowId;
   
   const [flow, setFlow] = useState<BotFlow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,7 +195,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // If this was a new flow, redirect to the saved flow
       if (!flowId || flowId === 'new') {
-        navigate(`/bot-flows/${savedFlow.id}`, { replace: true });
+        setLocation(`/bot-flows/${savedFlow.id}`);
       }
       
       // Show success message
@@ -258,7 +259,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
         <div className="text-center">
           <p className="text-gray-600 mb-4">Bot flow not found</p>
           <button
-            onClick={() => navigate('/bot-flows')}
+            onClick={() => setLocation('/bot-flows')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Bot Flows
@@ -275,7 +276,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => navigate('/bot-flows')}
+              onClick={() => setLocation('/bot-flows')}
               className="flex items-center text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft size={20} className="mr-2" />

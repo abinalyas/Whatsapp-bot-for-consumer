@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { 
   Plus, 
   Search, 
@@ -125,7 +125,7 @@ const mockApi = {
 interface BotFlowsListPageProps {}
 
 export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
   const [flows, setFlows] = useState<BotFlow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -214,7 +214,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               </div>
               
               <button
-                onClick={() => navigate('/bot-flows/new')}
+                onClick={() => setLocation('/bot-flows/new')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               >
                 <Plus size={20} className="mr-2" />
@@ -292,7 +292,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
             </p>
             {!searchTerm && statusFilter === 'all' && (
               <button
-                onClick={() => navigate('/bot-flows/new')}
+                onClick={() => setLocation('/bot-flows/new')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Create Your First Flow
@@ -350,7 +350,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => navigate(`/bot-flows/${flow.id}`)}
+                          onClick={() => setLocation(`/bot-flows/${flow.id}`)}
                           className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           title="Edit flow"
                         >
@@ -358,7 +358,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
                         </button>
                         
                         <button
-                          onClick={() => navigate(`/bot-flows/${flow.id}/preview`)}
+                          onClick={() => setLocation(`/bot-flows/${flow.id}/preview`)}
                           className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                           title="Preview flow"
                         >
