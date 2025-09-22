@@ -13,6 +13,8 @@ import DebugBusinessConfigPage from "@/pages/debug-business-config";
 import CustomerLandingPage from "@/pages/customer-landing";
 import BusinessDashboardPage from "@/pages/business-dashboard";
 import BusinessTypeDemoPage from "@/pages/business-type-demo";
+import BotFlowsListPage from "@/pages/bot-flows-list";
+import BotFlowBuilderPage from "@/pages/bot-flow-builder";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/transactions" component={TransactionsManagementPage} />
       <Route path="/customer" component={CustomerLandingPage} />
       <Route path="/demo" component={BusinessTypeDemoPage} />
+      <Route path="/bot-flows" component={BotFlowsListPage} />
+      <Route path="/bot-flows/:flowId" component={BotFlowBuilderPage} />
       <Route path="/test" component={SimpleTestPage} />
       <Route component={NotFound} />
     </Switch>

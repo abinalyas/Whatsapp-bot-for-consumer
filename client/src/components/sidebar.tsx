@@ -9,6 +9,7 @@ export function Sidebar() {
     { href: "/business-config-full", label: "Business Setup", icon: "fas fa-building" },
     { href: "/offerings", label: "Services", icon: "fas fa-cut" },
     { href: "/transactions", label: "Appointments", icon: "fas fa-calendar-check" },
+    { href: "/bot-flows", label: "Bot Flows", icon: "fas fa-project-diagram" },
     { href: "/demo", label: "Business Demo", icon: "fas fa-eye" },
     { href: "/customer", label: "Customer View", icon: "fas fa-external-link-alt" },
     { href: "/conversations", label: "WhatsApp Bot", icon: "fas fa-comments" },
