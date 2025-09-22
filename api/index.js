@@ -778,7 +778,7 @@ var DatabaseStorageImpl = class {
     return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
   }
 };
-var storage = process.env.NODE_ENV === "production" && process.env.DATABASE_URL ? new DatabaseStorageImpl() : new InMemoryStorage();
+var storage = process.env.USE_DATABASE === "true" && process.env.DATABASE_URL ? new DatabaseStorageImpl() : new InMemoryStorage();
 
 // server/routes.ts
 import { z } from "zod";

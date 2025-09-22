@@ -364,6 +364,7 @@ export class DatabaseStorageImpl implements IStorage {
 }
 
 // Export the appropriate storage implementation based on environment
-export const storage: IStorage = process.env.NODE_ENV === 'production' && process.env.DATABASE_URL 
+// Temporarily use InMemoryStorage for production until database migration is complete
+export const storage: IStorage = process.env.USE_DATABASE === 'true' && process.env.DATABASE_URL 
   ? new DatabaseStorageImpl() 
   : new InMemoryStorage();
