@@ -1,49 +1,70 @@
--- Migration to add missing columns to production database
--- This addresses the "column does not exist" errors
+-- Migration: Add missing columns to existing tables
+-- This migration adds columns that are referenced in the code but missing from the schema
 
--- Add missing columns to services table
-ALTER TABLE services 
-ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60;
+-- Add payment_reference column to bookings table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'bookings' AND column_name = 'payment_reference') THEN
+        ALTER TABLE bookings ADD COLUMN payment_reference VARCHAR(255);
+    END IF;
+END $$;
 
--- Add missing columns to bookings table  
-ALTER TABLE bookings 
-ADD COLUMN IF NOT EXISTS customer_email TEXT;
+-- Add created_at column to services table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'services' AND column_name = 'created_at') THEN
+        ALTER TABLE services ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
--- Add missing columns to conversations table (if they don't exist)
-ALTER TABLE conversations 
-ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{}'::jsonb;
+-- Add updated_at column to services table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'services' AND column_name = 'updated_at') THEN
+        ALTER TABLE services ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
--- Add missing columns to messages table (if they don't exist)
-ALTER TABLE messages 
-ADD COLUMN IF NOT EXISTS tenant_id VARCHAR REFERENCES tenants(id) ON DELETE CASCADE;
+-- Add created_at column to bookings table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'bookings' AND column_name = 'created_at') THEN
+        ALTER TABLE bookings ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
--- Update existing messages to have tenant_id from their conversation
-UPDATE messages 
-SET tenant_id = c.tenant_id 
-FROM conversations c 
-WHERE messages.conversation_id = c.id 
-AND messages.tenant_id IS NULL;
+-- Add updated_at column to bookings table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'bookings' AND column_name = 'updated_at') THEN
+        ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
--- Add missing columns to services table for enhanced business model
-ALTER TABLE services 
-ADD COLUMN IF NOT EXISTS category VARCHAR(100),
-ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+-- Create trigger to automatically update updated_at columns
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
--- Add missing columns to bookings table for enhanced business model
-ALTER TABLE bookings 
-ADD COLUMN IF NOT EXISTS custom_fields JSONB DEFAULT '{}'::jsonb,
-ADD COLUMN IF NOT EXISTS transaction_type VARCHAR(50) DEFAULT 'booking';
+-- Add triggers for services table
+DROP TRIGGER IF EXISTS update_services_updated_at ON services;
+CREATE TRIGGER update_services_updated_at
+    BEFORE UPDATE ON services
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_services_tenant_id ON services(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_services_category ON services(category);
-CREATE INDEX IF NOT EXISTS idx_bookings_tenant_id ON bookings(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
-CREATE INDEX IF NOT EXISTS idx_conversations_tenant_id ON conversations(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_messages_tenant_id ON messages(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-
--- Add constraints to ensure data integrity
-ALTER TABLE messages 
-ADD CONSTRAINT IF NOT EXISTS messages_tenant_id_not_null 
-CHECK (tenant_id IS NOT NULL);
+-- Add triggers for bookings table
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
+CREATE TRIGGER update_bookings_updated_at
+    BEFORE UPDATE ON bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

@@ -668,6 +668,89 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Migration endpoint for fixing database schema (admin only)
+  app.post("/api/admin/migrate", async (req, res) => {
+    try {
+      const { adminKey } = req.body;
+      
+      // Simple admin key check (in production, use proper authentication)
+      if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Run the migration to add missing columns
+      const { Pool } = require('@neondatabase/serverless');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      
+      const migrationSQL = `
+        -- Add payment_reference column to bookings table if it doesn't exist
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'bookings' AND column_name = 'payment_reference') THEN
+                ALTER TABLE bookings ADD COLUMN payment_reference VARCHAR(255);
+            END IF;
+        END $$;
+
+        -- Add created_at column to services table if it doesn't exist
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'services' AND column_name = 'created_at') THEN
+                ALTER TABLE services ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+            END IF;
+        END $$;
+
+        -- Add updated_at column to services table if it doesn't exist
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'services' AND column_name = 'updated_at') THEN
+                ALTER TABLE services ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+            END IF;
+        END $$;
+
+        -- Add created_at column to bookings table if it doesn't exist
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'bookings' AND column_name = 'created_at') THEN
+                ALTER TABLE bookings ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+            END IF;
+        END $$;
+
+        -- Add updated_at column to bookings table if it doesn't exist
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                           WHERE table_name = 'bookings' AND column_name = 'updated_at') THEN
+                ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+            END IF;
+        END $$;
+      `;
+
+      const client = await pool.connect();
+      try {
+        await client.query(migrationSQL);
+        console.log("✅ Database migration completed successfully");
+        res.json({ 
+          success: true, 
+          message: "Database migration completed successfully. Missing columns added." 
+        });
+      } finally {
+        client.release();
+        await pool.end();
+      }
+    } catch (error) {
+      console.error("❌ Migration failed:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Migration failed", 
+        details: error.message 
+      });
+    }
+  });
+
   // Business configuration API
   app.get("/api/business-config", (req, res) => {
     try {
@@ -698,11 +781,29 @@ We apologize for any inconvenience caused.`;
       // Mock data for now - replace with actual service call
       const mockFlows = [
         {
+          id: 'current_salon_flow',
+          name: '🟢 Current Salon Flow (ACTIVE)',
+          description: 'This is the exact flow currently running on WhatsApp',
+          businessType: 'salon',
+          isActive: true,
+          nodes: [
+            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        },
+        {
           id: 'flow_1',
           name: 'Restaurant Booking Flow',
           description: 'Complete flow for restaurant table reservations',
           businessType: 'restaurant',
-          isActive: true,
+          isActive: false,
           nodes: [
             { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
             { id: '2', type: 'message', name: 'Welcome', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },

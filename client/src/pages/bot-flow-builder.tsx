@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { ArrowLeft, Save, Play, Download, Upload, Copy, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Play, Copy } from 'lucide-react';
 import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 
 // API functions
@@ -88,8 +88,8 @@ const api = {
 interface BotFlowBuilderPageProps {}
 
 export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
-  const [match, params] = useRoute('/bot-flows/:flowId');
-  const [location, setLocation] = useLocation();
+  const [, params] = useRoute('/bot-flows/:flowId');
+  const [, setLocation] = useLocation();
   const flowId = params?.flowId;
   
   const [flow, setFlow] = useState<BotFlow | null>(null);

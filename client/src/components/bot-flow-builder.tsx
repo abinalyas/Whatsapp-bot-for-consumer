@@ -3,7 +3,7 @@
  * Drag-and-drop interface for creating WhatsApp bot conversation flows
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { 
   Plus, 
   Save, 
@@ -15,9 +15,7 @@ import {
   GitBranch, 
   Zap, 
   Link,
-  Eye,
-  Download,
-  Upload
+  Eye
 } from 'lucide-react';
 
 // ===== TYPES =====
@@ -130,7 +128,6 @@ interface BotFlowBuilderProps {
 }
 
 export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
-  tenantId,
   businessType,
   initialFlow,
   onSave,
