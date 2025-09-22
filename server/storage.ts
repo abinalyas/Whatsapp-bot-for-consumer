@@ -364,8 +364,151 @@ export class DatabaseStorageImpl implements IStorage {
   }
 }
 
-// Export the appropriate storage implementation based on environment
-// Use CompatibleDatabaseStorage for production to work with current database schema
-export const storage: IStorage = process.env.DATABASE_URL 
-  ? new CompatibleDatabaseStorage() as IStorage
-  : new InMemoryStorage();
+// Hybrid storage that falls back to in-memory if database fails
+class HybridStorage implements IStorage {
+  private dbStorage: CompatibleDatabaseStorage;
+  private memoryStorage: InMemoryStorage;
+  private useDatabase: boolean = true;
+
+  constructor() {
+    this.dbStorage = new CompatibleDatabaseStorage();
+    this.memoryStorage = new InMemoryStorage();
+  }
+
+  private async tryDatabase<T>(operation: () => Promise<T>): Promise<T> {
+    if (!this.useDatabase) {
+      throw new Error("Database disabled");
+    }
+    
+    try {
+      return await operation();
+    } catch (error) {
+      console.warn("Database operation failed, falling back to memory storage:", error);
+      this.useDatabase = false;
+      throw error;
+    }
+  }
+
+  async getServices(): Promise<Service[]> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getServices());
+    } catch {
+      return await this.memoryStorage.getServices();
+    }
+  }
+
+  async getService(id: string): Promise<Service | undefined> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getService(id));
+    } catch {
+      return await this.memoryStorage.getService(id);
+    }
+  }
+
+  async createService(service: InsertService): Promise<Service> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createService(service));
+    } catch {
+      return await this.memoryStorage.createService(service);
+    }
+  }
+
+  async updateService(id: string, service: Partial<InsertService>): Promise<Service | undefined> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateService(id, service));
+    } catch {
+      return await this.memoryStorage.updateService(id, service);
+    }
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.deleteService(id));
+    } catch {
+      return await this.memoryStorage.deleteService(id);
+    }
+  }
+
+  async getConversation(phoneNumber: string): Promise<Conversation | undefined> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getConversation(phoneNumber));
+    } catch {
+      return await this.memoryStorage.getConversation(phoneNumber);
+    }
+  }
+
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createConversation(conversation));
+    } catch {
+      return await this.memoryStorage.createConversation(conversation);
+    }
+  }
+
+  async updateConversation(id: string, conversation: Partial<InsertConversation>): Promise<Conversation | undefined> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateConversation(id, conversation));
+    } catch {
+      return await this.memoryStorage.updateConversation(id, conversation);
+    }
+  }
+
+  async getMessages(conversationId: string): Promise<Message[]> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getMessages(conversationId));
+    } catch {
+      return await this.memoryStorage.getMessages(conversationId);
+    }
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createMessage(message));
+    } catch {
+      return await this.memoryStorage.createMessage(message);
+    }
+  }
+
+  async getBookings(): Promise<Booking[]> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getBookings());
+    } catch {
+      return await this.memoryStorage.getBookings();
+    }
+  }
+
+  async createBooking(booking: InsertBooking): Promise<Booking> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createBooking(booking));
+    } catch {
+      return await this.memoryStorage.createBooking(booking);
+    }
+  }
+
+  async updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking | undefined> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateBooking(id, booking));
+    } catch {
+      return await this.memoryStorage.updateBooking(id, booking);
+    }
+  }
+
+  async getTodayBookings(): Promise<Booking[]> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getTodayBookings());
+    } catch {
+      return await this.memoryStorage.getTodayBookings();
+    }
+  }
+
+  async getTodayRevenue(): Promise<number> {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getTodayRevenue());
+    } catch {
+      return await this.memoryStorage.getTodayRevenue();
+    }
+  }
+}
+
+// Export the hybrid storage that falls back gracefully
+export const storage: IStorage = new HybridStorage();

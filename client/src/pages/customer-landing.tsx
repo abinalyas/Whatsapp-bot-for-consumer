@@ -99,82 +99,19 @@ export const CustomerLandingPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Mock business configuration - in real app this would come from API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get business type from URL params or default to salon
+      const urlParams = new URLSearchParams(window.location.search);
+      const businessType = urlParams.get('type') || 'salon';
       
-      const mockConfig: BusinessConfig = {
-        id: 'demo-business-001',
-        businessName: 'Spark Beauty Salon',
-        businessType: {
-          id: '2',
-          name: 'Beauty Salon',
-          category: 'Beauty & Wellness',
-          terminology: {
-            offering: 'Service',
-            transaction: 'Appointment',
-            customer: 'Client',
-            booking: 'Appointment'
-          }
-        },
-        branding: {
-          primaryColor: '#ec4899',
-          secondaryColor: '#64748b'
-        },
-        contact: {
-          phone: '+1 (555) 123-4567',
-          email: 'hello@sparkbeauty.com',
-          address: '123 Beauty Street, Salon City, SC 12345'
-        },
-        offerings: [
-          {
-            id: '1',
-            name: 'Haircut & Style',
-            description: 'Professional haircut with styling and finishing',
-            basePrice: 45,
-            duration: 60,
-            category: 'Hair Services',
-            isActive: true,
-            variants: [
-              { id: '1a', name: 'Short Hair', priceModifier: 0 },
-              { id: '1b', name: 'Long Hair', priceModifier: 15 }
-            ]
-          },
-          {
-            id: '2',
-            name: 'Hair Color',
-            description: 'Full hair coloring service with consultation',
-            basePrice: 120,
-            duration: 180,
-            category: 'Hair Services',
-            isActive: true,
-            variants: [
-              { id: '2a', name: 'Single Color', priceModifier: 0 },
-              { id: '2b', name: 'Highlights', priceModifier: 30 },
-              { id: '2c', name: 'Full Color + Highlights', priceModifier: 60 }
-            ]
-          },
-          {
-            id: '3',
-            name: 'Manicure',
-            description: 'Professional nail care and polish application',
-            basePrice: 25,
-            duration: 45,
-            category: 'Nail Services',
-            isActive: true
-          },
-          {
-            id: '4',
-            name: 'Facial Treatment',
-            description: 'Relaxing facial with cleansing and moisturizing',
-            basePrice: 65,
-            duration: 75,
-            category: 'Skin Care',
-            isActive: true
-          }
-        ]
-      };
-
-      setBusinessConfig(mockConfig);
+      // Fetch business configuration from API
+      const response = await fetch(`/api/business-config?type=${businessType}`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setBusinessConfig(result.data);
+      } else {
+        throw new Error('Failed to load business configuration');
+      }
     } catch (error) {
       console.error('Failed to load business config:', error);
     } finally {

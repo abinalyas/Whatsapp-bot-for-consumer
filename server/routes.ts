@@ -614,8 +614,29 @@ We apologize for any inconvenience caused.`;
     }
   });
 
-  // Business configuration routes
-  // app.use("/api/business-config", businessConfigRoutes); // Temporarily disabled
+  // Business configuration API
+  app.get("/api/business-config", (req, res) => {
+    try {
+      const { getBusinessConfig } = require("./business-config-api");
+      const businessType = req.query.type as string;
+      const config = getBusinessConfig(businessType);
+      res.json({ success: true, data: config });
+    } catch (error) {
+      console.error("Error fetching business config:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch business config" });
+    }
+  });
+
+  app.get("/api/business-types", (req, res) => {
+    try {
+      const { getAllBusinessTypes } = require("./business-config-api");
+      const types = getAllBusinessTypes();
+      res.json({ success: true, data: types });
+    } catch (error) {
+      console.error("Error fetching business types:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch business types" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

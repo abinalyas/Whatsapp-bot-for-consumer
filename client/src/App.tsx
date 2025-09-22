@@ -12,6 +12,7 @@ import TransactionsManagementPage from "@/pages/transactions-management";
 import DebugBusinessConfigPage from "@/pages/debug-business-config";
 import CustomerLandingPage from "@/pages/customer-landing";
 import BusinessDashboardPage from "@/pages/business-dashboard";
+import BusinessTypeDemoPage from "@/pages/business-type-demo";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/offerings" component={OfferingsManagementPage} />
       <Route path="/transactions" component={TransactionsManagementPage} />
       <Route path="/customer" component={CustomerLandingPage} />
+      <Route path="/demo" component={BusinessTypeDemoPage} />
       <Route path="/test" component={SimpleTestPage} />
       <Route component={NotFound} />
     </Switch>

@@ -1,8 +1,279 @@
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// server/business-config-api.ts
+var business_config_api_exports = {};
+__export(business_config_api_exports, {
+  getAllBusinessTypes: () => getAllBusinessTypes,
+  getBusinessConfig: () => getBusinessConfig
+});
+function getBusinessConfig(businessType) {
+  const type = businessType || "salon";
+  return businessConfigs[type] || businessConfigs["salon"];
+}
+function getAllBusinessTypes() {
+  return Object.keys(businessConfigs);
+}
+var businessConfigs;
+var init_business_config_api = __esm({
+  "server/business-config-api.ts"() {
+    "use strict";
+    businessConfigs = {
+      "restaurant": {
+        id: "demo-restaurant-001",
+        businessName: "Spark Restaurant",
+        businessType: {
+          id: "1",
+          name: "Restaurant",
+          category: "Food & Beverage",
+          terminology: {
+            offering: "Menu Item",
+            transaction: "Order",
+            customer: "Diner",
+            booking: "Reservation"
+          }
+        },
+        branding: {
+          primaryColor: "#f97316",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkrestaurant.com",
+          address: "123 Food Street, Restaurant City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Grilled Chicken",
+            description: "Perfectly grilled chicken with herbs and spices",
+            basePrice: 18,
+            category: "Main Course",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Regular", priceModifier: 0 },
+              { id: "1b", name: "Large", priceModifier: 5 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Caesar Salad",
+            description: "Fresh romaine lettuce with caesar dressing",
+            basePrice: 12,
+            category: "Salads",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Pasta Carbonara",
+            description: "Creamy pasta with bacon and parmesan",
+            basePrice: 16,
+            category: "Pasta",
+            isActive: true
+          }
+        ]
+      },
+      "clinic": {
+        id: "demo-clinic-001",
+        businessName: "Spark Medical Clinic",
+        businessType: {
+          id: "3",
+          name: "Medical Clinic",
+          category: "Healthcare",
+          terminology: {
+            offering: "Treatment",
+            transaction: "Appointment",
+            customer: "Patient",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#10b981",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "appointments@sparkclinic.com",
+          address: "123 Health Street, Medical City, MC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "General Consultation",
+            description: "Comprehensive health checkup with our doctors",
+            basePrice: 85,
+            duration: 30,
+            category: "Consultation",
+            isActive: true
+          },
+          {
+            id: "2",
+            name: "Blood Test",
+            description: "Complete blood count and analysis",
+            basePrice: 45,
+            duration: 15,
+            category: "Laboratory",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "X-Ray",
+            description: "Digital X-ray imaging service",
+            basePrice: 65,
+            duration: 20,
+            category: "Imaging",
+            isActive: true
+          }
+        ]
+      },
+      "retail": {
+        id: "demo-retail-001",
+        businessName: "Spark Retail Store",
+        businessType: {
+          id: "4",
+          name: "Retail Store",
+          category: "Retail",
+          terminology: {
+            offering: "Product",
+            transaction: "Order",
+            customer: "Customer",
+            booking: "Order"
+          }
+        },
+        branding: {
+          primaryColor: "#3b82f6",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "orders@sparkretail.com",
+          address: "123 Shopping Street, Retail City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Premium T-Shirt",
+            description: "High-quality cotton t-shirt in various colors",
+            basePrice: 25,
+            category: "Clothing",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Small", priceModifier: 0 },
+              { id: "1b", name: "Medium", priceModifier: 0 },
+              { id: "1c", name: "Large", priceModifier: 2 },
+              { id: "1d", name: "XL", priceModifier: 4 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Wireless Headphones",
+            description: "Bluetooth wireless headphones with noise cancellation",
+            basePrice: 89,
+            category: "Electronics",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Coffee Mug",
+            description: "Ceramic coffee mug with custom design",
+            basePrice: 15,
+            category: "Home & Kitchen",
+            isActive: true
+          }
+        ]
+      },
+      "salon": {
+        id: "demo-salon-001",
+        businessName: "Spark Beauty Salon",
+        businessType: {
+          id: "2",
+          name: "Beauty Salon",
+          category: "Beauty & Wellness",
+          terminology: {
+            offering: "Service",
+            transaction: "Appointment",
+            customer: "Client",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#ec4899",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkbeauty.com",
+          address: "123 Beauty Street, Salon City, SC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Haircut & Style",
+            description: "Professional haircut with styling and finishing",
+            basePrice: 45,
+            duration: 60,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Short Hair", priceModifier: 0 },
+              { id: "1b", name: "Long Hair", priceModifier: 15 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Hair Color",
+            description: "Full hair coloring service with consultation",
+            basePrice: 120,
+            duration: 180,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "2a", name: "Single Color", priceModifier: 0 },
+              { id: "2b", name: "Highlights", priceModifier: 30 },
+              { id: "2c", name: "Full Color + Highlights", priceModifier: 60 }
+            ]
+          },
+          {
+            id: "3",
+            name: "Manicure",
+            description: "Professional nail care and polish application",
+            basePrice: 25,
+            duration: 45,
+            category: "Nail Services",
+            isActive: true
+          },
+          {
+            id: "4",
+            name: "Facial Treatment",
+            description: "Relaxing facial with cleansing and moisturizing",
+            basePrice: 65,
+            duration: 75,
+            category: "Skin Care",
+            isActive: true
+          }
+        ]
+      }
+    };
+  }
+});
 
 // server/vercel.ts
 import express2 from "express";
@@ -928,7 +1199,133 @@ var InMemoryStorage = class {
     return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
   }
 };
-var storage = process.env.DATABASE_URL ? new CompatibleDatabaseStorage() : new InMemoryStorage();
+var HybridStorage = class {
+  dbStorage;
+  memoryStorage;
+  useDatabase = true;
+  constructor() {
+    this.dbStorage = new CompatibleDatabaseStorage();
+    this.memoryStorage = new InMemoryStorage();
+  }
+  async tryDatabase(operation) {
+    if (!this.useDatabase) {
+      throw new Error("Database disabled");
+    }
+    try {
+      return await operation();
+    } catch (error) {
+      console.warn("Database operation failed, falling back to memory storage:", error);
+      this.useDatabase = false;
+      throw error;
+    }
+  }
+  async getServices() {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getServices());
+    } catch {
+      return await this.memoryStorage.getServices();
+    }
+  }
+  async getService(id) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getService(id));
+    } catch {
+      return await this.memoryStorage.getService(id);
+    }
+  }
+  async createService(service) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createService(service));
+    } catch {
+      return await this.memoryStorage.createService(service);
+    }
+  }
+  async updateService(id, service) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateService(id, service));
+    } catch {
+      return await this.memoryStorage.updateService(id, service);
+    }
+  }
+  async deleteService(id) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.deleteService(id));
+    } catch {
+      return await this.memoryStorage.deleteService(id);
+    }
+  }
+  async getConversation(phoneNumber) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getConversation(phoneNumber));
+    } catch {
+      return await this.memoryStorage.getConversation(phoneNumber);
+    }
+  }
+  async createConversation(conversation) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createConversation(conversation));
+    } catch {
+      return await this.memoryStorage.createConversation(conversation);
+    }
+  }
+  async updateConversation(id, conversation) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateConversation(id, conversation));
+    } catch {
+      return await this.memoryStorage.updateConversation(id, conversation);
+    }
+  }
+  async getMessages(conversationId) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getMessages(conversationId));
+    } catch {
+      return await this.memoryStorage.getMessages(conversationId);
+    }
+  }
+  async createMessage(message) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createMessage(message));
+    } catch {
+      return await this.memoryStorage.createMessage(message);
+    }
+  }
+  async getBookings() {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getBookings());
+    } catch {
+      return await this.memoryStorage.getBookings();
+    }
+  }
+  async createBooking(booking) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.createBooking(booking));
+    } catch {
+      return await this.memoryStorage.createBooking(booking);
+    }
+  }
+  async updateBooking(id, booking) {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.updateBooking(id, booking));
+    } catch {
+      return await this.memoryStorage.updateBooking(id, booking);
+    }
+  }
+  async getTodayBookings() {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getTodayBookings());
+    } catch {
+      return await this.memoryStorage.getTodayBookings();
+    }
+  }
+  async getTodayRevenue() {
+    try {
+      return await this.tryDatabase(() => this.dbStorage.getTodayRevenue());
+    } catch {
+      return await this.memoryStorage.getTodayRevenue();
+    }
+  }
+};
+var storage = new HybridStorage();
 
 // server/routes.ts
 import { z } from "zod";
@@ -1428,6 +1825,27 @@ We apologize for any inconvenience caused.`;
     } catch (error) {
       console.error("Error processing test message:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.get("/api/business-config", (req, res) => {
+    try {
+      const { getBusinessConfig: getBusinessConfig2 } = (init_business_config_api(), __toCommonJS(business_config_api_exports));
+      const businessType = req.query.type;
+      const config = getBusinessConfig2(businessType);
+      res.json({ success: true, data: config });
+    } catch (error) {
+      console.error("Error fetching business config:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch business config" });
+    }
+  });
+  app2.get("/api/business-types", (req, res) => {
+    try {
+      const { getAllBusinessTypes: getAllBusinessTypes2 } = (init_business_config_api(), __toCommonJS(business_config_api_exports));
+      const types = getAllBusinessTypes2();
+      res.json({ success: true, data: types });
+    } catch (error) {
+      console.error("Error fetching business types:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch business types" });
     }
   });
   const httpServer = createServer(app2);
