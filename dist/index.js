@@ -2995,6 +2995,9 @@ var createServiceSchema = z.object({
   price: z.number().min(0),
   icon: z.string().optional()
 });
+var WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+var PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID;
+var USD_TO_INR_RATE = 83;
 async function sendWhatsAppMessage(to, message) {
   try {
     const phoneNumberId = process.env.WHATSAPP_PHONE_ID;
@@ -3029,7 +3032,7 @@ async function sendWhatsAppMessage(to, message) {
 }
 function generateUPILink(amount, serviceName) {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  const inrAmount = Math.round(amount * 83);
+  const inrAmount = Math.round(amount * USD_TO_INR_RATE);
   return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 async function processWhatsAppMessage(from, messageText) {
@@ -3097,7 +3100,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
       const activeServices = services2.filter((s) => s.isActive);
       response = "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach((service) => {
-        const inrPrice = Math.round(service.price * 83);
+        const inrPrice = Math.round(service.price * USD_TO_INR_RATE);
         response += `\u{1F487}\u200D\u2640\uFE0F ${service.name} \u2013 \u20B9${inrPrice}
 `;
       });
@@ -3109,7 +3112,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
         (s) => s.isActive && s.name.toLowerCase() === text3.toLowerCase()
       );
       if (selectedService) {
-        const inrPrice = Math.round(selectedService.price * 83);
+        const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE);
         response = `Perfect! You've selected ${selectedService.name} (\u20B9${inrPrice}).
 
 `;
@@ -3236,7 +3239,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
 `;
               response += `Time: ${selectedTime}
 `;
-              const inrPrice = Math.round(selectedService.price * 83);
+              const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE);
               response += `Amount: \u20B9${inrPrice}
 
 `;
@@ -3537,15 +3540,25 @@ We apologize for any inconvenience caused.`;
   app2.get("/api/stats", async (req, res) => {
     try {
       const todayBookings = await storage.getTodayBookings();
-      const todayRevenue = await storage.getTodayRevenue();
+      const todayRevenueUSD = todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
+      const todayRevenueINR = Math.round(todayRevenueUSD * USD_TO_INR_RATE);
       const allBookings = await storage.getBookings();
-      const todayMessages = todayBookings.length * 4;
+      let todayMessages = 0;
+      for (const booking of todayBookings) {
+        const messages2 = await storage.getMessages(booking.conversationId);
+        todayMessages += messages2.length;
+      }
+      let responseRate = 98;
+      if (todayMessages > 0) {
+        const botMessages = Math.floor(todayMessages / 2);
+        responseRate = Math.min(100, Math.round(botMessages / todayMessages * 100));
+      }
       const stats = {
         todayMessages,
         todayBookings: todayBookings.length,
-        todayRevenue,
-        responseRate: 98,
-        // Static for now
+        todayRevenue: todayRevenueINR,
+        // Return INR value to match dashboard display
+        responseRate,
         totalBookings: allBookings.length
       };
       res.json(stats);

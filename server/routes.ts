@@ -48,6 +48,13 @@ const createServiceSchema = z.object({
   icon: z.string().optional(),
 });
 
+// WhatsApp Cloud API credentials
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID;
+
+// Currency conversion rate (USD to INR)
+const USD_TO_INR_RATE = 83;
+
 // Helper function to send WhatsApp message
 async function sendWhatsAppMessage(to: string, message: string): Promise<boolean> {
   try {
@@ -90,7 +97,7 @@ async function sendWhatsAppMessage(to: string, message: string): Promise<boolean
 // Generate UPI payment link (convert USD to INR for payment)
 function generateUPILink(amount: number, serviceName: string): string {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  const inrAmount = Math.round(amount * 83); // Convert USD to INR (approximate rate)
+  const inrAmount = Math.round(amount * USD_TO_INR_RATE); // Convert USD to INR (approximate rate)
   return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 
@@ -195,7 +202,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       
       response = "👋 Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach(service => {
-        const inrPrice = Math.round(service.price * 83); // Convert USD to INR for display
+        const inrPrice = Math.round(service.price * USD_TO_INR_RATE); // Convert USD to INR for display
         response += `💇‍♀️ ${service.name} – ₹${inrPrice}\n`;
       });
       response += "\nReply with service name to book.";
@@ -210,7 +217,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       
       if (selectedService) {
         // Move to appointment scheduling
-        const inrPrice = Math.round(selectedService.price * 83); // Convert USD to INR for display
+        const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE); // Convert USD to INR for display
         response = `Perfect! You've selected ${selectedService.name} (₹${inrPrice}).\n\n`;
         response += "📅 Now, please select your preferred appointment date.\n\n";
         response += "Available dates:\n";
@@ -359,7 +366,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
               response += `Service: ${selectedService.name}\n`;
               response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
               response += `Time: ${selectedTime}\n`;
-              const inrPrice = Math.round(selectedService.price * 83); // Convert USD to INR for display
+              const inrPrice = Math.round(selectedService.price * USD_TO_INR_RATE); // Convert USD to INR for display
               response += `Amount: ₹${inrPrice}\n\n`;
               response += `💳 Please complete your payment:\n${upiLink}\n\n`;
               response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
@@ -717,18 +724,40 @@ We apologize for any inconvenience caused.`;
 
   app.get("/api/stats", async (req, res) => {
     try {
+      // Get today's bookings
       const todayBookings = await storage.getTodayBookings();
-      const todayRevenue = await storage.getTodayRevenue();
+      
+      // Calculate today's revenue (convert USD to INR like in WhatsApp bot)
+      const todayRevenueUSD = todayBookings
+        .filter(booking => booking.status === "confirmed")
+        .reduce((total, booking) => total + booking.amount, 0);
+      const todayRevenueINR = Math.round(todayRevenueUSD * USD_TO_INR_RATE); // Convert USD to INR using constant
+      
+      // Get all bookings for total count
       const allBookings = await storage.getBookings();
       
-      // Calculate today's messages (approximate based on bookings)
-      const todayMessages = todayBookings.length * 4; // Estimate 4 messages per booking flow
+      // Calculate today's messages by getting all messages for today's conversations
+      let todayMessages = 0;
+      for (const booking of todayBookings) {
+        const messages = await storage.getMessages(booking.conversationId);
+        todayMessages += messages.length;
+      }
+      
+      // Calculate response rate (simplified calculation)
+      // For now, we'll calculate based on the ratio of bot messages to total messages
+      // A more accurate calculation would require tracking message responses
+      let responseRate = 98; // Default
+      if (todayMessages > 0) {
+        // Estimate that about half of messages are from the bot
+        const botMessages = Math.floor(todayMessages / 2);
+        responseRate = Math.min(100, Math.round((botMessages / todayMessages) * 100));
+      }
       
       const stats = {
         todayMessages,
         todayBookings: todayBookings.length,
-        todayRevenue,
-        responseRate: 98, // Static for now
+        todayRevenue: todayRevenueINR, // Return INR value to match dashboard display
+        responseRate,
         totalBookings: allBookings.length,
       };
       
