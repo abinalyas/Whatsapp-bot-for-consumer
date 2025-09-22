@@ -6,11 +6,11 @@ export function Sidebar() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
-    { href: "/business-config", label: "Quick Setup", icon: "fas fa-rocket" },
-    { href: "/business-config-full", label: "Business Config", icon: "fas fa-building" },
-    { href: "/offerings", label: "Offerings", icon: "fas fa-cut" },
-    { href: "/transactions", label: "Transactions", icon: "fas fa-calendar-check" },
-    { href: "/conversations", label: "Conversations", icon: "fas fa-comments" },
+    { href: "/business-config-full", label: "Business Setup", icon: "fas fa-building" },
+    { href: "/offerings", label: "Services", icon: "fas fa-cut" },
+    { href: "/transactions", label: "Appointments", icon: "fas fa-calendar-check" },
+    { href: "/customer", label: "Customer View", icon: "fas fa-external-link-alt" },
+    { href: "/conversations", label: "WhatsApp Bot", icon: "fas fa-comments" },
     { href: "/analytics", label: "Analytics", icon: "fas fa-chart-bar" },
     { href: "/settings", label: "Settings", icon: "fas fa-cog" },
   ];

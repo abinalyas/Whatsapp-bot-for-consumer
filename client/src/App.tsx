@@ -10,17 +10,21 @@ import BusinessConfigurationPage from "@/pages/business-configuration";
 import OfferingsManagementPage from "@/pages/offerings-management";
 import TransactionsManagementPage from "@/pages/transactions-management";
 import DebugBusinessConfigPage from "@/pages/debug-business-config";
+import CustomerLandingPage from "@/pages/customer-landing";
+import BusinessDashboardPage from "@/pages/business-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={BusinessDashboardPage} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/business-config" component={SimpleBusinessConfigPage} />
       <Route path="/business-config-full" component={BusinessConfigurationPage} />
       <Route path="/debug-config" component={DebugBusinessConfigPage} />
       <Route path="/offerings" component={OfferingsManagementPage} />
       <Route path="/transactions" component={TransactionsManagementPage} />
+      <Route path="/customer" component={CustomerLandingPage} />
       <Route path="/test" component={SimpleTestPage} />
       <Route component={NotFound} />
     </Switch>
