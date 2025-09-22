@@ -287,17 +287,15 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
             currentState: "awaiting_payment",
           });
           
-          // Get the latest conversation data to ensure we have selectedDate
-          const latestConversation = await storage.getConversation(from);
-          
-          if (latestConversation && latestConversation.selectedDate) {
+          // Use the conversation object that was just updated which contains selectedDate
+        if (updatedConversation && updatedConversation.selectedDate) {
             // Generate UPI payment link
             const upiLink = generateUPILink(selectedService.price, selectedService.name);
             
             response = `Perfect! Your appointment is scheduled for ${selectedTime}.\n\n`;
             response += `📋 Booking Summary:\n`;
             response += `Service: ${selectedService.name}\n`;
-            response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+            response += `Date: ${new Date(updatedConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
             response += `Time: ${selectedTime}\n`;
             const inrPrice = Math.round(selectedService.price * 83); // Convert USD to INR for display
             response += `Amount: ₹${inrPrice}\n\n`;
@@ -508,14 +506,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let notificationMessage = '';
           
           if (status === 'confirmed') {
-            const appointmentDate = booking.appointmentDate 
-              ? new Date(booking.appointmentDate).toLocaleDateString('en-GB', { 
+            // Format appointment date safely
+            let appointmentDateStr = 'your selected date';
+            if (booking.appointmentDate) {
+              try {
+                appointmentDateStr = new Date(booking.appointmentDate).toLocaleDateString('en-GB', { 
                   weekday: 'long', 
                   year: 'numeric', 
                   month: 'long', 
                   day: 'numeric' 
-                })
-              : 'your selected date';
+                });
+              } catch (e) {
+                console.error("Error formatting appointment date:", e);
+              }
+            }
             
             const appointmentTime = booking.appointmentTime || 'your selected time';
 
