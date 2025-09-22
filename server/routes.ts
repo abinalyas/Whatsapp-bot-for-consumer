@@ -835,7 +835,7 @@ We apologize for any inconvenience caused.`;
   // Bot Flows API endpoints
   app.get("/api/bot-flows", async (req, res) => {
     try {
-      // Mock data for now - replace with actual service call
+      // Mock data for now - replace with actual service call  
       const mockFlows = [
         {
           id: 'current_salon_flow',
