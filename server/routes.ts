@@ -638,6 +638,150 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Bot Flows API endpoints
+  app.get("/api/bot-flows", async (req, res) => {
+    try {
+      // Mock data for now - replace with actual service call
+      const mockFlows = [
+        {
+          id: 'flow_1',
+          name: 'Restaurant Booking Flow',
+          description: 'Complete flow for restaurant table reservations',
+          businessType: 'restaurant',
+          isActive: true,
+          nodes: [
+            { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: '2', type: 'message', name: 'Welcome', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: '3', type: 'question', name: 'Date', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: '4', type: 'end', name: 'End', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        },
+        {
+          id: 'flow_2',
+          name: 'Customer Support Flow',
+          description: 'Handle customer inquiries and support requests',
+          businessType: 'restaurant',
+          isActive: false,
+          nodes: [
+            { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: '2', type: 'question', name: 'Issue Type', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
+            { id: '3', type: 'condition', name: 'Route', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        }
+      ];
+
+      res.json({
+        flows: mockFlows,
+        total: mockFlows.length
+      });
+    } catch (error) {
+      console.error("Error fetching bot flows:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/bot-flows/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Mock data for now - replace with actual service call
+      const mockFlow = {
+        id,
+        name: 'Sample Restaurant Bot Flow',
+        description: 'A sample bot flow for restaurant bookings',
+        businessType: 'restaurant',
+        isActive: false,
+        nodes: [
+          {
+            id: 'start_1',
+            type: 'start',
+            name: 'Start',
+            position: { x: 100, y: 100 },
+            configuration: {},
+            connections: [
+              {
+                id: 'conn_1',
+                sourceNodeId: 'start_1',
+                targetNodeId: 'message_1',
+                label: 'Begin'
+              }
+            ],
+            metadata: {}
+          },
+          {
+            id: 'message_1',
+            type: 'message',
+            name: 'Welcome Message',
+            position: { x: 400, y: 100 },
+            configuration: {
+              messageText: 'Welcome to our restaurant! I can help you make a reservation.'
+            },
+            connections: [
+              {
+                id: 'conn_2',
+                sourceNodeId: 'message_1',
+                targetNodeId: 'question_1',
+                label: 'Next'
+              }
+            ],
+            metadata: {}
+          },
+          {
+            id: 'question_1',
+            type: 'question',
+            name: 'Ask for Date',
+            position: { x: 700, y: 100 },
+            configuration: {
+              questionText: 'What date would you like to make a reservation for?',
+              inputType: 'date',
+              variableName: 'reservation_date'
+            },
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [
+          {
+            name: 'reservation_date',
+            type: 'date',
+            description: 'The date for the reservation'
+          },
+          {
+            name: 'party_size',
+            type: 'number',
+            description: 'Number of people'
+          }
+        ]
+      };
+
+      res.json(mockFlow);
+    } catch (error) {
+      console.error("Error fetching bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/bot-flows", async (req, res) => {
+    try {
+      const flowData = req.body;
+      
+      // Mock response for now - replace with actual service call
+      const savedFlow = {
+        ...flowData,
+        id: `flow_${Date.now()}`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      res.status(201).json(savedFlow);
+    } catch (error) {
+      console.error("Error creating bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
