@@ -17,7 +17,6 @@ import { string } from 'zod';
 import { string } from 'zod';
 import { string } from 'zod';
 import { string } from 'zod';
-import { string } from 'zod';
 import { boolean } from 'zod';
 import { request } from 'http';
 import { request } from 'http';
@@ -28,8 +27,6 @@ import { request } from 'http';
 import { string } from 'zod';
 import { boolean } from 'zod';
 import { request } from 'http';
-import { string } from 'zod';
-import { string } from 'zod';
 import { string } from 'zod';
 import { string } from 'zod';
 import { string } from 'zod';
@@ -748,93 +745,13 @@ export class BotFlowBuilderService {
         },
       };
     }
-  }  /
-/ ===== BOT FLOW VALIDATION =====
+  }
+
+  // ===== BOT FLOW VALIDATION =====
 
   /**
    * Validate bot flow
    */
-  async validateBotFlow(tenantId: string, flowId: string): Promise<ServiceResponse<BotFlowValidationResult>> {
-    try {
-      const flowResult = await this.getBotFlow(tenantId, flowId);
-      if (!flowResult.success) {
-        return flowResult as any;
-      }
-
-      const flow = flowResult.data!;
-      const errors: BotFlowValidationResult['errors'] = [];
-      const warnings: BotFlowValidationResult['warnings'] = [];
-
-      // Check for start node
-      const startNodes = flow.nodes.filter(node => node.type === 'start');
-      if (startNodes.length === 0) {
-        errors.push({
-          type: 'error',
-          message: 'Flow must have at least one start node',
-          code: 'MISSING_START_NODE',
-        });
-      } else if (startNodes.length > 1) {
-        errors.push({
-          type: 'error',
-          message: 'Flow can only have one start node',
-          code: 'MULTIPLE_START_NODES',
-        });
-      }
-
-      // Check for end nodes
-      const endNodes = flow.nodes.filter(node => node.type === 'end');
-      if (endNodes.length === 0) {
-        warnings.push({
-          message: 'Flow should have at least one end node',
-          code: 'MISSING_END_NODE',
-        });
-      }
-
-      // Validate each node
-      for (const node of flow.nodes) {
-        const nodeValidation = this.validateNodeConfiguration(node.type, node.configuration);
-        if (!nodeValidation.isValid) {
-          errors.push(...nodeValidation.errors.map(error => ({
-            nodeId: node.id,
-            type: 'error' as const,
-            message: error.message,
-            code: error.code,
-          })));
-        }
-
-        // Check node connections
-        this.validateNodeConnections(node, flow.nodes, errors, warnings);
-      }
-
-      // Check for unreachable nodes
-      this.validateFlowReachability(flow, errors, warnings);
-
-      // Check for infinite loops
-      this.validateFlowLoops(flow, warnings);
-
-      const result: BotFlowValidationResult = {
-        isValid: errors.length === 0,
-        errors,
-        warnings,
-      };
-
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error) {
-      console.error('Error validating bot flow:', error);
-      return {
-        success: false,
-        error: {
-          code: 'BOT_FLOW_VALIDATION_FAILED',
-          message: 'Failed to validate bot flow',
-          tenantId,
-          resourceId: flowId,
-        },
-      };
-    }
-  }
 
   // ===== BOT FLOW TEMPLATES =====
 

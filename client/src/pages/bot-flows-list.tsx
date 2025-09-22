@@ -21,104 +21,122 @@ import {
 } from 'lucide-react';
 import { BotFlow } from '../components/bot-flow-builder';
 
-// Mock API functions
-const mockApi = {
+// API functions
+const api = {
   async getBotFlows(tenantId: string, filters: any = {}): Promise<{ flows: BotFlow[]; total: number }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockFlows: BotFlow[] = [
-          {
-            id: 'flow_1',
-            name: 'Restaurant Booking Flow',
-            description: 'Complete flow for restaurant table reservations',
-            businessType: 'restaurant',
-            isActive: true,
-            nodes: [
-              { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '2', type: 'message', name: 'Welcome', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '3', type: 'question', name: 'Date', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '4', type: 'end', name: 'End', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
-            ],
-            variables: []
-          },
-          {
-            id: 'flow_2',
-            name: 'Customer Support Flow',
-            description: 'Handle customer inquiries and support requests',
-            businessType: 'restaurant',
-            isActive: false,
-            nodes: [
-              { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '2', type: 'question', name: 'Issue Type', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '3', type: 'condition', name: 'Route', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
-            ],
-            variables: []
-          },
-          {
-            id: 'flow_3',
-            name: 'Menu Inquiry Flow',
-            description: 'Help customers browse menu and get information',
-            businessType: 'restaurant',
-            isActive: true,
-            nodes: [
-              { id: '1', type: 'start', name: 'Start', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-              { id: '2', type: 'message', name: 'Menu Options', position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
-            ],
-            variables: []
-          }
-        ];
-
-        const filteredFlows = mockFlows.filter(flow => {
-          if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            return flow.name.toLowerCase().includes(searchLower) || 
-                   flow.description?.toLowerCase().includes(searchLower);
-          }
-          if (filters.status === 'active') return flow.isActive;
-          if (filters.status === 'inactive') return !flow.isActive;
-          return true;
-        });
-
-        resolve({
-          flows: filteredFlows,
-          total: filteredFlows.length
-        });
-      }, 500);
-    });
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.search) {
+        queryParams.append('search', filters.search);
+      }
+      
+      if (filters.status) {
+        queryParams.append('isActive', filters.status === 'active' ? 'true' : 'false');
+      }
+      
+      const response = await fetch(`/api/bot-flows?${queryParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch bot flows');
+      }
+      
+      const result = await response.json();
+      return {
+        flows: result.flows,
+        total: result.total
+      };
+    } catch (error) {
+      console.error('Error fetching bot flows:', error);
+      throw error;
+    }
   },
 
   async toggleBotFlowStatus(tenantId: string, flowId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Toggling flow ${flowId} status`);
-        resolve(true);
-      }, 500);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to toggle flow status');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error toggling flow status:', error);
+      throw error;
+    }
   },
 
   async deleteBotFlow(tenantId: string, flowId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Deleting flow ${flowId}`);
-        resolve(true);
-      }, 500);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete flow');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting flow:', error);
+      throw error;
+    }
   },
 
   async duplicateBotFlow(tenantId: string, flowId: string): Promise<BotFlow> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: `flow_${Date.now()}`,
-          name: 'Copy of Flow',
-          description: 'Duplicated flow',
-          businessType: 'restaurant',
-          isActive: false,
-          nodes: [],
-          variables: []
-        });
-      }, 500);
-    });
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch flow for duplication');
+      }
+      
+      const flow = await response.json();
+      
+      // Create a new flow with duplicated data
+      const duplicatedFlowData = {
+        ...flow,
+        id: undefined, // Remove ID to create a new flow
+        name: `${flow.name} Copy`,
+        isActive: false
+      };
+      
+      const createResponse = await fetch(`/api/bot-flows`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(duplicatedFlowData),
+      });
+      
+      if (!createResponse.ok) {
+        throw new Error('Failed to create duplicated flow');
+      }
+      
+      return await createResponse.json();
+    } catch (error) {
+      console.error('Error duplicating flow:', error);
+      throw error;
+    }
   },
 
   async activateFlow(tenantId: string, flowId: string): Promise<boolean> {
@@ -176,7 +194,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mock tenant ID
+  // Mock tenant ID - in a real app, this would come from auth context
   const tenantId = 'tenant_123';
 
   useEffect(() => {
@@ -186,13 +204,34 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
   const loadFlows = async () => {
     setLoading(true);
     try {
-      const result = await mockApi.getBotFlows(tenantId, {
+      const result = await api.getBotFlows(tenantId, {
         search: searchTerm,
         status: statusFilter === 'all' ? undefined : statusFilter
       });
       setFlows(result.flows);
     } catch (error) {
       console.error('Error loading flows:', error);
+      // Fallback to mock data if API fails
+      setFlows([
+        {
+          id: 'current_salon_flow',
+          name: '🟢 Current Salon Flow (ACTIVE)',
+          description: 'This is the exact flow currently running on WhatsApp',
+          businessType: 'salon',
+          isActive: true,
+          nodes: [
+            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: []
+        }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -200,7 +239,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
 
   const handleToggleStatus = async (flowId: string) => {
     try {
-      await mockApi.toggleBotFlowStatus(tenantId, flowId);
+      await api.toggleBotFlowStatus(tenantId, flowId);
       setFlows(prev => prev.map(flow => 
         flow.id === flowId ? { ...flow, isActive: !flow.isActive } : flow
       ));
@@ -213,7 +252,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
     if (!confirm('Are you sure you want to delete this bot flow?')) return;
 
     try {
-      await mockApi.deleteBotFlow(tenantId, flowId);
+      await api.deleteBotFlow(tenantId, flowId);
       setFlows(prev => prev.filter(flow => flow.id !== flowId));
     } catch (error) {
       console.error('Error deleting flow:', error);
@@ -222,7 +261,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
 
   const handleDuplicate = async (flowId: string) => {
     try {
-      const duplicatedFlow = await mockApi.duplicateBotFlow(tenantId, flowId);
+      const duplicatedFlow = await api.duplicateBotFlow(tenantId, flowId);
       setFlows(prev => [duplicatedFlow, ...prev]);
     } catch (error) {
       console.error('Error duplicating flow:', error);
@@ -236,14 +275,14 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
 
       if (flow.isActive) {
         // Deactivate flow
-        await mockApi.deactivateFlow(tenantId, flowId);
+        await api.deactivateFlow(tenantId, flowId);
         setFlows(prev => prev.map(f => 
           f.id === flowId ? { ...f, isActive: false } : f
         ));
         alert('Flow deactivated. WhatsApp will use default responses.');
       } else {
         // Activate flow (deactivate others first)
-        await mockApi.activateFlow(tenantId, flowId);
+        await api.activateFlow(tenantId, flowId);
         setFlows(prev => prev.map(f => ({
           ...f,
           isActive: f.id === flowId

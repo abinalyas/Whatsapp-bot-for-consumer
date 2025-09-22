@@ -10,7 +10,7 @@ import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 
 // API functions
 const api = {
-  async getBotFlow(tenantId: string, flowId: string): Promise<BotFlow | null> {
+  async getBotFlow(flowId: string): Promise<BotFlow | null> {
     try {
       const response = await fetch(`/api/bot-flows/${flowId}`);
       if (!response.ok) {
@@ -23,33 +23,52 @@ const api = {
     }
   },
 
-  async saveBotFlow(tenantId: string, flow: BotFlow): Promise<BotFlow> {
+  async saveBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
     try {
-      const method = flow.id ? 'PUT' : 'POST';
-      const url = flow.id ? `/api/bot-flows/${flow.id}` : '/api/bot-flows';
+      let response;
       
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(flow),
-      });
+      if (flow.id) {
+        // Update existing flow
+        response = await fetch(`/api/bot-flows/${flow.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(flow),
+        });
+      } else {
+        // Create new flow
+        response = await fetch(`/api/bot-flows`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(flow),
+        });
+      }
       
       if (!response.ok) {
         throw new Error('Failed to save bot flow');
       }
       
-      return await response.json();
+      const savedFlow = await response.json();
+      
+      return {
+        success: true,
+        message: flow.id ? 'Bot flow updated successfully!' : 'Bot flow created successfully!'
+      };
     } catch (error) {
       console.error('Error saving bot flow:', error);
-      throw error;
+      return {
+        success: false,
+        message: 'Error saving bot flow. Please try again.'
+      };
     }
   },
 
-  async testBotFlow(tenantId: string, flow: BotFlow): Promise<{ success: boolean; message: string }> {
+  async testBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`/api/bot-flows/${flow.id}/test`, {
+      const response = await fetch(`/api/bot-flows/${flow.id || 'new'}/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +80,12 @@ const api = {
         throw new Error('Failed to test bot flow');
       }
       
-      return await response.json();
+      const result = await response.json();
+      
+      return {
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
       console.error('Error testing bot flow:', error);
       return {
@@ -111,7 +135,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
     setLoading(true);
     try {
       if (flowId && flowId !== 'new') {
-        const loadedFlow = await api.getBotFlow(tenantId, flowId);
+        const loadedFlow = await api.getBotFlow(flowId);
         setFlow(loadedFlow);
         if (loadedFlow) {
           setBusinessType(loadedFlow.businessType);
@@ -138,7 +162,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const handleSave = async (updatedFlow: BotFlow) => {
     setSaving(true);
     try {
-      const savedFlow = await api.saveBotFlow(tenantId, updatedFlow);
+      const savedFlow = await api.saveBotFlow(updatedFlow);
       setFlow(savedFlow);
       
       // If this was a new flow, redirect to the saved flow
@@ -159,7 +183,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const handleTest = async (flowToTest: BotFlow) => {
     setTesting(true);
     try {
-      const result = await api.testBotFlow(tenantId, flowToTest);
+      const result = await api.testBotFlow(flowToTest);
       alert(result.message);
     } catch (error) {
       console.error('Error testing flow:', error);

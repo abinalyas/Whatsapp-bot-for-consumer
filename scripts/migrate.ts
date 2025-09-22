@@ -1,181 +1,204 @@
 #!/usr/bin/env tsx
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Client } from "pg";
+import { config } from "dotenv";
+import * as schema from "../shared/schema";
 
-import { Pool } from '@neondatabase/serverless';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+config({ path: ".env.local" });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-interface Migration {
-  id: string;
-  name: string;
-  applied_at: Date;
-}
-
-class MigrationRunner {
-  private pool: Pool;
-
-  constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
-  }
-
-  async ensureMigrationsTable(): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS migrations (
-          id varchar PRIMARY KEY,
-          name varchar NOT NULL,
-          applied_at timestamp NOT NULL DEFAULT NOW()
-        );
-      `);
-    } finally {
-      client.release();
-    }
-  }
-
-  async getAppliedMigrations(): Promise<Migration[]> {
-    const client = await this.pool.connect();
-    try {
-      const result = await client.query('SELECT * FROM migrations ORDER BY applied_at');
-      return result.rows;
-    } finally {
-      client.release();
-    }
-  }
-
-  async applyMigration(migrationId: string, migrationName: string, sqlPath: string): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      
-      // Read and execute migration SQL
-      const sql = readFileSync(sqlPath, 'utf-8');
-      await client.query(sql);
-      
-      // Record migration as applied
-      await client.query(
-        'INSERT INTO migrations (id, name) VALUES ($1, $2)',
-        [migrationId, migrationName]
-      );
-      
-      await client.query('COMMIT');
-      console.log(`✅ Applied migration: ${migrationId} - ${migrationName}`);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error(`❌ Failed to apply migration ${migrationId}:`, error);
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  async rollbackMigration(migrationId: string, rollbackSqlPath: string): Promise<void> {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      
-      // Read and execute rollback SQL
-      const sql = readFileSync(rollbackSqlPath, 'utf-8');
-      await client.query(sql);
-      
-      // Remove migration record
-      await client.query('DELETE FROM migrations WHERE id = $1', [migrationId]);
-      
-      await client.query('COMMIT');
-      console.log(`✅ Rolled back migration: ${migrationId}`);
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error(`❌ Failed to rollback migration ${migrationId}:`, error);
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  async close(): Promise<void> {
-    await this.pool.end();
-  }
-}
-
-async function main() {
-  const command = process.argv[2];
-  const migrationId = process.argv[3];
-
-  if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL environment variable is required');
-    process.exit(1);
-  }
-
-  const runner = new MigrationRunner(process.env.DATABASE_URL);
-
+async function runMigration() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+  
   try {
-    await runner.ensureMigrationsTable();
-
-    switch (command) {
-      case 'up':
-        if (!migrationId) {
-          console.error('❌ Migration ID is required for "up" command');
-          console.log('Usage: npm run migrate up <migration_id>');
-          process.exit(1);
-        }
-        
-        const appliedMigrations = await runner.getAppliedMigrations();
-        const isAlreadyApplied = appliedMigrations.some(m => m.id === migrationId);
-        
-        if (isAlreadyApplied) {
-          console.log(`⚠️  Migration ${migrationId} is already applied`);
-          break;
-        }
-
-        const migrationPath = join(__dirname, '..', 'migrations', `${migrationId}.sql`);
-        const migrationName = migrationId.replace(/^\d+_/, '').replace(/_/g, ' ');
-        
-        await runner.applyMigration(migrationId, migrationName, migrationPath);
-        break;
-
-      case 'down':
-        if (!migrationId) {
-          console.error('❌ Migration ID is required for "down" command');
-          console.log('Usage: npm run migrate down <migration_id>');
-          process.exit(1);
-        }
-
-        const rollbackPath = join(__dirname, '..', 'migrations', `${migrationId}_rollback.sql`);
-        await runner.rollbackMigration(migrationId, rollbackPath);
-        break;
-
-      case 'status':
-        const migrations = await runner.getAppliedMigrations();
-        console.log('\n📋 Applied Migrations:');
-        if (migrations.length === 0) {
-          console.log('   No migrations applied yet');
-        } else {
-          migrations.forEach(m => {
-            console.log(`   ✅ ${m.id} - ${m.name} (${m.applied_at.toISOString()})`);
-          });
-        }
-        break;
-
-      default:
-        console.log('Usage:');
-        console.log('  npm run migrate up <migration_id>    - Apply a migration');
-        console.log('  npm run migrate down <migration_id>  - Rollback a migration');
-        console.log('  npm run migrate status               - Show migration status');
-        console.log('');
-        console.log('Available migrations:');
-        console.log('  0001_multi_tenant_schema - Multi-tenant database schema');
-        break;
+    await client.connect();
+    const db = drizzle(client, { schema });
+    
+    console.log("Running migration to add default Spark Salon bot flow...");
+    
+    // Check if the default flow already exists
+    const existingFlows = await db.query.botFlows.findMany({
+      where: (botFlows, { eq }) => eq(botFlows.name, 'Spark Salon Default Flow')
+    });
+    
+    if (existingFlows.length > 0) {
+      console.log("Default Spark Salon bot flow already exists. Skipping creation.");
+      return;
     }
+    
+    // Create the default Spark Salon bot flow
+    const [newFlow] = await db.insert(schema.botFlows).values({
+      name: 'Spark Salon Default Flow',
+      description: 'Default bot flow for Spark Salon WhatsApp bookings',
+      businessType: 'salon',
+      isActive: true,
+      isDefault: true,
+      variables: JSON.stringify([
+        { name: 'selected_service', type: 'string', description: 'The service customer selected' },
+        { name: 'appointment_date', type: 'string', description: 'Preferred appointment date' },
+        { name: 'appointment_time', type: 'string', description: 'Preferred appointment time' },
+        { name: 'customer_name', type: 'string', description: 'Customer name for booking' }
+      ])
+    }).returning();
+    
+    if (!newFlow) {
+      throw new Error("Failed to create default bot flow");
+    }
+    
+    console.log(`Created default bot flow with ID: ${newFlow.id}`);
+    
+    // Create the nodes for the flow
+    const nodes = [
+      {
+        flowId: newFlow.id,
+        nodeType: 'start',
+        name: 'Start',
+        positionX: 100,
+        positionY: 100,
+        config: JSON.stringify({}),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'welcome_msg',
+            label: 'Begin'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'message',
+        name: 'Welcome Message',
+        positionX: 400,
+        positionY: 100,
+        config: JSON.stringify({
+          messageText: '👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut & Style - ₹800\n✨ Facial Treatment - ₹1200\n💆‍♀️ Massage Therapy - ₹1500\n\nReply with service name to book.'
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'service_question',
+            label: 'Next'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'question',
+        name: 'Service Selection',
+        positionX: 700,
+        positionY: 100,
+        config: JSON.stringify({
+          questionText: 'Which service would you like to book?',
+          inputType: 'text',
+          variableName: 'selected_service'
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'date_question',
+            label: 'Next'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'question',
+        name: 'Date Selection',
+        positionX: 1000,
+        positionY: 100,
+        config: JSON.stringify({
+          questionText: 'Please select your preferred appointment date:',
+          inputType: 'date',
+          variableName: 'appointment_date'
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'time_question',
+            label: 'Next'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'question',
+        name: 'Time Selection',
+        positionX: 1300,
+        positionY: 100,
+        config: JSON.stringify({
+          questionText: 'Please select your preferred appointment time:',
+          inputType: 'text',
+          variableName: 'appointment_time'
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'customer_details',
+            label: 'Next'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'question',
+        name: 'Customer Name',
+        positionX: 1600,
+        positionY: 100,
+        config: JSON.stringify({
+          questionText: 'What is your name?',
+          inputType: 'text',
+          variableName: 'customer_name'
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'payment_action',
+            label: 'Next'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'action',
+        name: 'Payment Request',
+        positionX: 1900,
+        positionY: 100,
+        config: JSON.stringify({
+          actionType: 'create_transaction',
+          actionParameters: {
+            amount: 200,
+            currency: 'INR',
+            description: 'Spark Salon Booking Fee'
+          }
+        }),
+        connections: JSON.stringify([
+          {
+            targetNodeId: 'confirmation_end',
+            label: 'Payment Sent'
+          }
+        ])
+      },
+      {
+        flowId: newFlow.id,
+        nodeType: 'end',
+        name: 'Booking Confirmed',
+        positionX: 2200,
+        positionY: 100,
+        config: JSON.stringify({
+          endMessage: '🎉 Booking Confirmed!\n\n📋 Your appointment:\n👤 {{customer_name}}\n💇‍♀️ {{selected_service}}\n📅 {{appointment_date}} at {{appointment_time}}\n\n📍 Spark Salon\n123 Beauty Street\n\nWe will send a reminder 2 hours before your appointment. Thank you! ✨'
+        }),
+        connections: JSON.stringify([])
+      }
+    ];
+    
+    for (const node of nodes) {
+      const [createdNode] = await db.insert(schema.botFlowNodes).values(node).returning();
+      console.log(`Created node: ${createdNode.name}`);
+    }
+    
+    console.log("Migration completed successfully!");
+    
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error("Migration failed:", error);
     process.exit(1);
   } finally {
-    await runner.close();
+    await client.end();
   }
 }
 
-main().catch(console.error);
+runMigration();

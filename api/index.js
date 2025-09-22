@@ -15,11 +15,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc) => {
+var __copyProps = (to, from, except, desc2) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
   }
   return to;
 };
@@ -1468,6 +1468,1320 @@ var storage = new HybridStorage();
 
 // server/routes.ts
 import { z } from "zod";
+
+// server/routes/bot-flow-builder.routes.ts
+import { Router } from "express";
+
+// server/services/bot-flow-builder.service.ts
+import { Pool as Pool2 } from "@neondatabase/serverless";
+import { drizzle as drizzle2 } from "drizzle-orm/neon-serverless";
+import { eq as eq3, and as and3, desc, asc, sql as sql3 } from "drizzle-orm";
+var BotFlowBuilderService = class {
+  db;
+  pool;
+  constructor(connectionString) {
+    this.pool = new Pool2({ connectionString });
+    this.db = drizzle2(this.pool, { schema: schema_exports });
+  }
+  // ===== BOT FLOW MANAGEMENT =====
+  /**
+   * Create new bot flow
+   */
+  async createBotFlow(tenantId, request) {
+    try {
+      const validation = this.validateCreateBotFlowRequest(request);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_VALIDATION_FAILED",
+            message: "Bot flow validation failed",
+            tenantId,
+            details: validation.errors
+          }
+        };
+      }
+      const [botFlow] = await this.db.insert(botFlows).values({
+        tenantId,
+        name: request.name,
+        description: request.description,
+        businessType: request.businessType,
+        isActive: false,
+        // Start inactive until nodes are added
+        isTemplate: request.isTemplate || false,
+        version: "1.0.0",
+        variables: request.variables || [],
+        metadata: request.metadata || {}
+      }).returning();
+      if (request.templateId) {
+        await this.copyTemplateNodes(tenantId, botFlow.id, request.templateId);
+      }
+      const result = await this.getBotFlow(tenantId, botFlow.id);
+      return result;
+    } catch (error) {
+      console.error("Error creating bot flow:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_CREATE_FAILED",
+          message: "Failed to create bot flow",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Get bot flow by ID
+   */
+  async getBotFlow(tenantId, flowId) {
+    try {
+      const [botFlow] = await this.db.select().from(botFlows).where(and3(
+        eq3(botFlows.tenantId, tenantId),
+        eq3(botFlows.id, flowId)
+      ));
+      if (!botFlow) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NOT_FOUND",
+            message: "Bot flow not found",
+            tenantId,
+            resourceId: flowId
+          }
+        };
+      }
+      const nodes = await this.db.select().from(botFlowNodes).where(eq3(botFlowNodes.flowId, flowId)).orderBy(asc(botFlowNodes.createdAt));
+      const result = {
+        ...botFlow,
+        nodes: nodes.map((node) => ({
+          ...node,
+          position: node.position,
+          configuration: node.configuration,
+          connections: node.connections,
+          metadata: node.metadata
+        })),
+        variables: botFlow.variables,
+        metadata: botFlow.metadata
+      };
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error("Error getting bot flow:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_FETCH_FAILED",
+          message: "Failed to fetch bot flow",
+          tenantId,
+          resourceId: flowId
+        }
+      };
+    }
+  }
+  /**
+   * List bot flows
+   */
+  async listBotFlows(tenantId, options = {}) {
+    try {
+      const { businessType, isActive, isTemplate, page = 1, limit = 50 } = options;
+      const offset = (page - 1) * limit;
+      const conditions = [eq3(botFlows.tenantId, tenantId)];
+      if (businessType) {
+        conditions.push(eq3(botFlows.businessType, businessType));
+      }
+      if (isActive !== void 0) {
+        conditions.push(eq3(botFlows.isActive, isActive));
+      }
+      if (isTemplate !== void 0) {
+        conditions.push(eq3(botFlows.isTemplate, isTemplate));
+      }
+      const flows = await this.db.select().from(botFlows).where(and3(...conditions)).orderBy(desc(botFlows.updatedAt)).limit(limit).offset(offset);
+      const [{ count }] = await this.db.select({ count: sql3`count(*)` }).from(botFlows).where(and3(...conditions));
+      const flowsWithNodes = [];
+      for (const flow of flows) {
+        const nodes = await this.db.select().from(botFlowNodes).where(eq3(botFlowNodes.flowId, flow.id)).orderBy(asc(botFlowNodes.createdAt));
+        flowsWithNodes.push({
+          ...flow,
+          nodes: nodes.map((node) => ({
+            ...node,
+            position: node.position,
+            configuration: node.configuration,
+            connections: node.connections,
+            metadata: node.metadata
+          })),
+          variables: flow.variables,
+          metadata: flow.metadata
+        });
+      }
+      return {
+        success: true,
+        data: {
+          flows: flowsWithNodes,
+          total: count,
+          page,
+          limit
+        }
+      };
+    } catch (error) {
+      console.error("Error listing bot flows:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_LIST_FAILED",
+          message: "Failed to list bot flows",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update bot flow
+   */
+  async updateBotFlow(tenantId, flowId, request) {
+    try {
+      const [updatedFlow] = await this.db.update(botFlows).set({
+        ...request,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(and3(
+        eq3(botFlows.tenantId, tenantId),
+        eq3(botFlows.id, flowId)
+      )).returning();
+      if (!updatedFlow) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NOT_FOUND",
+            message: "Bot flow not found",
+            tenantId,
+            resourceId: flowId
+          }
+        };
+      }
+      const result = await this.getBotFlow(tenantId, flowId);
+      return result;
+    } catch (error) {
+      console.error("Error updating bot flow:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_UPDATE_FAILED",
+          message: "Failed to update bot flow",
+          tenantId,
+          resourceId: flowId
+        }
+      };
+    }
+  }
+  /**
+   * Delete bot flow
+   */
+  async deleteBotFlow(tenantId, flowId) {
+    try {
+      await this.db.delete(botFlowNodes).where(eq3(botFlowNodes.flowId, flowId));
+      const [deletedFlow] = await this.db.delete(botFlows).where(and3(
+        eq3(botFlows.tenantId, tenantId),
+        eq3(botFlows.id, flowId)
+      )).returning();
+      if (!deletedFlow) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NOT_FOUND",
+            message: "Bot flow not found",
+            tenantId,
+            resourceId: flowId
+          }
+        };
+      }
+      return {
+        success: true,
+        data: void 0
+      };
+    } catch (error) {
+      console.error("Error deleting bot flow:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_DELETE_FAILED",
+          message: "Failed to delete bot flow",
+          tenantId,
+          resourceId: flowId
+        }
+      };
+    }
+  }
+  // ===== BOT FLOW NODE MANAGEMENT =====
+  /**
+   * Create bot flow node
+   */
+  async createBotFlowNode(tenantId, flowId, request) {
+    try {
+      const flowResult = await this.getBotFlow(tenantId, flowId);
+      if (!flowResult.success) {
+        return flowResult;
+      }
+      const validation = this.validateNodeConfiguration(request.type, request.configuration);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NODE_VALIDATION_FAILED",
+            message: "Bot flow node validation failed",
+            tenantId,
+            details: validation.errors
+          }
+        };
+      }
+      const [node] = await this.db.insert(botFlowNodes).values({
+        tenantId,
+        flowId,
+        type: request.type,
+        name: request.name,
+        description: request.description,
+        position: request.position,
+        configuration: request.configuration,
+        connections: request.connections || [],
+        metadata: request.metadata || {}
+      }).returning();
+      const result = {
+        ...node,
+        position: node.position,
+        configuration: node.configuration,
+        connections: node.connections,
+        metadata: node.metadata
+      };
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error("Error creating bot flow node:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_NODE_CREATE_FAILED",
+          message: "Failed to create bot flow node",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update bot flow node
+   */
+  async updateBotFlowNode(tenantId, nodeId, request) {
+    try {
+      if (request.configuration) {
+        const [existingNode] = await this.db.select().from(botFlowNodes).where(and3(
+          eq3(botFlowNodes.tenantId, tenantId),
+          eq3(botFlowNodes.id, nodeId)
+        ));
+        if (!existingNode) {
+          return {
+            success: false,
+            error: {
+              code: "BOT_FLOW_NODE_NOT_FOUND",
+              message: "Bot flow node not found",
+              tenantId,
+              resourceId: nodeId
+            }
+          };
+        }
+        const validation = this.validateNodeConfiguration(existingNode.type, request.configuration);
+        if (!validation.isValid) {
+          return {
+            success: false,
+            error: {
+              code: "BOT_FLOW_NODE_VALIDATION_FAILED",
+              message: "Bot flow node validation failed",
+              tenantId,
+              details: validation.errors
+            }
+          };
+        }
+      }
+      const [updatedNode] = await this.db.update(botFlowNodes).set({
+        ...request,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(and3(
+        eq3(botFlowNodes.tenantId, tenantId),
+        eq3(botFlowNodes.id, nodeId)
+      )).returning();
+      if (!updatedNode) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NODE_NOT_FOUND",
+            message: "Bot flow node not found",
+            tenantId,
+            resourceId: nodeId
+          }
+        };
+      }
+      const result = {
+        ...updatedNode,
+        position: updatedNode.position,
+        configuration: updatedNode.configuration,
+        connections: updatedNode.connections,
+        metadata: updatedNode.metadata
+      };
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error("Error updating bot flow node:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_NODE_UPDATE_FAILED",
+          message: "Failed to update bot flow node",
+          tenantId,
+          resourceId: nodeId
+        }
+      };
+    }
+  }
+  /**
+   * Delete bot flow node
+   */
+  async deleteBotFlowNode(tenantId, nodeId) {
+    try {
+      const [deletedNode] = await this.db.delete(botFlowNodes).where(and3(
+        eq3(botFlowNodes.tenantId, tenantId),
+        eq3(botFlowNodes.id, nodeId)
+      )).returning();
+      if (!deletedNode) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_NODE_NOT_FOUND",
+            message: "Bot flow node not found",
+            tenantId,
+            resourceId: nodeId
+          }
+        };
+      }
+      await this.removeNodeConnections(deletedNode.flowId, nodeId);
+      return {
+        success: true,
+        data: void 0
+      };
+    } catch (error) {
+      console.error("Error deleting bot flow node:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_NODE_DELETE_FAILED",
+          message: "Failed to delete bot flow node",
+          tenantId,
+          resourceId: nodeId
+        }
+      };
+    }
+  }
+  // ===== BOT FLOW VALIDATION =====
+  /**
+   * Validate bot flow
+   */
+  // ===== BOT FLOW TEMPLATES =====
+  /**
+   * Get predefined bot flow templates
+   */
+  async getBotFlowTemplates(businessType) {
+    try {
+      const templates = this.getPredefinedTemplates();
+      const filteredTemplates = businessType ? templates.filter((template) => template.businessType === businessType) : templates;
+      return {
+        success: true,
+        data: filteredTemplates
+      };
+    } catch (error) {
+      console.error("Error getting bot flow templates:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_TEMPLATES_FETCH_FAILED",
+          message: "Failed to fetch bot flow templates"
+        }
+      };
+    }
+  }
+  /**
+   * Create bot flow from template
+   */
+  async createBotFlowFromTemplate(tenantId, templateId, customization) {
+    try {
+      const templates = this.getPredefinedTemplates();
+      const template = templates.find((t) => t.id === templateId);
+      if (!template) {
+        return {
+          success: false,
+          error: {
+            code: "BOT_FLOW_TEMPLATE_NOT_FOUND",
+            message: "Bot flow template not found",
+            resourceId: templateId
+          }
+        };
+      }
+      const createRequest = {
+        name: customization.name,
+        description: customization.description || template.description,
+        businessType: template.businessType,
+        variables: template.variables,
+        metadata: {
+          ...template.metadata,
+          templateId,
+          customization: customization.variables
+        }
+      };
+      const flowResult = await this.createBotFlow(tenantId, createRequest);
+      if (!flowResult.success) {
+        return flowResult;
+      }
+      const flow = flowResult.data;
+      const nodeIdMap = /* @__PURE__ */ new Map();
+      for (const templateNode of template.nodes) {
+        const nodeResult = await this.createBotFlowNode(tenantId, flow.id, {
+          type: templateNode.type,
+          name: templateNode.name,
+          description: templateNode.description,
+          position: templateNode.position,
+          configuration: this.customizeNodeConfiguration(templateNode.configuration, customization.variables),
+          metadata: templateNode.metadata
+        });
+        if (nodeResult.success) {
+          nodeIdMap.set(templateNode.name, nodeResult.data.id);
+        }
+      }
+      for (const templateNode of template.nodes) {
+        const actualNodeId = nodeIdMap.get(templateNode.name);
+        if (actualNodeId && templateNode.connections.length > 0) {
+          const updatedConnections = templateNode.connections.map((conn) => ({
+            ...conn,
+            id: this.generateId(),
+            sourceNodeId: actualNodeId,
+            targetNodeId: nodeIdMap.get(conn.targetNodeId) || conn.targetNodeId
+          }));
+          await this.updateBotFlowNode(tenantId, actualNodeId, {
+            connections: updatedConnections
+          });
+        }
+      }
+      const startNode = template.nodes.find((node) => node.type === "start");
+      if (startNode) {
+        const entryNodeId = nodeIdMap.get(startNode.name);
+        if (entryNodeId) {
+          await this.updateBotFlow(tenantId, flow.id, {
+            metadata: {
+              ...flow.metadata,
+              entryNodeId
+            }
+          });
+        }
+      }
+      const result = await this.getBotFlow(tenantId, flow.id);
+      return result;
+    } catch (error) {
+      console.error("Error creating bot flow from template:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOT_FLOW_TEMPLATE_CREATE_FAILED",
+          message: "Failed to create bot flow from template",
+          resourceId: templateId
+        }
+      };
+    }
+  }
+  // ===== UTILITY METHODS =====
+  /**
+   * Validate create bot flow request
+   */
+  validateCreateBotFlowRequest(request) {
+    const errors = [];
+    if (!request.name || request.name.trim().length === 0) {
+      errors.push("Flow name is required");
+    }
+    if (!request.businessType || request.businessType.trim().length === 0) {
+      errors.push("Business type is required");
+    }
+    if (request.variables) {
+      for (const variable of request.variables) {
+        if (!variable.name || variable.name.trim().length === 0) {
+          errors.push("Variable name is required");
+        }
+        if (!variable.type) {
+          errors.push(`Variable type is required for ${variable.name}`);
+        }
+      }
+    }
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+  /**
+   * Validate node configuration
+   */
+  validateNodeConfiguration(nodeType, configuration) {
+    const errors = [];
+    switch (nodeType) {
+      case "start":
+        break;
+      case "message":
+        if (!configuration.messageText) {
+          errors.push({
+            message: "Message text is required for message nodes",
+            code: "MISSING_MESSAGE_TEXT"
+          });
+        }
+        break;
+      case "question":
+        if (!configuration.questionText) {
+          errors.push({
+            message: "Question text is required for question nodes",
+            code: "MISSING_QUESTION_TEXT"
+          });
+        }
+        if (!configuration.variableName) {
+          errors.push({
+            message: "Variable name is required for question nodes",
+            code: "MISSING_VARIABLE_NAME"
+          });
+        }
+        if (configuration.inputType === "choice" && (!configuration.choices || configuration.choices.length === 0)) {
+          errors.push({
+            message: "Choices are required for choice input type",
+            code: "MISSING_CHOICES"
+          });
+        }
+        break;
+      case "condition":
+        if (!configuration.conditions || configuration.conditions.length === 0) {
+          errors.push({
+            message: "Conditions are required for condition nodes",
+            code: "MISSING_CONDITIONS"
+          });
+        }
+        break;
+      case "action":
+        if (!configuration.actionType) {
+          errors.push({
+            message: "Action type is required for action nodes",
+            code: "MISSING_ACTION_TYPE"
+          });
+        }
+        break;
+      case "integration":
+        if (!configuration.integrationType) {
+          errors.push({
+            message: "Integration type is required for integration nodes",
+            code: "MISSING_INTEGRATION_TYPE"
+          });
+        }
+        break;
+      case "end":
+        break;
+    }
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+  /**
+   * Validate node connections
+   */
+  validateNodeConnections(node, allNodes, errors, warnings) {
+    for (const connection of node.connections) {
+      const targetExists = allNodes.some((n) => n.id === connection.targetNodeId);
+      if (!targetExists) {
+        errors.push({
+          nodeId: node.id,
+          type: "error",
+          message: `Connection target node ${connection.targetNodeId} does not exist`,
+          code: "INVALID_CONNECTION_TARGET"
+        });
+      }
+    }
+    switch (node.type) {
+      case "start":
+        if (node.connections.length === 0) {
+          warnings.push({
+            nodeId: node.id,
+            message: "Start node should have at least one connection",
+            code: "START_NODE_NO_CONNECTIONS"
+          });
+        }
+        break;
+      case "condition":
+        if (node.connections.length < 2) {
+          warnings.push({
+            nodeId: node.id,
+            message: "Condition node should have at least two connections (true/false paths)",
+            code: "CONDITION_NODE_INSUFFICIENT_CONNECTIONS"
+          });
+        }
+        break;
+      case "end":
+        if (node.connections.length > 0) {
+          warnings.push({
+            nodeId: node.id,
+            message: "End node should not have outgoing connections",
+            code: "END_NODE_HAS_CONNECTIONS"
+          });
+        }
+        break;
+    }
+  }
+  /**
+   * Validate flow reachability
+   */
+  validateFlowReachability(flow, errors, warnings) {
+    const startNodes = flow.nodes.filter((node) => node.type === "start");
+    if (startNodes.length === 0) return;
+    const reachableNodes = /* @__PURE__ */ new Set();
+    const toVisit = [startNodes[0].id];
+    while (toVisit.length > 0) {
+      const currentNodeId = toVisit.pop();
+      if (reachableNodes.has(currentNodeId)) continue;
+      reachableNodes.add(currentNodeId);
+      const currentNode = flow.nodes.find((node) => node.id === currentNodeId);
+      if (currentNode) {
+        for (const connection of currentNode.connections) {
+          if (!reachableNodes.has(connection.targetNodeId)) {
+            toVisit.push(connection.targetNodeId);
+          }
+        }
+      }
+    }
+    for (const node of flow.nodes) {
+      if (!reachableNodes.has(node.id) && node.type !== "start") {
+        warnings.push({
+          nodeId: node.id,
+          message: `Node ${node.name} is not reachable from start node`,
+          code: "UNREACHABLE_NODE"
+        });
+      }
+    }
+  }
+  /**
+   * Validate flow for infinite loops
+   */
+  validateFlowLoops(flow, warnings) {
+    const visited = /* @__PURE__ */ new Set();
+    const recursionStack = /* @__PURE__ */ new Set();
+    const hasLoop = (nodeId) => {
+      if (recursionStack.has(nodeId)) {
+        return true;
+      }
+      if (visited.has(nodeId)) {
+        return false;
+      }
+      visited.add(nodeId);
+      recursionStack.add(nodeId);
+      const node = flow.nodes.find((n) => n.id === nodeId);
+      if (node) {
+        for (const connection of node.connections) {
+          if (hasLoop(connection.targetNodeId)) {
+            return true;
+          }
+        }
+      }
+      recursionStack.delete(nodeId);
+      return false;
+    };
+    const startNodes = flow.nodes.filter((node) => node.type === "start");
+    for (const startNode of startNodes) {
+      if (hasLoop(startNode.id)) {
+        warnings.push({
+          message: "Flow contains potential infinite loops",
+          code: "POTENTIAL_INFINITE_LOOP"
+        });
+        break;
+      }
+    }
+  }
+  /**
+   * Remove connections to a deleted node
+   */
+  async removeNodeConnections(flowId, deletedNodeId) {
+    const nodes = await this.db.select().from(botFlowNodes).where(eq3(botFlowNodes.flowId, flowId));
+    for (const node of nodes) {
+      const connections = node.connections;
+      const updatedConnections = connections.filter(
+        (conn) => conn.targetNodeId !== deletedNodeId && conn.sourceNodeId !== deletedNodeId
+      );
+      if (updatedConnections.length !== connections.length) {
+        await this.db.update(botFlowNodes).set({
+          connections: updatedConnections,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq3(botFlowNodes.id, node.id));
+      }
+    }
+  }
+  /**
+   * Copy template nodes to a new flow
+   */
+  async copyTemplateNodes(tenantId, flowId, templateId) {
+    const templates = this.getPredefinedTemplates();
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) return;
+    const nodeIdMap = /* @__PURE__ */ new Map();
+    for (const templateNode of template.nodes) {
+      const nodeResult = await this.createBotFlowNode(tenantId, flowId, {
+        type: templateNode.type,
+        name: templateNode.name,
+        description: templateNode.description,
+        position: templateNode.position,
+        configuration: templateNode.configuration,
+        metadata: templateNode.metadata
+      });
+      if (nodeResult.success) {
+        nodeIdMap.set(templateNode.name, nodeResult.data.id);
+      }
+    }
+    for (const templateNode of template.nodes) {
+      const actualNodeId = nodeIdMap.get(templateNode.name);
+      if (actualNodeId && templateNode.connections.length > 0) {
+        const updatedConnections = templateNode.connections.map((conn) => ({
+          ...conn,
+          id: this.generateId(),
+          sourceNodeId: actualNodeId,
+          targetNodeId: nodeIdMap.get(conn.targetNodeId) || conn.targetNodeId
+        }));
+        await this.updateBotFlowNode(tenantId, actualNodeId, {
+          connections: updatedConnections
+        });
+      }
+    }
+  }
+  /**
+   * Customize node configuration with variables
+   */
+  customizeNodeConfiguration(configuration, variables) {
+    if (!variables) return configuration;
+    const customized = { ...configuration };
+    if (customized.messageText) {
+      customized.messageText = this.replaceVariables(customized.messageText, variables);
+    }
+    if (customized.questionText) {
+      customized.questionText = this.replaceVariables(customized.questionText, variables);
+    }
+    return customized;
+  }
+  /**
+   * Replace variables in text
+   */
+  replaceVariables(text3, variables) {
+    let result = text3;
+    for (const [key, value] of Object.entries(variables)) {
+      result = result.replace(new RegExp(`{{${key}}}`, "g"), String(value));
+    }
+    return result;
+  }
+  /**
+   * Generate unique ID
+   */
+  generateId() {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+  /**
+   * Get predefined bot flow templates
+   */
+  getPredefinedTemplates() {
+    return [
+      {
+        id: "restaurant-order-flow",
+        name: "Restaurant Order Flow",
+        description: "Complete order flow for restaurants with menu selection and payment",
+        businessType: "restaurant",
+        category: "ordering",
+        nodes: [
+          {
+            type: "start",
+            name: "Welcome",
+            position: { x: 100, y: 100 },
+            configuration: {},
+            connections: [{ sourceNodeId: "Welcome", targetNodeId: "ShowMenu", label: "start" }],
+            metadata: {}
+          },
+          {
+            type: "message",
+            name: "ShowMenu",
+            position: { x: 300, y: 100 },
+            configuration: {
+              messageText: "Welcome to {{restaurantName}}! Here's our menu:",
+              messageType: "template"
+            },
+            connections: [{ sourceNodeId: "ShowMenu", targetNodeId: "AskOrder", label: "next" }],
+            metadata: {}
+          },
+          {
+            type: "question",
+            name: "AskOrder",
+            position: { x: 500, y: 100 },
+            configuration: {
+              questionText: "What would you like to order?",
+              inputType: "text",
+              variableName: "orderItems",
+              validation: { required: true }
+            },
+            connections: [{ sourceNodeId: "AskOrder", targetNodeId: "ConfirmOrder", label: "next" }],
+            metadata: {}
+          },
+          {
+            type: "action",
+            name: "ConfirmOrder",
+            position: { x: 700, y: 100 },
+            configuration: {
+              actionType: "create_transaction",
+              actionParameters: {
+                type: "order",
+                items: "{{orderItems}}"
+              }
+            },
+            connections: [{ sourceNodeId: "ConfirmOrder", targetNodeId: "OrderComplete", label: "success" }],
+            metadata: {}
+          },
+          {
+            type: "end",
+            name: "OrderComplete",
+            position: { x: 900, y: 100 },
+            configuration: {},
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [
+          {
+            name: "restaurantName",
+            type: "string",
+            defaultValue: "Our Restaurant",
+            description: "Name of the restaurant",
+            isRequired: true
+          },
+          {
+            name: "orderItems",
+            type: "string",
+            description: "Items ordered by customer",
+            isRequired: false
+          }
+        ],
+        metadata: {
+          category: "ordering",
+          difficulty: "beginner",
+          estimatedSetupTime: "10 minutes"
+        }
+      },
+      {
+        id: "clinic-appointment-flow",
+        name: "Clinic Appointment Flow",
+        description: "Appointment booking flow for healthcare clinics",
+        businessType: "clinic",
+        category: "booking",
+        nodes: [
+          {
+            type: "start",
+            name: "Welcome",
+            position: { x: 100, y: 100 },
+            configuration: {},
+            connections: [{ sourceNodeId: "Welcome", targetNodeId: "AskService", label: "start" }],
+            metadata: {}
+          },
+          {
+            type: "question",
+            name: "AskService",
+            position: { x: 300, y: 100 },
+            configuration: {
+              questionText: "What type of appointment would you like to book?",
+              inputType: "choice",
+              choices: [
+                { value: "consultation", label: "General Consultation" },
+                { value: "checkup", label: "Health Checkup" },
+                { value: "specialist", label: "Specialist Visit" }
+              ],
+              variableName: "appointmentType"
+            },
+            connections: [{ sourceNodeId: "AskService", targetNodeId: "AskDate", label: "next" }],
+            metadata: {}
+          },
+          {
+            type: "question",
+            name: "AskDate",
+            position: { x: 500, y: 100 },
+            configuration: {
+              questionText: "When would you like to schedule your appointment?",
+              inputType: "date",
+              variableName: "appointmentDate",
+              validation: { required: true }
+            },
+            connections: [{ sourceNodeId: "AskDate", targetNodeId: "BookAppointment", label: "next" }],
+            metadata: {}
+          },
+          {
+            type: "action",
+            name: "BookAppointment",
+            position: { x: 700, y: 100 },
+            configuration: {
+              actionType: "create_transaction",
+              actionParameters: {
+                type: "appointment",
+                service: "{{appointmentType}}",
+                scheduledDate: "{{appointmentDate}}"
+              }
+            },
+            connections: [{ sourceNodeId: "BookAppointment", targetNodeId: "AppointmentBooked", label: "success" }],
+            metadata: {}
+          },
+          {
+            type: "end",
+            name: "AppointmentBooked",
+            position: { x: 900, y: 100 },
+            configuration: {},
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [
+          {
+            name: "clinicName",
+            type: "string",
+            defaultValue: "Our Clinic",
+            description: "Name of the clinic",
+            isRequired: true
+          },
+          {
+            name: "appointmentType",
+            type: "string",
+            description: "Type of appointment selected",
+            isRequired: false
+          },
+          {
+            name: "appointmentDate",
+            type: "date",
+            description: "Selected appointment date",
+            isRequired: false
+          }
+        ],
+        metadata: {
+          category: "booking",
+          difficulty: "beginner",
+          estimatedSetupTime: "15 minutes"
+        }
+      }
+    ];
+  }
+  /**
+   * Cleanup resources
+   */
+  async cleanup() {
+    try {
+      await this.pool.end();
+    } catch (error) {
+      console.error("Error cleaning up bot flow builder service:", error);
+    }
+  }
+};
+
+// server/middleware/tenant-context.middleware.ts
+function tenantContextMiddleware(options) {
+  const { tenantService, requireTenant = true, requiredPermissions = [] } = options;
+  return async (req, res, next) => {
+    try {
+      let tenantContext = null;
+      const apiKey = extractApiKey(req);
+      if (apiKey) {
+        const result = await tenantService.validateApiKey(apiKey);
+        if (result.success) {
+          tenantContext = result.data;
+        } else {
+          return res.status(401).json({
+            error: "Invalid API key",
+            code: result.error.code,
+            message: result.error.message
+          });
+        }
+      }
+      if (!tenantContext) {
+        const jwtContext = extractJwtContext(req);
+        if (jwtContext) {
+          tenantContext = jwtContext;
+        }
+      }
+      if (!tenantContext) {
+        const domain = extractDomainFromRequest(req);
+        if (domain) {
+          const result = await tenantService.getTenantByDomain(domain);
+          if (result.success) {
+            tenantContext = {
+              tenantId: result.data.id,
+              permissions: ["read:services", "read:conversations", "read:bookings"],
+              // Default permissions for domain-based access
+              subscriptionLimits: {
+                messagesPerMonth: 1e3,
+                bookingsPerMonth: 100,
+                apiCallsPerDay: 1e3
+              },
+              currentUsage: {
+                messages_sent: 0,
+                messages_received: 0,
+                bookings_created: 0,
+                api_calls: 0,
+                storage_used: 0,
+                webhook_calls: 0
+              }
+            };
+          }
+        }
+      }
+      if (requireTenant && !tenantContext) {
+        return res.status(401).json({
+          error: "Tenant context required",
+          message: "Request must include valid API key, JWT token, or be made from a registered domain"
+        });
+      }
+      if (tenantContext) {
+        const tenantResult = await tenantService.getTenantById(tenantContext.tenantId);
+        if (!tenantResult.success) {
+          return res.status(404).json({
+            error: "Tenant not found",
+            code: tenantResult.error.code,
+            message: tenantResult.error.message
+          });
+        }
+        const tenant = tenantResult.data;
+        if (tenant.status === "suspended") {
+          return res.status(423).json({
+            error: "Tenant suspended",
+            message: "Tenant account has been suspended",
+            tenantId: tenant.id
+          });
+        }
+        if (tenant.status === "cancelled") {
+          return res.status(410).json({
+            error: "Tenant cancelled",
+            message: "Tenant account has been cancelled",
+            tenantId: tenant.id
+          });
+        }
+      }
+      if (tenantContext && requiredPermissions.length > 0) {
+        const hasAllPermissions = requiredPermissions.every(
+          (permission) => tenantContext.permissions.includes(permission) || tenantContext.permissions.includes("admin:all")
+        );
+        if (!hasAllPermissions) {
+          return res.status(403).json({
+            error: "Insufficient permissions",
+            message: "Request requires additional permissions",
+            required: requiredPermissions,
+            current: tenantContext.permissions
+          });
+        }
+      }
+      if (tenantContext) {
+        req.tenantContext = tenantContext;
+        req.tenantId = tenantContext.tenantId;
+        req.hasPermission = (permission) => tenantContext.permissions.includes(permission) || tenantContext.permissions.includes("admin:all");
+      }
+      next();
+    } catch (error) {
+      console.error("Tenant context middleware error:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: "Failed to process tenant context"
+      });
+    }
+  };
+}
+function extractApiKey(req) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    if (token.startsWith("tk_")) {
+      return token;
+    }
+  }
+  const apiKeyHeader = req.headers["x-api-key"];
+  if (typeof apiKeyHeader === "string" && apiKeyHeader.startsWith("tk_")) {
+    return apiKeyHeader;
+  }
+  return null;
+}
+function extractJwtContext(req) {
+  return null;
+}
+function extractDomainFromRequest(req) {
+  const host = req.headers.host;
+  if (!host) return null;
+  const domain = host.split(":")[0];
+  if (domain === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(domain)) {
+    return null;
+  }
+  return domain;
+}
+
+// server/routes/bot-flow-builder.routes.ts
+var router = Router();
+router.use(tenantContextMiddleware);
+var botFlowService = new BotFlowBuilderService(process.env.DATABASE_URL);
+router.get("/", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { businessType, isActive, isTemplate, page = 1, limit = 50 } = req.query;
+    const result = await botFlowService.listBotFlows(tenantId, {
+      businessType,
+      isActive: isActive === "true" ? true : isActive === "false" ? false : void 0,
+      isTemplate: isTemplate === "true" ? true : isTemplate === "false" ? false : void 0,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json(result.data);
+  } catch (error) {
+    console.error("Error listing bot flows:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const flowData = req.body;
+    const result = await botFlowService.createBotFlow(tenantId, flowData);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.status(201).json(result.data);
+  } catch (error) {
+    console.error("Error creating bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.get("/:id", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const result = await botFlowService.getBotFlow(tenantId, id);
+    if (!result.success) {
+      return res.status(404).json({ error: result.error });
+    }
+    res.json(result.data);
+  } catch (error) {
+    console.error("Error fetching bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.put("/:id", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const flowData = req.body;
+    const result = await botFlowService.updateBotFlow(tenantId, id, flowData);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json(result.data);
+  } catch (error) {
+    console.error("Error updating bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.delete("/:id", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const result = await botFlowService.deleteBotFlow(tenantId, id);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({ message: "Bot flow deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/:id/activate", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const deactivateResult = await botFlowService.deactivateAllBotFlows(tenantId);
+    if (!deactivateResult.success) {
+      return res.status(400).json({ error: deactivateResult.error });
+    }
+    const activateResult = await botFlowService.activateBotFlow(tenantId, id);
+    if (!activateResult.success) {
+      return res.status(400).json({ error: activateResult.error });
+    }
+    res.json({ message: "Bot flow activated successfully" });
+  } catch (error) {
+    console.error("Error activating bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/:id/deactivate", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const result = await botFlowService.deactivateBotFlow(tenantId, id);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({ message: "Bot flow deactivated successfully" });
+  } catch (error) {
+    console.error("Error deactivating bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/:id/toggle", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const flowResult = await botFlowService.getBotFlow(tenantId, id);
+    if (!flowResult.success) {
+      return res.status(404).json({ error: flowResult.error });
+    }
+    const flow = flowResult.data;
+    let result;
+    if (flow.isActive) {
+      result = await botFlowService.deactivateBotFlow(tenantId, id);
+    } else {
+      await botFlowService.deactivateAllBotFlows(tenantId);
+      result = await botFlowService.activateBotFlow(tenantId, id);
+    }
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({ message: `Bot flow ${flow.isActive ? "deactivated" : "activated"} successfully` });
+  } catch (error) {
+    console.error("Error toggling bot flow:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+router.post("/:id/test", async (req, res) => {
+  try {
+    const { tenantId } = req.tenantContext;
+    const { id } = req.params;
+    const flowData = req.body;
+    console.log(`Testing bot flow ${id}:`, flowData);
+    res.json({
+      success: true,
+      message: "Bot flow test completed successfully!"
+    });
+  } catch (error) {
+    console.error("Error testing bot flow:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error testing bot flow. Please try again."
+    });
+  }
+});
+var bot_flow_builder_routes_default = router;
+
+// server/routes.ts
 var webhookVerificationSchema = z.object({
   "hub.mode": z.string(),
   "hub.challenge": z.string(),
@@ -2002,8 +3316,8 @@ We apologize for any inconvenience caused.`;
       if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
         return res.status(403).json({ error: "Unauthorized" });
       }
-      const { Pool: Pool2 } = __require("@neondatabase/serverless");
-      const pool2 = new Pool2({ connectionString: process.env.DATABASE_URL });
+      const { Pool: Pool3 } = __require("@neondatabase/serverless");
+      const pool2 = new Pool3({ connectionString: process.env.DATABASE_URL });
       const client = await pool2.connect();
       try {
         const migrations = [
@@ -2014,14 +3328,14 @@ We apologize for any inconvenience caused.`;
           "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"
         ];
         const results = [];
-        for (const sql3 of migrations) {
+        for (const sql4 of migrations) {
           try {
-            await client.query(sql3);
-            results.push(`\u2705 Executed: ${sql3}`);
-            console.log(`\u2705 Executed: ${sql3}`);
+            await client.query(sql4);
+            results.push(`\u2705 Executed: ${sql4}`);
+            console.log(`\u2705 Executed: ${sql4}`);
           } catch (error) {
-            results.push(`\u26A0\uFE0F Error: ${sql3} - ${error.message}`);
-            console.log(`\u26A0\uFE0F Error: ${sql3} - ${error.message}`);
+            results.push(`\u26A0\uFE0F Error: ${sql4} - ${error.message}`);
+            console.log(`\u26A0\uFE0F Error: ${sql4} - ${error.message}`);
           }
         }
         console.log("\u2705 Database migration completed");
@@ -2064,359 +3378,7 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({ success: false, error: "Failed to fetch business types" });
     }
   });
-  app2.get("/api/bot-flows", async (req, res) => {
-    try {
-      const mockFlows = [
-        {
-          id: "current_salon_flow",
-          name: "\u{1F7E2} Current Salon Flow (ACTIVE)",
-          description: "This is the exact flow currently running on WhatsApp",
-          businessType: "salon",
-          isActive: true,
-          nodes: [
-            { id: "start_1", type: "start", name: "Start", position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "welcome_msg", type: "message", name: "Welcome Message", position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "service_question", type: "question", name: "Service Selection", position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "date_question", type: "question", name: "Date Selection", position: { x: 1e3, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "time_question", type: "question", name: "Time Selection", position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "customer_details", type: "question", name: "Customer Name", position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "payment_action", type: "action", name: "Payment Request", position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: "confirmation_end", type: "end", name: "Booking Confirmed", position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
-          ],
-          variables: []
-        },
-        {
-          id: "flow_1",
-          name: "Restaurant Booking Flow",
-          description: "Complete flow for restaurant table reservations",
-          businessType: "restaurant",
-          isActive: false,
-          nodes: [
-            { id: "1", type: "start", name: "Start", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-            { id: "2", type: "message", name: "Welcome", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-            { id: "3", type: "question", name: "Date", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-            { id: "4", type: "end", name: "End", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
-          ],
-          variables: []
-        },
-        {
-          id: "flow_2",
-          name: "Customer Support Flow",
-          description: "Handle customer inquiries and support requests",
-          businessType: "restaurant",
-          isActive: false,
-          nodes: [
-            { id: "1", type: "start", name: "Start", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-            { id: "2", type: "question", name: "Issue Type", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} },
-            { id: "3", type: "condition", name: "Route", position: { x: 0, y: 0 }, configuration: {}, connections: [], metadata: {} }
-          ],
-          variables: []
-        }
-      ];
-      res.json({
-        flows: mockFlows,
-        total: mockFlows.length
-      });
-    } catch (error) {
-      console.error("Error fetching bot flows:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-  app2.post("/api/bot-flows", async (req, res) => {
-    try {
-      const flow = req.body;
-      flow.id = `flow_${Date.now()}`;
-      console.log("Creating new bot flow:", flow);
-      res.json(flow);
-    } catch (error) {
-      console.error("Error creating bot flow:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-  app2.put("/api/bot-flows/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const flow = req.body;
-      flow.id = id;
-      console.log("Updating bot flow:", flow);
-      res.json(flow);
-    } catch (error) {
-      console.error("Error updating bot flow:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-  app2.post("/api/bot-flows/:id/test", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const flow = req.body;
-      console.log("Testing bot flow:", id, flow);
-      res.json({
-        success: true,
-        message: "Bot flow test completed successfully!"
-      });
-    } catch (error) {
-      console.error("Error testing bot flow:", error);
-      res.status(500).json({
-        success: false,
-        message: "Error testing bot flow. Please try again."
-      });
-    }
-  });
-  app2.get("/api/bot-flows/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      if (id === "current_salon_flow") {
-        const currentSalonFlow = {
-          id: "current_salon_flow",
-          name: "\u{1F7E2} Current Salon Flow (ACTIVE)",
-          description: "This is the exact flow currently running on WhatsApp",
-          businessType: "salon",
-          isActive: true,
-          nodes: [
-            {
-              id: "start_1",
-              type: "start",
-              name: "Start",
-              position: { x: 100, y: 100 },
-              configuration: {},
-              connections: [{
-                id: "conn_1",
-                sourceNodeId: "start_1",
-                targetNodeId: "welcome_msg",
-                label: "Begin"
-              }],
-              metadata: {}
-            },
-            {
-              id: "welcome_msg",
-              type: "message",
-              name: "Welcome Message",
-              position: { x: 400, y: 100 },
-              configuration: {
-                messageText: "\u{1F487}\u200D\u2640\uFE0F Welcome to Glamour Salon!\n\nI can help you book an appointment. What service would you like?\n\n1. \u{1F487}\u200D\u2640\uFE0F Haircut & Style - \u20B9800\n2. \u{1F3A8} Hair Color - \u20B92500\n3. \u2728 Facial Treatment - \u20B91200\n4. \u{1F485} Manicure & Pedicure - \u20B9600\n\nReply with 1, 2, 3, or 4"
-              },
-              connections: [{
-                id: "conn_2",
-                sourceNodeId: "welcome_msg",
-                targetNodeId: "service_question",
-                label: "Next"
-              }],
-              metadata: {}
-            },
-            {
-              id: "service_question",
-              type: "question",
-              name: "Service Selection",
-              position: { x: 700, y: 100 },
-              configuration: {
-                questionText: "Which service would you like?",
-                inputType: "choice",
-                variableName: "selected_service",
-                choices: [
-                  { value: "1", label: "Haircut & Style - \u20B9800" },
-                  { value: "2", label: "Hair Color - \u20B92500" },
-                  { value: "3", label: "Facial Treatment - \u20B91200" },
-                  { value: "4", label: "Manicure & Pedicure - \u20B9600" }
-                ]
-              },
-              connections: [{
-                id: "conn_3",
-                sourceNodeId: "service_question",
-                targetNodeId: "date_question",
-                label: "Service Selected"
-              }],
-              metadata: {}
-            },
-            {
-              id: "date_question",
-              type: "question",
-              name: "Date Selection",
-              position: { x: 1e3, y: 100 },
-              configuration: {
-                questionText: "Great choice! When would you like your appointment?\n\nAvailable dates:\n\u2022 Today\n\u2022 Tomorrow\n\u2022 Day after tomorrow\n\nPlease type your preferred date.",
-                inputType: "text",
-                variableName: "appointment_date"
-              },
-              connections: [{
-                id: "conn_4",
-                sourceNodeId: "date_question",
-                targetNodeId: "time_question",
-                label: "Date Selected"
-              }],
-              metadata: {}
-            },
-            {
-              id: "time_question",
-              type: "question",
-              name: "Time Selection",
-              position: { x: 1300, y: 100 },
-              configuration: {
-                questionText: "Perfect! What time would you prefer?\n\nAvailable slots:\n\u2022 10:00 AM\n\u2022 2:00 PM\n\u2022 4:00 PM\n\u2022 6:00 PM\n\nPlease choose a time.",
-                inputType: "choice",
-                variableName: "appointment_time",
-                choices: [
-                  { value: "10:00 AM", label: "10:00 AM" },
-                  { value: "2:00 PM", label: "2:00 PM" },
-                  { value: "4:00 PM", label: "4:00 PM" },
-                  { value: "6:00 PM", label: "6:00 PM" }
-                ]
-              },
-              connections: [{
-                id: "conn_5",
-                sourceNodeId: "time_question",
-                targetNodeId: "customer_details",
-                label: "Time Selected"
-              }],
-              metadata: {}
-            },
-            {
-              id: "customer_details",
-              type: "question",
-              name: "Customer Name",
-              position: { x: 1600, y: 100 },
-              configuration: {
-                questionText: "Excellent! I need your name for the booking.",
-                inputType: "text",
-                variableName: "customer_name"
-              },
-              connections: [{
-                id: "conn_6",
-                sourceNodeId: "customer_details",
-                targetNodeId: "payment_action",
-                label: "Name Collected"
-              }],
-              metadata: {}
-            },
-            {
-              id: "payment_action",
-              type: "action",
-              name: "Payment Request",
-              position: { x: 1900, y: 100 },
-              configuration: {
-                actionType: "send_notification",
-                actionParameters: {
-                  message: '\u{1F4B0} Booking Summary:\n\n\u{1F464} Name: {{customer_name}}\n\u{1F487}\u200D\u2640\uFE0F Service: {{selected_service}}\n\u{1F4C5} Date: {{appointment_date}}\n\u{1F550} Time: {{appointment_time}}\n\nTo confirm, please pay \u20B9200 booking fee:\n\u{1F4B3} UPI: salon@paytm\n\nReply "PAID" when done.'
-                }
-              },
-              connections: [{
-                id: "conn_7",
-                sourceNodeId: "payment_action",
-                targetNodeId: "confirmation_end",
-                label: "Payment Sent"
-              }],
-              metadata: {}
-            },
-            {
-              id: "confirmation_end",
-              type: "end",
-              name: "Booking Confirmed",
-              position: { x: 2200, y: 100 },
-              configuration: {
-                endMessage: "\u{1F389} Booking Confirmed!\n\n\u{1F4CB} Your appointment:\n\u{1F464} {{customer_name}}\n\u{1F487}\u200D\u2640\uFE0F {{selected_service}}\n\u{1F4C5} {{appointment_date}} at {{appointment_time}}\n\n\u{1F4CD} Glamour Salon\n123 Fashion Street\n\nWe will send a reminder 2 hours before your appointment. Thank you! \u2728"
-              },
-              connections: [],
-              metadata: {}
-            }
-          ],
-          variables: [
-            { name: "selected_service", type: "string", description: "The service customer selected" },
-            { name: "appointment_date", type: "string", description: "Preferred appointment date" },
-            { name: "appointment_time", type: "string", description: "Preferred appointment time" },
-            { name: "customer_name", type: "string", description: "Customer name for booking" }
-          ]
-        };
-        res.json(currentSalonFlow);
-        return;
-      }
-      const mockFlow = {
-        id,
-        name: "Sample Bot Flow",
-        description: "A sample bot flow for restaurant bookings",
-        businessType: "restaurant",
-        isActive: false,
-        nodes: [
-          {
-            id: "start_1",
-            type: "start",
-            name: "Start",
-            position: { x: 100, y: 100 },
-            configuration: {},
-            connections: [
-              {
-                id: "conn_1",
-                sourceNodeId: "start_1",
-                targetNodeId: "message_1",
-                label: "Begin"
-              }
-            ],
-            metadata: {}
-          },
-          {
-            id: "message_1",
-            type: "message",
-            name: "Welcome Message",
-            position: { x: 400, y: 100 },
-            configuration: {
-              messageText: "Welcome to our restaurant! I can help you make a reservation."
-            },
-            connections: [
-              {
-                id: "conn_2",
-                sourceNodeId: "message_1",
-                targetNodeId: "question_1",
-                label: "Next"
-              }
-            ],
-            metadata: {}
-          },
-          {
-            id: "question_1",
-            type: "question",
-            name: "Ask for Date",
-            position: { x: 700, y: 100 },
-            configuration: {
-              questionText: "What date would you like to make a reservation for?",
-              inputType: "date",
-              variableName: "reservation_date"
-            },
-            connections: [],
-            metadata: {}
-          }
-        ],
-        variables: [
-          {
-            name: "reservation_date",
-            type: "date",
-            description: "The date for the reservation"
-          },
-          {
-            name: "party_size",
-            type: "number",
-            description: "Number of people"
-          }
-        ]
-      };
-      res.json(mockFlow);
-    } catch (error) {
-      console.error("Error fetching bot flow:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-  app2.post("/api/bot-flows", async (req, res) => {
-    try {
-      const flowData = req.body;
-      const savedFlow = {
-        ...flowData,
-        id: `flow_${Date.now()}`,
-        createdAt: /* @__PURE__ */ new Date(),
-        updatedAt: /* @__PURE__ */ new Date()
-      };
-      res.status(201).json(savedFlow);
-    } catch (error) {
-      console.error("Error creating bot flow:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
+  app2.use("/api/bot-flows", bot_flow_builder_routes_default);
   app2.post("/api/bot-flows/:flowId/activate", async (req, res) => {
     try {
       const { flowId } = req.params;
