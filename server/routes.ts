@@ -782,6 +782,74 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Conversation Engine API endpoints
+  app.post("/api/conversations/:conversationId/process", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { phoneNumber, message } = req.body;
+
+      // Mock response for now - replace with actual conversation engine
+      const mockResponse = {
+        success: true,
+        response: `Processed message "${message}" for conversation ${conversationId}`,
+        shouldContinue: true,
+      };
+
+      res.json(mockResponse);
+    } catch (error) {
+      console.error("Error processing conversation message:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/conversations/:conversationId/status", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+
+      // Mock response for now
+      const mockStatus = {
+        isActive: true,
+        currentNode: 'message-1',
+        variables: { userName: 'John' },
+        flowId: 'flow-123',
+      };
+
+      res.json(mockStatus);
+    } catch (error) {
+      console.error("Error getting conversation status:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/conversations/test-flow", async (req, res) => {
+    try {
+      const { flowId, testMessages } = req.body;
+
+      if (!flowId || !testMessages || !Array.isArray(testMessages)) {
+        return res.status(400).json({ 
+          error: 'flowId and testMessages array are required' 
+        });
+      }
+
+      // Mock test results
+      const results = testMessages.map((message, index) => ({
+        input: message,
+        success: true,
+        response: `Mock response to: ${message}`,
+        step: index + 1,
+      }));
+
+      res.json({
+        success: true,
+        testResults: results,
+        totalSteps: results.length,
+      });
+    } catch (error) {
+      console.error("Error testing bot flow:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
