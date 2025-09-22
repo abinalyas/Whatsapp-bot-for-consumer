@@ -3040,7 +3040,8 @@ async function processWhatsAppMessage(from, messageText) {
       await processDynamicWhatsAppMessage(from, messageText);
       return;
     }
-    await processStaticWhatsAppMessage(from, messageText);
+    const response = await processStaticWhatsAppMessage(from, messageText);
+    await sendWhatsAppMessage(from, response);
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
     await sendWhatsAppMessage(from, "Sorry, I'm experiencing technical difficulties. Please try again later.");

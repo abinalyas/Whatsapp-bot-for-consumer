@@ -109,7 +109,9 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
     }
     
     // Fall back to static processing
-    await processStaticWhatsAppMessage(from, messageText);
+    const response = await processStaticWhatsAppMessage(from, messageText);
+    // Send the response to WhatsApp
+    await sendWhatsAppMessage(from, response);
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
     // Send error message to user
