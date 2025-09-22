@@ -38,7 +38,8 @@ async function runMigration() {
       "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
       "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
       "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS notes TEXT;",
-      "ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(50) NOT NULL DEFAULT 'text';"
+      "ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(50) NOT NULL DEFAULT 'text';",
+      "ALTER TABLE messages ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';"
     ];
 
     console.log('🔄 Running migrations...');
