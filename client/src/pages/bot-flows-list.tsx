@@ -119,6 +119,50 @@ const mockApi = {
         });
       }, 500);
     });
+  },
+
+  async activateFlow(tenantId: string, flowId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to activate flow');
+      }
+      
+      const result = await response.json();
+      console.log('Flow activated:', result.message);
+      return true;
+    } catch (error) {
+      console.error('Error activating flow:', error);
+      throw error;
+    }
+  },
+
+  async deactivateFlow(tenantId: string, flowId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/bot-flows/${flowId}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to deactivate flow');
+      }
+      
+      const result = await response.json();
+      console.log('Flow deactivated:', result.message);
+      return true;
+    } catch (error) {
+      console.error('Error deactivating flow:', error);
+      throw error;
+    }
   }
 };
 
@@ -182,6 +226,33 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
       setFlows(prev => [duplicatedFlow, ...prev]);
     } catch (error) {
       console.error('Error duplicating flow:', error);
+    }
+  };
+
+  const handleActivateFlow = async (flowId: string) => {
+    try {
+      const flow = flows.find(f => f.id === flowId);
+      if (!flow) return;
+
+      if (flow.isActive) {
+        // Deactivate flow
+        await mockApi.deactivateFlow(tenantId, flowId);
+        setFlows(prev => prev.map(f => 
+          f.id === flowId ? { ...f, isActive: false } : f
+        ));
+        alert('Flow deactivated. WhatsApp will use default responses.');
+      } else {
+        // Activate flow (deactivate others first)
+        await mockApi.activateFlow(tenantId, flowId);
+        setFlows(prev => prev.map(f => ({
+          ...f,
+          isActive: f.id === flowId
+        })));
+        alert(`"${flow.name}" is now active! WhatsApp will use this flow for all conversations.`);
+      }
+    } catch (error) {
+      console.error('Error toggling flow activation:', error);
+      alert('Error updating flow status. Please try again.');
     }
   };
 
@@ -376,15 +447,15 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
 
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleToggleStatus(flow.id)}
-                          className={`p-2 rounded transition-colors ${
+                          onClick={() => handleActivateFlow(flow.id)}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
                             flow.isActive
-                              ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
-                              : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
                           }`}
-                          title={flow.isActive ? 'Deactivate flow' : 'Activate flow'}
+                          title={flow.isActive ? 'Active for WhatsApp' : 'Activate for WhatsApp'}
                         >
-                          {flow.isActive ? <Pause size={16} /> : <Play size={16} />}
+                          {flow.isActive ? '🟢 Active' : 'Activate'}
                         </button>
                         
                         <button
