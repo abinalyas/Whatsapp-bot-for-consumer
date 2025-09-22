@@ -1480,6 +1480,9 @@ var BotFlowBuilderService = class {
   db;
   pool;
   constructor(connectionString) {
+    if (!connectionString) {
+      throw new Error("Database connection string is required");
+    }
     this.pool = new Pool2({ connectionString });
     this.db = drizzle2(this.pool, { schema: schema_exports });
   }
@@ -1631,7 +1634,8 @@ var BotFlowBuilderService = class {
         error: {
           code: "BOT_FLOW_LIST_FAILED",
           message: "Failed to list bot flows",
-          tenantId
+          tenantId,
+          details: error instanceof Error ? error.message : String(error)
         }
       };
     }
@@ -2631,15 +2635,24 @@ router.get("/", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { businessType, isActive, isTemplate, page = 1, limit = 50 } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({ error: "Invalid page parameter" });
+    }
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      return res.status(400).json({ error: "Invalid limit parameter (must be between 1 and 100)" });
+    }
     const result = await botFlowService.listBotFlows(tenantId, {
       businessType,
       isActive: isActive === "true" ? true : isActive === "false" ? false : void 0,
       isTemplate: isTemplate === "true" ? true : isTemplate === "false" ? false : void 0,
-      page: parseInt(page),
-      limit: parseInt(limit)
+      page: pageNum,
+      limit: limitNum
     });
     if (!result.success) {
-      return res.status(400).json({ error: result.error });
+      console.error("Bot flow service error:", result.error);
+      return res.status(500).json({ error: "Internal server error" });
     }
     res.json(result.data);
   } catch (error) {
@@ -2918,7 +2931,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
     } else if (conversation.currentState === "awaiting_service") {
       const services2 = await storage.getServices();
       const selectedService = services2.find(
-        (s) => s.isActive && s.name.toLowerCase() === text3
+        (s) => s.isActive && s.name.toLowerCase() === text3.toLowerCase()
       );
       if (selectedService) {
         const inrPrice = Math.round(selectedService.price * 83);

@@ -217,6 +217,10 @@ export class BotFlowBuilderService {
   private pool: Pool;
 
   constructor(connectionString: string) {
+    if (!connectionString) {
+      throw new Error('Database connection string is required');
+    }
+    
     this.pool = new Pool({ connectionString });
     this.db = drizzle(this.pool, { schema });
   }
@@ -429,6 +433,7 @@ export class BotFlowBuilderService {
           code: 'BOT_FLOW_LIST_FAILED',
           message: 'Failed to list bot flows',
           tenantId,
+          details: error instanceof Error ? error.message : String(error),
         },
       };
     }

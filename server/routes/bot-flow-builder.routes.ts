@@ -26,16 +26,29 @@ router.get('/', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { businessType, isActive, isTemplate, page = 1, limit = 50 } = req.query;
 
+    // Validate parameters
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({ error: 'Invalid page parameter' });
+    }
+    
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      return res.status(400).json({ error: 'Invalid limit parameter (must be between 1 and 100)' });
+    }
+
     const result = await botFlowService.listBotFlows(tenantId, {
       businessType: businessType as string,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
       isTemplate: isTemplate === 'true' ? true : isTemplate === 'false' ? false : undefined,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
+      page: pageNum,
+      limit: limitNum
     });
 
     if (!result.success) {
-      return res.status(400).json({ error: result.error });
+      console.error('Bot flow service error:', result.error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
 
     res.json(result.data);

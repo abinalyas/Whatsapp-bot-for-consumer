@@ -192,7 +192,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       // Check if message matches a service
       const services = await storage.getServices();
       const selectedService = services.find(s => 
-        s.isActive && s.name.toLowerCase() === text
+        s.isActive && s.name.toLowerCase() === text.toLowerCase()
       );
       
       if (selectedService) {
