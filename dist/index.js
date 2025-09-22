@@ -541,7 +541,252 @@ if (process.env.DATABASE_URL) {
 }
 
 // server/storage.ts
-import { eq, and, gte, lt } from "drizzle-orm";
+import { eq as eq2, and as and2, gte as gte2, lt as lt2 } from "drizzle-orm";
+
+// server/storage-compatible.ts
+import { eq, and, gte, lt, sql as sql2 } from "drizzle-orm";
+import { pgTable as pgTable2, text as text2, varchar as varchar2, integer as integer2, timestamp as timestamp2, boolean as boolean2, jsonb as jsonb2 } from "drizzle-orm/pg-core";
+var compatibleServices = pgTable2("services", {
+  id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),
+  name: text2("name").notNull(),
+  description: text2("description"),
+  price: integer2("price").notNull(),
+  durationMinutes: integer2("duration_minutes").default(60),
+  isActive: boolean2("is_active").notNull().default(true),
+  icon: text2("icon"),
+  category: varchar2("category", { length: 100 }),
+  metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
+  createdAt: timestamp2("created_at").notNull().defaultNow(),
+  updatedAt: timestamp2("updated_at").notNull().defaultNow()
+});
+var compatibleConversations = pgTable2("conversations", {
+  id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),
+  phoneNumber: text2("phone_number").notNull(),
+  customerName: text2("customer_name"),
+  currentState: text2("current_state").notNull().default("greeting"),
+  selectedService: varchar2("selected_service"),
+  selectedDate: text2("selected_date"),
+  selectedTime: text2("selected_time"),
+  contextData: jsonb2("context_data").default(sql2`'{}'::jsonb`),
+  createdAt: timestamp2("created_at").notNull().defaultNow(),
+  updatedAt: timestamp2("updated_at").notNull().defaultNow()
+});
+var compatibleMessages = pgTable2("messages", {
+  id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),
+  conversationId: varchar2("conversation_id").notNull(),
+  content: text2("content").notNull(),
+  messageType: varchar2("message_type", { length: 50 }).notNull().default("text"),
+  isFromBot: boolean2("is_from_bot").notNull(),
+  metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
+  timestamp: timestamp2("timestamp").notNull().defaultNow()
+});
+var compatibleBookings = pgTable2("bookings", {
+  id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),
+  conversationId: varchar2("conversation_id").notNull(),
+  serviceId: varchar2("service_id").notNull(),
+  phoneNumber: text2("phone_number").notNull(),
+  customerName: text2("customer_name"),
+  customerEmail: text2("customer_email"),
+  amount: integer2("amount").notNull(),
+  status: varchar2("status", { length: 20 }).notNull().default("pending"),
+  paymentMethod: varchar2("payment_method", { length: 50 }),
+  paymentReference: text2("payment_reference"),
+  appointmentDate: timestamp2("appointment_date"),
+  appointmentTime: text2("appointment_time"),
+  notes: text2("notes"),
+  metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
+  createdAt: timestamp2("created_at").notNull().defaultNow(),
+  updatedAt: timestamp2("updated_at").notNull().defaultNow()
+});
+var CompatibleDatabaseStorage = class {
+  constructor() {
+    this.initializeDefaultServices();
+  }
+  async initializeDefaultServices() {
+    try {
+      const existingServices = await this.getServices();
+      if (existingServices.length > 0) return;
+      const defaultServices = [
+        {
+          name: "Haircut & Style",
+          description: "Professional haircut with styling",
+          price: 45,
+          // USD equivalent of ₹200
+          durationMinutes: 60,
+          isActive: true,
+          icon: "fas fa-cut",
+          category: "Hair Services"
+        },
+        {
+          name: "Facial Treatment",
+          description: "Deep cleansing facial treatment",
+          price: 65,
+          // USD equivalent of ₹500
+          durationMinutes: 75,
+          isActive: true,
+          icon: "fas fa-sparkles",
+          category: "Skin Care"
+        },
+        {
+          name: "Hair Color",
+          description: "Full hair coloring service",
+          price: 120,
+          // USD equivalent of ₹800
+          durationMinutes: 180,
+          isActive: true,
+          icon: "fas fa-palette",
+          category: "Hair Services"
+        }
+      ];
+      for (const service of defaultServices) {
+        await this.createService(service);
+      }
+      console.log("\u2705 Initialized default services");
+    } catch (error) {
+      console.error("\u274C Error initializing default services:", error);
+    }
+  }
+  async getServices() {
+    try {
+      return await db.select().from(compatibleServices);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      return [];
+    }
+  }
+  async getService(id) {
+    try {
+      const [service] = await db.select().from(compatibleServices).where(eq(compatibleServices.id, id));
+      return service || void 0;
+    } catch (error) {
+      console.error("Error fetching service:", error);
+      return void 0;
+    }
+  }
+  async createService(insertService) {
+    try {
+      const [service] = await db.insert(compatibleServices).values(insertService).returning();
+      return service;
+    } catch (error) {
+      console.error("Error creating service:", error);
+      throw error;
+    }
+  }
+  async updateService(id, updateData) {
+    try {
+      const [service] = await db.update(compatibleServices).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleServices.id, id)).returning();
+      return service || void 0;
+    } catch (error) {
+      console.error("Error updating service:", error);
+      return void 0;
+    }
+  }
+  async deleteService(id) {
+    try {
+      const result = await db.delete(compatibleServices).where(eq(compatibleServices.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      return false;
+    }
+  }
+  async getConversation(phoneNumber) {
+    try {
+      const [conversation] = await db.select().from(compatibleConversations).where(eq(compatibleConversations.phoneNumber, phoneNumber));
+      return conversation || void 0;
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+      return void 0;
+    }
+  }
+  async createConversation(insertConversation) {
+    try {
+      const [conversation] = await db.insert(compatibleConversations).values(insertConversation).returning();
+      return conversation;
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      throw error;
+    }
+  }
+  async updateConversation(id, updateData) {
+    try {
+      const [conversation] = await db.update(compatibleConversations).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleConversations.id, id)).returning();
+      return conversation || void 0;
+    } catch (error) {
+      console.error("Error updating conversation:", error);
+      return void 0;
+    }
+  }
+  async getMessages(conversationId) {
+    try {
+      return await db.select().from(compatibleMessages).where(eq(compatibleMessages.conversationId, conversationId)).orderBy(compatibleMessages.timestamp);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      return [];
+    }
+  }
+  async createMessage(insertMessage) {
+    try {
+      const [message] = await db.insert(compatibleMessages).values(insertMessage).returning();
+      return message;
+    } catch (error) {
+      console.error("Error creating message:", error);
+      throw error;
+    }
+  }
+  async getBookings() {
+    try {
+      return await db.select().from(compatibleBookings).orderBy(sql2`${compatibleBookings.createdAt} DESC`);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      return [];
+    }
+  }
+  async createBooking(insertBooking) {
+    try {
+      const [booking] = await db.insert(compatibleBookings).values(insertBooking).returning();
+      return booking;
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      throw error;
+    }
+  }
+  async updateBooking(id, updateData) {
+    try {
+      const [booking] = await db.update(compatibleBookings).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(compatibleBookings.id, id)).returning();
+      return booking || void 0;
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      return void 0;
+    }
+  }
+  async getTodayBookings() {
+    try {
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return await db.select().from(compatibleBookings).where(and(
+        gte(compatibleBookings.createdAt, today),
+        lt(compatibleBookings.createdAt, tomorrow)
+      ));
+    } catch (error) {
+      console.error("Error fetching today's bookings:", error);
+      return [];
+    }
+  }
+  async getTodayRevenue() {
+    try {
+      const todayBookings = await this.getTodayBookings();
+      return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
+    } catch (error) {
+      console.error("Error calculating today's revenue:", error);
+      return 0;
+    }
+  }
+};
+
+// server/storage.ts
 var InMemoryStorage = class {
   services = [];
   conversations = [];
@@ -555,27 +800,30 @@ var InMemoryStorage = class {
     const defaultServices = [
       {
         id: randomUUID(),
-        name: "Haircut",
-        description: "Basic haircut and styling",
-        price: 200,
+        name: "Haircut & Style",
+        description: "Professional haircut with styling",
+        price: 45,
+        // USD equivalent
         isActive: true,
         icon: "fas fa-cut"
       },
       {
         id: randomUUID(),
-        name: "Facial",
+        name: "Facial Treatment",
         description: "Deep cleansing facial treatment",
-        price: 500,
+        price: 65,
+        // USD equivalent
         isActive: true,
         icon: "fas fa-sparkles"
       },
       {
         id: randomUUID(),
-        name: "Massage",
-        description: "Relaxing full body massage",
-        price: 800,
+        name: "Hair Color",
+        description: "Full hair coloring service",
+        price: 120,
+        // USD equivalent
         isActive: true,
-        icon: "fas fa-hands"
+        icon: "fas fa-palette"
       }
     ];
     this.services = defaultServices;
@@ -680,105 +928,7 @@ var InMemoryStorage = class {
     return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
   }
 };
-var DatabaseStorageImpl = class {
-  constructor() {
-    this.initializeDefaultServices();
-  }
-  async initializeDefaultServices() {
-    const existingServices = await this.getServices();
-    if (existingServices.length > 0) return;
-    const defaultServices = [
-      {
-        name: "Haircut",
-        description: "Basic haircut and styling",
-        price: 200,
-        isActive: true,
-        icon: "fas fa-cut"
-      },
-      {
-        name: "Facial",
-        description: "Deep cleansing facial treatment",
-        price: 500,
-        isActive: true,
-        icon: "fas fa-sparkles"
-      },
-      {
-        name: "Massage",
-        description: "Relaxing full body massage",
-        price: 800,
-        isActive: true,
-        icon: "fas fa-hands"
-      }
-    ];
-    for (const service of defaultServices) {
-      await this.createService(service);
-    }
-  }
-  async getServices() {
-    return await db.select().from(services);
-  }
-  async getService(id) {
-    const [service] = await db.select().from(services).where(eq(services.id, id));
-    return service || void 0;
-  }
-  async createService(insertService) {
-    const [service] = await db.insert(services).values(insertService).returning();
-    return service;
-  }
-  async updateService(id, updateData) {
-    const [service] = await db.update(services).set(updateData).where(eq(services.id, id)).returning();
-    return service || void 0;
-  }
-  async deleteService(id) {
-    const result = await db.delete(services).where(eq(services.id, id));
-    return result.rowCount > 0;
-  }
-  async getConversation(phoneNumber) {
-    const [conversation] = await db.select().from(conversations).where(eq(conversations.phoneNumber, phoneNumber));
-    return conversation || void 0;
-  }
-  async createConversation(insertConversation) {
-    const [conversation] = await db.insert(conversations).values(insertConversation).returning();
-    return conversation;
-  }
-  async updateConversation(id, updateData) {
-    const [conversation] = await db.update(conversations).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(conversations.id, id)).returning();
-    return conversation || void 0;
-  }
-  async getMessages(conversationId) {
-    return await db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.timestamp);
-  }
-  async createMessage(insertMessage) {
-    const [message] = await db.insert(messages).values(insertMessage).returning();
-    return message;
-  }
-  async getBookings() {
-    return await db.select().from(bookings).orderBy(bookings.createdAt);
-  }
-  async createBooking(insertBooking) {
-    const [booking] = await db.insert(bookings).values(insertBooking).returning();
-    return booking;
-  }
-  async updateBooking(id, updateData) {
-    const [booking] = await db.update(bookings).set({ ...updateData, updatedAt: /* @__PURE__ */ new Date() }).where(eq(bookings.id, id)).returning();
-    return booking || void 0;
-  }
-  async getTodayBookings() {
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return await db.select().from(bookings).where(and(
-      gte(bookings.createdAt, today),
-      lt(bookings.createdAt, tomorrow)
-    ));
-  }
-  async getTodayRevenue() {
-    const todayBookings = await this.getTodayBookings();
-    return todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
-  }
-};
-var storage = process.env.USE_DATABASE === "true" && process.env.DATABASE_URL ? new DatabaseStorageImpl() : new InMemoryStorage();
+var storage = process.env.DATABASE_URL ? new CompatibleDatabaseStorage() : new InMemoryStorage();
 
 // server/routes.ts
 import { z } from "zod";
@@ -852,12 +1002,13 @@ async function sendWhatsAppMessage(to, message) {
 }
 function generateUPILink(amount, serviceName) {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${amount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
+  const inrAmount = Math.round(amount * 83);
+  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 async function processWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Processing message from", from, ":", messageText);
-    const text2 = messageText.toLowerCase().trim();
+    const text3 = messageText.toLowerCase().trim();
     let conversation = await storage.getConversation(from);
     if (!conversation) {
       conversation = await storage.createConversation({
@@ -873,12 +1024,13 @@ async function processWhatsAppMessage(from, messageText) {
     console.log("WhatsApp: Stored user message for conversation", conversation.id);
     let response = "";
     let newState = conversation.currentState;
-    if (text2 === "hi" || text2 === "hello" || conversation.currentState === "greeting") {
+    if (text3 === "hi" || text3 === "hello" || conversation.currentState === "greeting") {
       const services2 = await storage.getServices();
       const activeServices = services2.filter((s) => s.isActive);
       response = "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach((service) => {
-        response += `\u{1F487}\u200D\u2640\uFE0F ${service.name} \u2013 \u20B9${service.price}
+        const inrPrice = Math.round(service.price * 83);
+        response += `\u{1F487}\u200D\u2640\uFE0F ${service.name} \u2013 \u20B9${inrPrice}
 `;
       });
       response += "\nReply with service name to book.";
@@ -886,10 +1038,11 @@ async function processWhatsAppMessage(from, messageText) {
     } else if (conversation.currentState === "awaiting_service") {
       const services2 = await storage.getServices();
       const selectedService = services2.find(
-        (s) => s.isActive && s.name.toLowerCase() === text2
+        (s) => s.isActive && s.name.toLowerCase() === text3
       );
       if (selectedService) {
-        response = `Perfect! You've selected ${selectedService.name} (\u20B9${selectedService.price}).
+        const inrPrice = Math.round(selectedService.price * 83);
+        response = `Perfect! You've selected ${selectedService.name} (\u20B9${inrPrice}).
 
 `;
         response += "\u{1F4C5} Now, please select your preferred appointment date.\n\n";
@@ -922,7 +1075,7 @@ async function processWhatsAppMessage(from, messageText) {
         });
       }
     } else if (conversation.currentState === "awaiting_date") {
-      const dateChoice = parseInt(text2);
+      const dateChoice = parseInt(text3);
       if (dateChoice >= 1 && dateChoice <= 7) {
         const today = /* @__PURE__ */ new Date();
         const selectedDate = new Date(today);
@@ -955,7 +1108,7 @@ async function processWhatsAppMessage(from, messageText) {
       }
     } else if (conversation.currentState === "awaiting_time") {
       const timeSlots = ["10:00 AM", "11:30 AM", "02:00 PM", "03:30 PM", "05:00 PM"];
-      const timeChoice = parseInt(text2);
+      const timeChoice = parseInt(text3);
       if (timeChoice >= 1 && timeChoice <= 5) {
         const selectedTime = timeSlots[timeChoice - 1];
         const services2 = await storage.getServices();
@@ -979,7 +1132,8 @@ async function processWhatsAppMessage(from, messageText) {
 `;
             response += `Time: ${selectedTime}
 `;
-            response += `Amount: \u20B9${selectedService.price}
+            const inrPrice = Math.round(selectedService.price * 83);
+            response += `Amount: \u20B9${inrPrice}
 
 `;
             response += `\u{1F4B3} Please complete your payment:
@@ -1003,7 +1157,7 @@ ${upiLink}
       } else {
         response = "Please select a valid time slot (1-5). Reply with the number for your preferred time.";
       }
-    } else if (conversation.currentState === "awaiting_payment" && text2 === "paid") {
+    } else if (conversation.currentState === "awaiting_payment" && text3 === "paid") {
       const services2 = await storage.getServices();
       const selectedService = services2.find((s) => s.id === conversation.selectedService);
       response = "\u2705 Payment received! Your appointment is confirmed.\n\n";

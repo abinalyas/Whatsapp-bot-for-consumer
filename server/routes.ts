@@ -85,10 +85,11 @@ async function sendWhatsAppMessage(to: string, message: string): Promise<boolean
   }
 }
 
-// Generate UPI payment link
+// Generate UPI payment link (convert USD to INR for payment)
 function generateUPILink(amount: number, serviceName: string): string {
   const upiId = process.env.UPI_ID || "sparksalon@upi";
-  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${amount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
+  const inrAmount = Math.round(amount * 83); // Convert USD to INR (approximate rate)
+  return `upi://pay?pa=${upiId}&pn=Spark+Salon&am=${inrAmount}&cu=INR&tn=Payment+for+${encodeURIComponent(serviceName)}`;
 }
 
 // Process incoming WhatsApp message
@@ -125,7 +126,8 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
       
       response = "👋 Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach(service => {
-        response += `💇‍♀️ ${service.name} – ₹${service.price}\n`;
+        const inrPrice = Math.round(service.price * 83); // Convert USD to INR for display
+        response += `💇‍♀️ ${service.name} – ₹${inrPrice}\n`;
       });
       response += "\nReply with service name to book.";
       newState = "awaiting_service";
@@ -139,7 +141,8 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
       
       if (selectedService) {
         // Move to appointment scheduling
-        response = `Perfect! You've selected ${selectedService.name} (₹${selectedService.price}).\n\n`;
+        const inrPrice = Math.round(selectedService.price * 83); // Convert USD to INR for display
+        response = `Perfect! You've selected ${selectedService.name} (₹${inrPrice}).\n\n`;
         response += "📅 Now, please select your preferred appointment date.\n\n";
         response += "Available dates:\n";
         
@@ -240,7 +243,8 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
             response += `Service: ${selectedService.name}\n`;
             response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
             response += `Time: ${selectedTime}\n`;
-            response += `Amount: ₹${selectedService.price}\n\n`;
+            const inrPrice = Math.round(selectedService.price * 83); // Convert USD to INR for display
+            response += `Amount: ₹${inrPrice}\n\n`;
             response += `💳 Please complete your payment:\n${upiLink}\n\n`;
             response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
             

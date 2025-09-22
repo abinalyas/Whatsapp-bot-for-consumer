@@ -2,6 +2,7 @@ import { type Service, type InsertService, type Conversation, type InsertConvers
 import { randomUUID } from "crypto";
 import { db as database } from "./db";
 import { eq, and, gte, lt } from "drizzle-orm";
+import { CompatibleDatabaseStorage, type IStorage as ICompatibleStorage } from "./storage-compatible";
 
 export interface IStorage {
   // Services
@@ -46,27 +47,27 @@ class InMemoryStorage implements IStorage {
     const defaultServices: (InsertService & { id: string })[] = [
       {
         id: randomUUID(),
-        name: "Haircut",
-        description: "Basic haircut and styling",
-        price: 200,
+        name: "Haircut & Style",
+        description: "Professional haircut with styling",
+        price: 45, // USD equivalent
         isActive: true,
         icon: "fas fa-cut"
       },
       {
         id: randomUUID(),
-        name: "Facial",
+        name: "Facial Treatment",
         description: "Deep cleansing facial treatment",
-        price: 500,
+        price: 65, // USD equivalent
         isActive: true,
         icon: "fas fa-sparkles"
       },
       {
         id: randomUUID(),
-        name: "Massage",
-        description: "Relaxing full body massage",
-        price: 800,
+        name: "Hair Color",
+        description: "Full hair coloring service",
+        price: 120, // USD equivalent
         isActive: true,
-        icon: "fas fa-hands"
+        icon: "fas fa-palette"
       }
     ];
 
@@ -214,25 +215,25 @@ export class DatabaseStorageImpl implements IStorage {
 
     const defaultServices: InsertService[] = [
       {
-        name: "Haircut",
-        description: "Basic haircut and styling",
-        price: 200,
+        name: "Haircut & Style",
+        description: "Professional haircut with styling",
+        price: 45, // USD equivalent
         isActive: true,
         icon: "fas fa-cut"
       },
       {
-        name: "Facial",
+        name: "Facial Treatment",
         description: "Deep cleansing facial treatment",
-        price: 500,
+        price: 65, // USD equivalent
         isActive: true,
         icon: "fas fa-sparkles"
       },
       {
-        name: "Massage",
-        description: "Relaxing full body massage",
-        price: 800,
+        name: "Hair Color",
+        description: "Full hair coloring service",
+        price: 120, // USD equivalent
         isActive: true,
-        icon: "fas fa-hands"
+        icon: "fas fa-palette"
       }
     ];
 
@@ -364,7 +365,7 @@ export class DatabaseStorageImpl implements IStorage {
 }
 
 // Export the appropriate storage implementation based on environment
-// Temporarily use InMemoryStorage for production until database migration is complete
-export const storage: IStorage = process.env.USE_DATABASE === 'true' && process.env.DATABASE_URL 
-  ? new DatabaseStorageImpl() 
+// Use CompatibleDatabaseStorage for production to work with current database schema
+export const storage: IStorage = process.env.DATABASE_URL 
+  ? new CompatibleDatabaseStorage() as IStorage
   : new InMemoryStorage();
