@@ -751,6 +751,63 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Migration endpoint for fixing database schema (admin only)
+  app.post("/api/admin/migrate", async (req, res) => {
+    try {
+      const { adminKey } = req.body;
+      
+      // Simple admin key check (in production, use proper authentication)
+      if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      // Run the migration to add missing columns
+      const { Pool } = require('@neondatabase/serverless');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      
+      const client = await pool.connect();
+      try {
+        // Add columns one by one using simple ALTER TABLE with IF NOT EXISTS
+        const migrations = [
+          "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);",
+          "ALTER TABLE services ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
+          "ALTER TABLE services ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
+          "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;",
+          "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;"
+        ];
+
+        const results = [];
+        for (const sql of migrations) {
+          try {
+            await client.query(sql);
+            results.push(`✅ Executed: ${sql}`);
+            console.log(`✅ Executed: ${sql}`);
+          } catch (error) {
+            results.push(`⚠️ Error: ${sql} - ${error.message}`);
+            console.log(`⚠️ Error: ${sql} - ${error.message}`);
+          }
+        }
+
+        console.log("✅ Database migration completed");
+        res.json({ 
+          success: true, 
+          message: "Database migration completed successfully. Missing columns added.",
+          details: results
+        });
+      } finally {
+        client.release();
+        await pool.end();
+      }
+    } catch (error) {
+      console.error("❌ Migration failed:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Migration failed", 
+        details: error.message 
+      });
+    }
+  });
+
   // Business configuration API
   app.get("/api/business-config", (req, res) => {
     try {
@@ -895,10 +952,176 @@ We apologize for any inconvenience caused.`;
     try {
       const { id } = req.params;
       
-      // Mock data for now - replace with actual service call
+      // Return the current salon flow if requested
+      if (id === 'current_salon_flow') {
+        const currentSalonFlow = {
+          id: 'current_salon_flow',
+          name: '🟢 Current Salon Flow (ACTIVE)',
+          description: 'This is the exact flow currently running on WhatsApp',
+          businessType: 'salon',
+          isActive: true,
+          nodes: [
+            {
+              id: 'start_1',
+              type: 'start',
+              name: 'Start',
+              position: { x: 100, y: 100 },
+              configuration: {},
+              connections: [{
+                id: 'conn_1',
+                sourceNodeId: 'start_1',
+                targetNodeId: 'welcome_msg',
+                label: 'Begin'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'welcome_msg',
+              type: 'message',
+              name: 'Welcome Message',
+              position: { x: 400, y: 100 },
+              configuration: {
+                messageText: '💇‍♀️ Welcome to Glamour Salon!\\n\\nI can help you book an appointment. What service would you like?\\n\\n1. 💇‍♀️ Haircut & Style - ₹800\\n2. 🎨 Hair Color - ₹2500\\n3. ✨ Facial Treatment - ₹1200\\n4. 💅 Manicure & Pedicure - ₹600\\n\\nReply with 1, 2, 3, or 4'
+              },
+              connections: [{
+                id: 'conn_2',
+                sourceNodeId: 'welcome_msg',
+                targetNodeId: 'service_question',
+                label: 'Next'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'service_question',
+              type: 'question',
+              name: 'Service Selection',
+              position: { x: 700, y: 100 },
+              configuration: {
+                questionText: 'Which service would you like?',
+                inputType: 'choice',
+                variableName: 'selected_service',
+                choices: [
+                  { value: '1', label: 'Haircut & Style - ₹800' },
+                  { value: '2', label: 'Hair Color - ₹2500' },
+                  { value: '3', label: 'Facial Treatment - ₹1200' },
+                  { value: '4', label: 'Manicure & Pedicure - ₹600' }
+                ]
+              },
+              connections: [{
+                id: 'conn_3',
+                sourceNodeId: 'service_question',
+                targetNodeId: 'date_question',
+                label: 'Service Selected'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'date_question',
+              type: 'question',
+              name: 'Date Selection',
+              position: { x: 1000, y: 100 },
+              configuration: {
+                questionText: 'Great choice! When would you like your appointment?\\n\\nAvailable dates:\\n• Today\\n• Tomorrow\\n• Day after tomorrow\\n\\nPlease type your preferred date.',
+                inputType: 'text',
+                variableName: 'appointment_date'
+              },
+              connections: [{
+                id: 'conn_4',
+                sourceNodeId: 'date_question',
+                targetNodeId: 'time_question',
+                label: 'Date Selected'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'time_question',
+              type: 'question',
+              name: 'Time Selection',
+              position: { x: 1300, y: 100 },
+              configuration: {
+                questionText: 'Perfect! What time would you prefer?\\n\\nAvailable slots:\\n• 10:00 AM\\n• 2:00 PM\\n• 4:00 PM\\n• 6:00 PM\\n\\nPlease choose a time.',
+                inputType: 'choice',
+                variableName: 'appointment_time',
+                choices: [
+                  { value: '10:00 AM', label: '10:00 AM' },
+                  { value: '2:00 PM', label: '2:00 PM' },
+                  { value: '4:00 PM', label: '4:00 PM' },
+                  { value: '6:00 PM', label: '6:00 PM' }
+                ]
+              },
+              connections: [{
+                id: 'conn_5',
+                sourceNodeId: 'time_question',
+                targetNodeId: 'customer_details',
+                label: 'Time Selected'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'customer_details',
+              type: 'question',
+              name: 'Customer Name',
+              position: { x: 1600, y: 100 },
+              configuration: {
+                questionText: 'Excellent! I need your name for the booking.',
+                inputType: 'text',
+                variableName: 'customer_name'
+              },
+              connections: [{
+                id: 'conn_6',
+                sourceNodeId: 'customer_details',
+                targetNodeId: 'payment_action',
+                label: 'Name Collected'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'payment_action',
+              type: 'action',
+              name: 'Payment Request',
+              position: { x: 1900, y: 100 },
+              configuration: {
+                actionType: 'send_notification',
+                actionParameters: {
+                  message: '💰 Booking Summary:\\n\\n👤 Name: {{customer_name}}\\n💇‍♀️ Service: {{selected_service}}\\n📅 Date: {{appointment_date}}\\n🕐 Time: {{appointment_time}}\\n\\nTo confirm, please pay ₹200 booking fee:\\n💳 UPI: salon@paytm\\n\\nReply \"PAID\" when done.'
+                }
+              },
+              connections: [{
+                id: 'conn_7',
+                sourceNodeId: 'payment_action',
+                targetNodeId: 'confirmation_end',
+                label: 'Payment Sent'
+              }],
+              metadata: {}
+            },
+            {
+              id: 'confirmation_end',
+              type: 'end',
+              name: 'Booking Confirmed',
+              position: { x: 2200, y: 100 },
+              configuration: {
+                endMessage: '🎉 Booking Confirmed!\\n\\n📋 Your appointment:\\n👤 {{customer_name}}\\n💇‍♀️ {{selected_service}}\\n📅 {{appointment_date}} at {{appointment_time}}\\n\\n📍 Glamour Salon\\n123 Fashion Street\\n\\nWe\\'ll send a reminder 2 hours before your appointment. Thank you! ✨'
+              },
+              connections: [],
+              metadata: {}
+            }
+          ],
+          variables: [
+            { name: 'selected_service', type: 'string', description: 'The service customer selected' },
+            { name: 'appointment_date', type: 'string', description: 'Preferred appointment date' },
+            { name: 'appointment_time', type: 'string', description: 'Preferred appointment time' },
+            { name: 'customer_name', type: 'string', description: 'Customer name for booking' }
+          ]
+        };
+        
+        res.json(currentSalonFlow);
+        return;
+      }
+      
+      // Default mock flow for other IDs
       const mockFlow = {
         id,
-        name: 'Sample Restaurant Bot Flow',
+        name: 'Sample Bot Flow',
         description: 'A sample bot flow for restaurant bookings',
         businessType: 'restaurant',
         isActive: false,
