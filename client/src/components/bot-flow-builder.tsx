@@ -148,6 +148,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
+  const [connectionSuccess, setConnectionSuccess] = useState<{source: string, target: string} | null>(null);
   const [showNodePalette, setShowNodePalette] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -215,31 +216,58 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   const completeConnection = useCallback((targetNodeId: string) => {
     console.log('Completing connection:', { connectionStart, targetNodeId });
     
-    if (connectionStart && connectionStart !== targetNodeId) {
-      const newConnection: BotFlowConnection = {
-        id: `conn_${Date.now()}`,
-        sourceNodeId: connectionStart,
-        targetNodeId,
-        label: 'Next'
-      };
+    if (!connectionStart) {
+      console.log('No connection start node selected');
+      return;
+    }
+    
+    if (connectionStart === targetNodeId) {
+      console.log('Cannot connect node to itself');
+      return;
+    }
 
-      console.log('Creating new connection:', newConnection);
+    const newConnection: BotFlowConnection = {
+      id: `conn_${Date.now()}`,
+      sourceNodeId: connectionStart,
+      targetNodeId,
+      label: 'Next'
+    };
 
-      setFlow(prev => {
-        const updatedNodes = prev.nodes.map(node => 
-          node.id === connectionStart 
-            ? { ...node, connections: [...node.connections, newConnection] }
-            : node
+    console.log('Creating new connection:', newConnection);
+
+    setFlow(prev => {
+      // Check if this connection already exists
+      const sourceNode = prev.nodes.find(n => n.id === connectionStart);
+      if (sourceNode) {
+        const connectionExists = sourceNode.connections.some(
+          conn => conn.targetNodeId === targetNodeId
         );
         
-        console.log('Updated nodes:', updatedNodes);
-        
-        return {
-          ...prev,
-          nodes: updatedNodes
-        };
-      });
-    }
+        if (connectionExists) {
+          console.log('Connection already exists between these nodes');
+          return prev;
+        }
+      }
+
+      const updatedNodes = prev.nodes.map(node => 
+        node.id === connectionStart 
+          ? { ...node, connections: [...node.connections, newConnection] }
+          : node
+      );
+      
+      console.log('Updated nodes:', updatedNodes);
+      
+      return {
+        ...prev,
+        nodes: updatedNodes
+      };
+    });
+    
+    // Show success feedback
+    setConnectionSuccess({source: connectionStart, target: targetNodeId});
+    setTimeout(() => setConnectionSuccess(null), 2000);
+    
+    console.log('Connection created successfully');
 
     setIsConnecting(false);
     setConnectionStart(null);
@@ -285,15 +313,20 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging || !selectedNode) return;
 
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      const newPosition = {
-        x: (e.clientX - rect.left - dragOffset.x - pan.x) / zoom,
-        y: (e.clientY - rect.top - dragOffset.y - pan.y) / zoom
-      };
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      updateNode(selectedNode.id, { position: newPosition });
-    }
+    const rect = canvas.getBoundingClientRect();
+    // 考虑到可能存在的滚动条和CSS变换，直接计算相对于画布的位置
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    const newPosition = {
+      x: (canvasX - dragOffset.x - pan.x) / zoom,
+      y: (canvasY - dragOffset.y - pan.y) / zoom
+    };
+
+    updateNode(selectedNode.id, { position: newPosition });
   }, [isDragging, selectedNode, dragOffset, updateNode, zoom, pan]);
 
   const handleMouseUp = useCallback(() => {
@@ -314,14 +347,19 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
   const handleCanvasDoubleClick = useCallback((e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (rect) {
-        const position = {
-          x: (e.clientX - rect.left - pan.x) / zoom,
-          y: (e.clientY - rect.top - pan.y) / zoom
-        };
-        addNode('message', position);
-      }
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = e.clientX - rect.left;
+      const canvasY = e.clientY - rect.top;
+
+      const position = {
+        x: (canvasX - pan.x) / zoom,
+        y: (canvasY - pan.y) / zoom
+      };
+      
+      addNode('message', position);
     }
   }, [addNode, zoom, pan]);
 
@@ -350,35 +388,43 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         if (!targetNode) return;
 
         // Calculate connection points (right side of source to left side of target)
-        const startX = (node.position.x + 200) * zoom + pan.x; // Right edge of source node
-        const startY = (node.position.y + 30) * zoom + pan.y;  // Middle of source node
-        const endX = targetNode.position.x * zoom + pan.x;     // Left edge of target node
-        const endY = (targetNode.position.y + 30) * zoom + pan.y; // Middle of target node
+        const startX = node.position.x + 200; // Right edge of source node (200px is node width)
+        const startY = node.position.y + 30;  // Middle of source node (~30px from top)
+        const endX = targetNode.position.x;   // Left edge of target node
+        const endY = targetNode.position.y + 30; // Middle of target node (~30px from top)
 
-        // Create a curved path
-        const controlX1 = startX + 50;
-        const controlY1 = startY;
-        const controlX2 = endX - 50;
-        const controlY2 = endY;
+        // Apply zoom and pan transformations
+        const transformedStartX = startX * zoom + pan.x;
+        const transformedStartY = startY * zoom + pan.y;
+        const transformedEndX = endX * zoom + pan.x;
+        const transformedEndY = endY * zoom + pan.y;
 
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2;
+        // Create a curved path with better control points
+        const dx = Math.abs(transformedEndX - transformedStartX);
+        const controlX1 = transformedStartX + Math.max(50, dx * 0.5);
+        const controlY1 = transformedStartY;
+        const controlX2 = transformedEndX - Math.max(50, dx * 0.5);
+        const controlY2 = transformedEndY;
+
+        const midX = (transformedStartX + transformedEndX) / 2;
+        const midY = (transformedStartY + transformedEndY) / 2;
 
         connections.push(
           <g key={connection.id}>
             <path
-              d={`M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`}
+              d={`M ${transformedStartX} ${transformedStartY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${transformedEndX} ${transformedEndY}`}
               stroke="#6b7280"
               strokeWidth="2"
               fill="none"
               markerEnd="url(#arrowhead)"
+              className="pointer-events-auto"
             />
             {connection.label && (
               <text
                 x={midX}
                 y={midY - 5}
                 textAnchor="middle"
-                className="text-xs fill-gray-600 bg-white"
+                className="text-xs fill-gray-600 bg-white pointer-events-auto"
               >
                 {connection.label}
               </text>
@@ -390,8 +436,11 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               fill="white"
               stroke="#ef4444"
               strokeWidth="2"
-              className="cursor-pointer hover:fill-red-50"
-              onClick={() => deleteConnection(node.id, connection.id)}
+              className="cursor-pointer hover:fill-red-50 pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteConnection(node.id, connection.id);
+              }}
             />
             <text
               x={midX}
@@ -415,27 +464,32 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
     const nodeType = NODE_TYPES[node.type];
     const Icon = nodeType.icon;
     const isSelected = selectedNode?.id === node.id;
+    const isConnectionSource = isConnecting && connectionStart === node.id;
+    const isConnectionTarget = isConnecting && connectionStart !== node.id && connectionStart !== null;
 
     return (
       <div
         key={node.id}
         className={`absolute bg-white rounded-lg shadow-lg border-2 cursor-pointer transition-all ${
           isSelected ? 'border-blue-500 shadow-xl' : 
-          isConnecting ? 'border-green-300 hover:border-green-500' :
+          isConnectionSource ? 'border-blue-500 shadow-lg ring-2 ring-blue-300' :
+          isConnectionTarget ? 'border-green-500 shadow-md animate-pulse' :
+          isConnecting ? 'border-gray-300' :
           'border-gray-200 hover:border-gray-300'
         }`}
         style={{
           left: node.position.x * zoom + pan.x,
           top: node.position.y * zoom + pan.y,
           width: 200 * zoom,
-          transform: `scale(${zoom})`
+          transform: `scale(1)`,
+          zIndex: 2
         }}
         onMouseDown={(e) => handleMouseDown(e, node.id)}
         onClick={(e) => {
           e.stopPropagation();
-          console.log('Node clicked:', node.id, 'isConnecting:', isConnecting);
+          console.log('Node clicked:', node.id, 'isConnecting:', isConnecting, 'connectionStart:', connectionStart);
           
-          if (isConnecting) {
+          if (isConnecting && connectionStart && connectionStart !== node.id) {
             console.log('Completing connection via click');
             completeConnection(node.id);
           } else {
@@ -451,15 +505,23 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
           </div>
           <div className="flex items-center space-x-1">
             <button
-              className="text-white hover:text-gray-200 p-1"
+              className={`text-white hover:text-gray-200 p-1 transition-colors ${
+                isConnecting && connectionStart === node.id 
+                  ? 'text-green-300 animate-pulse ring-2 ring-green-300 rounded' 
+                  : ''
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Starting connection from node:', node.id);
+                // 添加视觉反馈：点击后按钮会显示为绿色并脉冲动画
                 startConnection(node.id);
               }}
-              title="Create connection"
+              title={isConnecting && connectionStart === node.id ? "Click on target node to complete connection" : "Create connection"}
             >
-              <Link size={12} />
+              <Link 
+                size={12} 
+                className={isConnecting && connectionStart === node.id ? 'animate-spin' : ''}
+              />
             </button>
             <button
               className="text-white hover:text-gray-200 p-1"
@@ -510,6 +572,16 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
   return (
     <div className="h-screen flex bg-gray-50">
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
+
       {/* Node Palette */}
       {showNodePalette && (
         <div className="w-64 bg-white border-r border-gray-200 p-4">
@@ -602,10 +674,11 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-hidden" style={{ width: '100%', height: '100%' }}>
           <div
             ref={canvasRef}
             className="w-full h-full relative cursor-crosshair"
+            style={{ width: '100%', height: '100%' }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onClick={handleCanvasClick}
@@ -627,8 +700,12 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
             {/* SVG for connections */}
             <svg
               ref={svgRef}
-              className="absolute inset-0 pointer-events-none"
-              style={{ zIndex: 1 }}
+              className="absolute inset-0"
+              style={{ 
+                zIndex: 1,
+                width: '100%',
+                height: '100%'
+              }}
             >
               <defs>
                 <marker
@@ -655,19 +732,39 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
             {/* Connection indicator */}
             {isConnecting && (
-              <div className="absolute top-4 left-4 bg-green-100 text-green-700 px-4 py-3 rounded-lg text-sm shadow-lg border border-green-200">
+              <div className="absolute top-4 left-4 bg-blue-100 text-blue-800 px-4 py-3 rounded-lg text-sm shadow-lg border border-blue-200 animate-fade-in">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Click on a target node to create connection</span>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <div>
+                    <div className="font-medium">Creating connection...</div>
+                    <div className="text-blue-700">
+                      {connectionStart 
+                        ? `Click on target node to connect from "${flow.nodes.find(n => n.id === connectionStart)?.name || 'selected node'}"` 
+                        : "Click on target node to complete"}
+                    </div>
+                  </div>
                   <button 
                     onClick={() => {
                       setIsConnecting(false);
                       setConnectionStart(null);
                     }}
-                    className="ml-2 text-green-600 hover:text-green-800"
+                    className="ml-2 text-blue-600 hover:text-blue-900 font-medium underline"
                   >
                     Cancel
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Connection success indicator */}
+            {connectionSuccess && (
+              <div className="absolute top-20 left-4 bg-green-100 text-green-800 px-4 py-3 rounded-lg text-sm shadow-lg border border-green-200 animate-fade-in">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div>
+                    <div className="font-medium">Connection created!</div>
+                    <div className="text-green-700">Successfully connected nodes</div>
+                  </div>
                 </div>
               </div>
             )}

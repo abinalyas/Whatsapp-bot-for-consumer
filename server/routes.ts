@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { send } from "process";
 // import businessConfigRoutes from "./routes/business-config.routes"; // Temporarily disabled
 
 // WhatsApp webhook verification schema
@@ -682,89 +683,6 @@ We apologize for any inconvenience caused.`;
       const { Pool } = require('@neondatabase/serverless');
       const pool = new Pool({ connectionString: process.env.DATABASE_URL });
       
-      const migrationSQL = `
-        -- Add payment_reference column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'payment_reference') THEN
-                ALTER TABLE bookings ADD COLUMN payment_reference VARCHAR(255);
-            END IF;
-        END $$;
-
-        -- Add created_at column to services table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'services' AND column_name = 'created_at') THEN
-                ALTER TABLE services ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add updated_at column to services table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'services' AND column_name = 'updated_at') THEN
-                ALTER TABLE services ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add created_at column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'created_at') THEN
-                ALTER TABLE bookings ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-
-        -- Add updated_at column to bookings table if it doesn't exist
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                           WHERE table_name = 'bookings' AND column_name = 'updated_at') THEN
-                ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-            END IF;
-        END $$;
-      `;
-
-      const client = await pool.connect();
-      try {
-        await client.query(migrationSQL);
-        console.log("✅ Database migration completed successfully");
-        res.json({ 
-          success: true, 
-          message: "Database migration completed successfully. Missing columns added." 
-        });
-      } finally {
-        client.release();
-        await pool.end();
-      }
-    } catch (error) {
-      console.error("❌ Migration failed:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Migration failed", 
-        details: error.message 
-      });
-    }
-  });
-
-  // Migration endpoint for fixing database schema (admin only)
-  app.post("/api/admin/migrate", async (req, res) => {
-    try {
-      const { adminKey } = req.body;
-      
-      // Simple admin key check (in production, use proper authentication)
-      if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
-        return res.status(403).json({ error: "Unauthorized" });
-      }
-
-      // Run the migration to add missing columns
-      const { Pool } = require('@neondatabase/serverless');
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      
       const client = await pool.connect();
       try {
         // Add columns one by one using simple ALTER TABLE with IF NOT EXISTS
@@ -981,7 +899,7 @@ We apologize for any inconvenience caused.`;
               name: 'Welcome Message',
               position: { x: 400, y: 100 },
               configuration: {
-                messageText: '💇‍♀️ Welcome to Glamour Salon!\\n\\nI can help you book an appointment. What service would you like?\\n\\n1. 💇‍♀️ Haircut & Style - ₹800\\n2. 🎨 Hair Color - ₹2500\\n3. ✨ Facial Treatment - ₹1200\\n4. 💅 Manicure & Pedicure - ₹600\\n\\nReply with 1, 2, 3, or 4'
+                messageText: '💇‍♀️ Welcome to Glamour Salon!\n\nI can help you book an appointment. What service would you like?\n\n1. 💇‍♀️ Haircut & Style - ₹800\n2. 🎨 Hair Color - ₹2500\n3. ✨ Facial Treatment - ₹1200\n4. 💅 Manicure & Pedicure - ₹600\n\nReply with 1, 2, 3, or 4'
               },
               connections: [{
                 id: 'conn_2',
@@ -1021,7 +939,7 @@ We apologize for any inconvenience caused.`;
               name: 'Date Selection',
               position: { x: 1000, y: 100 },
               configuration: {
-                questionText: 'Great choice! When would you like your appointment?\\n\\nAvailable dates:\\n• Today\\n• Tomorrow\\n• Day after tomorrow\\n\\nPlease type your preferred date.',
+                questionText: 'Great choice! When would you like your appointment?\n\nAvailable dates:\n• Today\n• Tomorrow\n• Day after tomorrow\n\nPlease type your preferred date.',
                 inputType: 'text',
                 variableName: 'appointment_date'
               },
@@ -1039,7 +957,7 @@ We apologize for any inconvenience caused.`;
               name: 'Time Selection',
               position: { x: 1300, y: 100 },
               configuration: {
-                questionText: 'Perfect! What time would you prefer?\\n\\nAvailable slots:\\n• 10:00 AM\\n• 2:00 PM\\n• 4:00 PM\\n• 6:00 PM\\n\\nPlease choose a time.',
+                questionText: 'Perfect! What time would you prefer?\n\nAvailable slots:\n• 10:00 AM\n• 2:00 PM\n• 4:00 PM\n• 6:00 PM\n\nPlease choose a time.',
                 inputType: 'choice',
                 variableName: 'appointment_time',
                 choices: [
@@ -1083,7 +1001,7 @@ We apologize for any inconvenience caused.`;
               configuration: {
                 actionType: 'send_notification',
                 actionParameters: {
-                  message: '💰 Booking Summary:\\n\\n👤 Name: {{customer_name}}\\n💇‍♀️ Service: {{selected_service}}\\n📅 Date: {{appointment_date}}\\n🕐 Time: {{appointment_time}}\\n\\nTo confirm, please pay ₹200 booking fee:\\n💳 UPI: salon@paytm\\n\\nReply \"PAID\" when done.'
+                  message: '💰 Booking Summary:\n\n👤 Name: {{customer_name}}\n💇‍♀️ Service: {{selected_service}}\n📅 Date: {{appointment_date}}\n🕐 Time: {{appointment_time}}\n\nTo confirm, please pay ₹200 booking fee:\n💳 UPI: salon@paytm\n\nReply "PAID" when done.'
                 }
               },
               connections: [{
@@ -1100,7 +1018,7 @@ We apologize for any inconvenience caused.`;
               name: 'Booking Confirmed',
               position: { x: 2200, y: 100 },
               configuration: {
-                endMessage: '🎉 Booking Confirmed!\\n\\n📋 Your appointment:\\n👤 {{customer_name}}\\n💇‍♀️ {{selected_service}}\\n📅 {{appointment_date}} at {{appointment_time}}\\n\\n📍 Glamour Salon\\n123 Fashion Street\\n\\nWe\\'ll send a reminder 2 hours before your appointment. Thank you! ✨'
+                endMessage: '🎉 Booking Confirmed!\n\n📋 Your appointment:\n👤 {{customer_name}}\n💇‍♀️ {{selected_service}}\n📅 {{appointment_date}} at {{appointment_time}}\n\n📍 Glamour Salon\n123 Fashion Street\n\nWe will send a reminder 2 hours before your appointment. Thank you! ✨'
               },
               connections: [],
               metadata: {}
