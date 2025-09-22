@@ -149,35 +149,46 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
   }
 }
 
-// Static message processing (existing logic)
-async function processStaticWhatsAppMessage(from: string, messageText: string): Promise<void> {
-  try {
-    const text = messageText.toLowerCase().trim();
-    
-    // Get or create conversation
-    let conversation = await storage.getConversation(from);
-    if (!conversation) {
-      conversation = await storage.createConversation({
-        phoneNumber: from,
-        currentState: "greeting",
-      });
-    }
+async function processStaticWhatsAppMessage(from: string, messageText: string): Promise<string> {
+  console.log("WhatsApp: Processing message from", from, "with text:", messageText);
+  
+  // Add timeout wrapper for storage operations
+  const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms)
+      )
+    ]);
+  };
 
-    // Store incoming message
-    await storage.createMessage({
-      conversationId: conversation.id,
-      content: messageText,
-      isFromBot: false,
+  // Get or create conversation
+  let conversation = await storage.getConversation(from);
+  if (!conversation) {
+    conversation = await storage.createConversation({
+      phoneNumber: from,
+      currentState: "greeting",
     });
-    console.log("WhatsApp: Stored user message for conversation", conversation.id);
+    console.log("WhatsApp: Created new conversation", conversation.id);
+  }
 
-    let response = "";
-    let newState = conversation.currentState;
+  // Store user message
+  await storage.createMessage({
+    conversationId: conversation.id,
+    content: messageText,
+    isFromBot: false,
+  });
+  console.log("WhatsApp: Stored user message for conversation", conversation.id);
 
+  let response = "";
+  let newState = conversation.currentState;
+  const text = messageText.toLowerCase().trim();
+
+  try {
     // Handle conversation flow
     if (text === "hi" || text === "hello" || conversation.currentState === "greeting") {
       // Send welcome message with services
-      const services = await storage.getServices();
+      const services = await withTimeout(storage.getServices(), 5000);
       const activeServices = services.filter(s => s.isActive);
       
       response = "👋 Welcome to Spark Salon!\n\nHere are our services:\n";
@@ -373,40 +384,53 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
         response = "Please select a valid time option (1-5). Reply with the number for your preferred time.";
       }
       
-    } else if (conversation.currentState === "awaiting_payment" && text === "paid") {
-      // Confirm payment and booking
-      const services = await storage.getServices();
-      const selectedService = services.find(s => s.id === conversation.selectedService);
-      
-      response = "✅ Payment received! Your appointment is confirmed.\n\n";
-      response += "📋 Confirmed Booking Details:\n";
-      if (selectedService) {
-        response += `Service: ${selectedService.name}\n`;
+    } else if (conversation.currentState === "awaiting_payment") {
+      if (text === "paid") {
+        response = "✅ Payment received! Your appointment is now confirmed.\n\n";
+        response += "📋 Booking Details:\n";
+        response += `Service: ${conversation.selectedService}\n`;
+        if (conversation.selectedDate) {
+          response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+        }
+        if (conversation.selectedTime) {
+          response += `Time: ${conversation.selectedTime}\n`;
+        }
+        response += "\n🎉 Thank you for choosing Spark Salon! We look forward to serving you.";
+        
+        // Update booking status
+        try {
+          const bookings = await withTimeout(storage.getBookings(), 5000);
+          const pendingBooking = bookings.find(b => 
+            b.conversationId === conversation.id && b.status === "pending"
+          );
+          
+          if (pendingBooking) {
+            await withTimeout(storage.updateBooking(pendingBooking.id, {
+              status: "confirmed",
+              paymentMethod: "UPI",
+            }), 5000);
+          }
+        } catch (error) {
+          console.error("Error updating booking:", error);
+        }
+        
+        // Reset conversation state
+        newState = "completed";
+      } else {
+        response = "Please complete your payment first. Click the UPI link and reply 'paid' once done.";
       }
+      
+    } else if (conversation.currentState === "completed") {
+      response = "Your appointment is already confirmed! 🎉\n\n";
+      response += "📋 Booking Details:\n";
+      response += `Service: ${conversation.selectedService}\n`;
       if (conversation.selectedDate) {
-        const appointmentDate = new Date(conversation.selectedDate);
-        response += `Date: ${appointmentDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+        response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
       }
       if (conversation.selectedTime) {
         response += `Time: ${conversation.selectedTime}\n`;
       }
       response += "\n🎉 Thank you for choosing Spark Salon! We look forward to serving you.";
-      
-      // Update booking status
-      const bookings = await storage.getBookings();
-      const pendingBooking = bookings.find(b => 
-        b.conversationId === conversation.id && b.status === "pending"
-      );
-      
-      if (pendingBooking) {
-        await storage.updateBooking(pendingBooking.id, {
-          status: "confirmed",
-          paymentMethod: "UPI",
-        });
-      }
-      
-      // Reset conversation state
-      newState = "completed";
       
     } else {
       // Default response for unrecognized input
@@ -415,26 +439,26 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
 
     // Update conversation state if needed
     if (newState !== conversation.currentState) {
-      await storage.updateConversation(conversation.id, {
-        currentState: newState,
-      });
+      try {
+        await withTimeout(storage.updateConversation(conversation.id, {
+          currentState: newState,
+        }), 5000);
+      } catch (error) {
+        console.error("Error updating conversation state:", error);
+      }
     }
 
-    // Send response
-    await sendWhatsAppMessage(from, response);
-    
-    // Store bot response
+    // Store bot message
     await storage.createMessage({
       conversationId: conversation.id,
       content: response,
       isFromBot: true,
     });
-    console.log("WhatsApp: Stored bot response for conversation", conversation.id);
 
+    return response;
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
-    // Send error message to user
-    await sendWhatsAppMessage(from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+    return "Sorry, I encountered an error processing your request. Please try again.";
   }
 }
 
