@@ -12,8 +12,14 @@ const router = Router();
 // Apply tenant context middleware to all routes
 router.use(tenantContextMiddleware);
 
-// Initialize service
-const botFlowService = new BotFlowBuilderService(process.env.DATABASE_URL!);
+// Initialize service with lazy initialization to prevent timeouts
+let botFlowService: BotFlowBuilderService | null = null;
+const getBotFlowService = () => {
+  if (!botFlowService) {
+    botFlowService = new BotFlowBuilderService(process.env.DATABASE_URL || '');
+  }
+  return botFlowService;
+};
 
 // ===== BOT FLOW ROUTES =====
 
@@ -38,7 +44,9 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid limit parameter (must be between 1 and 100)' });
     }
 
-    const result = await botFlowService.listBotFlows(tenantId, {
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.listBotFlows(tenantId, {
       businessType: businessType as string,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
       isTemplate: isTemplate === 'true' ? true : isTemplate === 'false' ? false : undefined,
@@ -126,7 +134,9 @@ router.post('/', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const flowData = req.body;
 
-    const result = await botFlowService.createBotFlow(tenantId, flowData);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.createBotFlow(tenantId, flowData);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -148,7 +158,9 @@ router.get('/:id', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { id } = req.params;
 
-    const result = await botFlowService.getBotFlow(tenantId, id);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.getBotFlow(tenantId, id);
 
     if (!result.success) {
       return res.status(404).json({ error: result.error });
@@ -171,7 +183,9 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const flowData = req.body;
 
-    const result = await botFlowService.updateBotFlow(tenantId, id, flowData);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.updateBotFlow(tenantId, id, flowData);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -193,7 +207,9 @@ router.delete('/:id', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { id } = req.params;
 
-    const result = await botFlowService.deleteBotFlow(tenantId, id);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.deleteBotFlow(tenantId, id);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -215,14 +231,17 @@ router.post('/:id/activate', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { id } = req.params;
 
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    
     // First deactivate all other flows for this tenant
-    const deactivateResult = await botFlowService.deactivateAllBotFlows(tenantId);
+    const deactivateResult = await service.deactivateAllBotFlows(tenantId);
     if (!deactivateResult.success) {
       return res.status(400).json({ error: deactivateResult.error });
     }
 
     // Then activate the requested flow
-    const activateResult = await botFlowService.activateBotFlow(tenantId, id);
+    const activateResult = await service.activateBotFlow(tenantId, id);
     if (!activateResult.success) {
       return res.status(400).json({ error: activateResult.error });
     }
@@ -243,7 +262,9 @@ router.post('/:id/deactivate', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { id } = req.params;
 
-    const result = await botFlowService.deactivateBotFlow(tenantId, id);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const result = await service.deactivateBotFlow(tenantId, id);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -265,27 +286,38 @@ router.post('/:id/toggle', async (req, res) => {
     const { tenantId } = req.tenantContext!;
     const { id } = req.params;
 
-    const flowResult = await botFlowService.getBotFlow(tenantId, id);
+    // Use lazy initialization to prevent timeouts
+    const service = getBotFlowService();
+    const flowResult = await service.getBotFlow(tenantId, id);
+    
     if (!flowResult.success) {
-      return res.status(404).json({ error: flowResult.error });
+      return res.status(404).json({ error: 'Bot flow not found' });
     }
 
     const flow = flowResult.data;
     let result;
 
     if (flow.isActive) {
-      result = await botFlowService.deactivateBotFlow(tenantId, id);
+      result = await service.deactivateBotFlow(tenantId, id);
     } else {
-      // When activating, deactivate all others first
-      await botFlowService.deactivateAllBotFlows(tenantId);
-      result = await botFlowService.activateBotFlow(tenantId, id);
+      // First deactivate all other flows for this tenant
+      const deactivateResult = await service.deactivateAllBotFlows(tenantId);
+      if (!deactivateResult.success) {
+        return res.status(400).json({ error: deactivateResult.error });
+      }
+      
+      // Then activate the requested flow
+      result = await service.activateBotFlow(tenantId, id);
     }
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
 
-    res.json({ message: `Bot flow ${flow.isActive ? 'deactivated' : 'activated'} successfully` });
+    res.json({ 
+      message: `Bot flow ${flow.isActive ? 'deactivated' : 'activated'} successfully`,
+      isActive: !flow.isActive
+    });
   } catch (error) {
     console.error('Error toggling bot flow:', error);
     res.status(500).json({ error: 'Internal server error' });

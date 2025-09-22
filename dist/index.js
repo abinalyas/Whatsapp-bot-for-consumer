@@ -2916,7 +2916,13 @@ function extractDomainFromRequest(req) {
 // server/routes/bot-flow-builder.routes.ts
 var router = Router();
 router.use(tenantContextMiddleware);
-var botFlowService = new BotFlowBuilderService(process.env.DATABASE_URL);
+var botFlowService = null;
+var getBotFlowService = () => {
+  if (!botFlowService) {
+    botFlowService = new BotFlowBuilderService(process.env.DATABASE_URL || "");
+  }
+  return botFlowService;
+};
 router.get("/", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
@@ -2929,7 +2935,8 @@ router.get("/", async (req, res) => {
     if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
       return res.status(400).json({ error: "Invalid limit parameter (must be between 1 and 100)" });
     }
-    const result = await botFlowService.listBotFlows(tenantId, {
+    const service = getBotFlowService();
+    const result = await service.listBotFlows(tenantId, {
       businessType,
       isActive: isActive === "true" ? true : isActive === "false" ? false : void 0,
       isTemplate: isTemplate === "true" ? true : isTemplate === "false" ? false : void 0,
@@ -3007,7 +3014,8 @@ router.post("/", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const flowData = req.body;
-    const result = await botFlowService.createBotFlow(tenantId, flowData);
+    const service = getBotFlowService();
+    const result = await service.createBotFlow(tenantId, flowData);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
@@ -3021,7 +3029,8 @@ router.get("/:id", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
-    const result = await botFlowService.getBotFlow(tenantId, id);
+    const service = getBotFlowService();
+    const result = await service.getBotFlow(tenantId, id);
     if (!result.success) {
       return res.status(404).json({ error: result.error });
     }
@@ -3036,7 +3045,8 @@ router.put("/:id", async (req, res) => {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
     const flowData = req.body;
-    const result = await botFlowService.updateBotFlow(tenantId, id, flowData);
+    const service = getBotFlowService();
+    const result = await service.updateBotFlow(tenantId, id, flowData);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
@@ -3050,7 +3060,8 @@ router.delete("/:id", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
-    const result = await botFlowService.deleteBotFlow(tenantId, id);
+    const service = getBotFlowService();
+    const result = await service.deleteBotFlow(tenantId, id);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
@@ -3064,11 +3075,12 @@ router.post("/:id/activate", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
-    const deactivateResult = await botFlowService.deactivateAllBotFlows(tenantId);
+    const service = getBotFlowService();
+    const deactivateResult = await service.deactivateAllBotFlows(tenantId);
     if (!deactivateResult.success) {
       return res.status(400).json({ error: deactivateResult.error });
     }
-    const activateResult = await botFlowService.activateBotFlow(tenantId, id);
+    const activateResult = await service.activateBotFlow(tenantId, id);
     if (!activateResult.success) {
       return res.status(400).json({ error: activateResult.error });
     }
@@ -3082,7 +3094,8 @@ router.post("/:id/deactivate", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
-    const result = await botFlowService.deactivateBotFlow(tenantId, id);
+    const service = getBotFlowService();
+    const result = await service.deactivateBotFlow(tenantId, id);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
@@ -3096,22 +3109,29 @@ router.post("/:id/toggle", async (req, res) => {
   try {
     const { tenantId } = req.tenantContext;
     const { id } = req.params;
-    const flowResult = await botFlowService.getBotFlow(tenantId, id);
+    const service = getBotFlowService();
+    const flowResult = await service.getBotFlow(tenantId, id);
     if (!flowResult.success) {
-      return res.status(404).json({ error: flowResult.error });
+      return res.status(404).json({ error: "Bot flow not found" });
     }
     const flow = flowResult.data;
     let result;
     if (flow.isActive) {
-      result = await botFlowService.deactivateBotFlow(tenantId, id);
+      result = await service.deactivateBotFlow(tenantId, id);
     } else {
-      await botFlowService.deactivateAllBotFlows(tenantId);
-      result = await botFlowService.activateBotFlow(tenantId, id);
+      const deactivateResult = await service.deactivateAllBotFlows(tenantId);
+      if (!deactivateResult.success) {
+        return res.status(400).json({ error: deactivateResult.error });
+      }
+      result = await service.activateBotFlow(tenantId, id);
     }
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
-    res.json({ message: `Bot flow ${flow.isActive ? "deactivated" : "activated"} successfully` });
+    res.json({
+      message: `Bot flow ${flow.isActive ? "deactivated" : "activated"} successfully`,
+      isActive: !flow.isActive
+    });
   } catch (error) {
     console.error("Error toggling bot flow:", error);
     res.status(500).json({ error: "Internal server error" });
