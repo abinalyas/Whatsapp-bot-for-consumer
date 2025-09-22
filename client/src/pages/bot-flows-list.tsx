@@ -43,7 +43,8 @@ const api = {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch bot flows');
+        // If response is not ok, throw an error to trigger the catch block
+        throw new Error(`Failed to fetch bot flows: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
@@ -53,6 +54,7 @@ const api = {
       };
     } catch (error) {
       console.error('Error fetching bot flows:', error);
+      // Re-throw the error so the calling function can handle it
       throw error;
     }
   },
@@ -198,27 +200,32 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
   const tenantId = 'tenant_123';
 
   useEffect(() => {
+    console.log('useEffect triggered, loading flows');
     loadFlows();
   }, [searchTerm, statusFilter]);
 
   const loadFlows = async () => {
+    console.log('Loading flows...');
     setLoading(true);
     try {
       const result = await api.getBotFlows(tenantId, {
         search: searchTerm,
         status: statusFilter === 'all' ? undefined : statusFilter
       });
+      console.log('Flows loaded successfully:', result.flows);
       setFlows(result.flows);
     } catch (error) {
       console.error('Error loading flows:', error);
       // Fallback to mock data if API fails
-      setFlows([
+      const mockFlows = [
         {
           id: 'current_salon_flow',
           name: '🟢 Current Salon Flow (ACTIVE)',
           description: 'This is the exact flow currently running on WhatsApp',
           businessType: 'salon',
           isActive: true,
+          isTemplate: false,
+          version: '1.0.0',
           nodes: [
             { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
             { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
@@ -229,10 +236,14 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
             { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
             { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
           ],
-          variables: []
+          variables: [],
+          metadata: {}
         }
-      ]);
+      ];
+      console.log('Setting mock flows:', mockFlows);
+      setFlows(mockFlows);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
