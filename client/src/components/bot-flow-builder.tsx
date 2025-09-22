@@ -401,30 +401,37 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
         // Create a curved path with better control points
         const dx = Math.abs(transformedEndX - transformedStartX);
-        const controlX1 = transformedStartX + Math.max(50, dx * 0.5);
+        const controlX1 = transformedStartX + Math.max(50, dx * 0.3);
         const controlY1 = transformedStartY;
-        const controlX2 = transformedEndX - Math.max(50, dx * 0.5);
+        const controlX2 = transformedEndX - Math.max(50, dx * 0.3);
         const controlY2 = transformedEndY;
 
         const midX = (transformedStartX + transformedEndX) / 2;
         const midY = (transformedStartY + transformedEndY) / 2;
 
         connections.push(
-          <g key={connection.id}>
+          <g key={connection.id} style={{ pointerEvents: 'auto' }}>
             <path
               d={`M ${transformedStartX} ${transformedStartY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${transformedEndX} ${transformedEndY}`}
               stroke="#6b7280"
               strokeWidth="2"
               fill="none"
               markerEnd="url(#arrowhead)"
-              className="pointer-events-auto"
+              style={{ pointerEvents: 'auto' }}
             />
             {connection.label && (
               <text
                 x={midX}
                 y={midY - 5}
                 textAnchor="middle"
-                className="text-xs fill-gray-600 bg-white pointer-events-auto"
+                className="text-xs fill-gray-600"
+                style={{ 
+                  pointerEvents: 'auto',
+                  background: 'white',
+                  paintOrder: 'stroke',
+                  strokeWidth: '2px',
+                  strokeLinejoin: 'round'
+                }}
               >
                 {connection.label}
               </text>
@@ -436,7 +443,11 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               fill="white"
               stroke="#ef4444"
               strokeWidth="2"
-              className="cursor-pointer hover:fill-red-50 pointer-events-auto"
+              style={{ 
+                cursor: 'pointer',
+                pointerEvents: 'auto'
+              }}
+              className="hover:fill-red-50"
               onClick={(e) => {
                 e.stopPropagation();
                 deleteConnection(node.id, connection.id);
@@ -446,7 +457,8 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               x={midX}
               y={midY + 1}
               textAnchor="middle"
-              className="text-xs fill-red-500 pointer-events-none"
+              className="text-xs fill-red-500"
+              style={{ pointerEvents: 'none' }}
             >
               ×
             </text>
@@ -580,6 +592,24 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out;
         }
+        
+        /* Ensure SVG elements are visible and interactive in all environments */
+        svg {
+          overflow: visible !important;
+        }
+        
+        svg path {
+          pointer-events: auto !important;
+        }
+        
+        svg text {
+          pointer-events: auto !important;
+          user-select: none;
+        }
+        
+        svg circle {
+          pointer-events: auto !important;
+        }
       `}</style>
 
       {/* Node Palette */}
@@ -674,11 +704,22 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 relative overflow-hidden" style={{ width: '100%', height: '100%' }}>
+        <div 
+          className="flex-1 relative overflow-hidden"
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            position: 'relative'
+          }}
+        >
           <div
             ref={canvasRef}
             className="w-full h-full relative cursor-crosshair"
-            style={{ width: '100%', height: '100%' }}
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              position: 'relative'
+            }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onClick={handleCanvasClick}
@@ -704,7 +745,13 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               style={{ 
                 zIndex: 1,
                 width: '100%',
-                height: '100%'
+                height: '100%',
+                minWidth: '100%',
+                minHeight: '100%',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                overflow: 'visible'
               }}
             >
               <defs>
@@ -726,7 +773,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
             </svg>
 
             {/* Nodes */}
-            <div className="absolute inset-0" style={{ zIndex: 2 }}>
+            <div 
+              className="absolute inset-0" 
+              style={{ 
+                zIndex: 2,
+                width: '100%',
+                height: '100%',
+                position: 'absolute',
+                top: 0,
+                left: 0
+              }}
+            >
               {flow.nodes.map(renderNode)}
             </div>
 
