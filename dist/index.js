@@ -3536,13 +3536,19 @@ We apologize for any inconvenience caused.`;
   app2.get("/api/stats", async (req, res) => {
     try {
       const todayBookings = await storage.getTodayBookings();
+      console.log("Today's bookings count:", todayBookings.length);
+      console.log("Today's bookings:", todayBookings);
       const todayRevenueINR = todayBookings.filter((booking) => booking.status === "confirmed").reduce((total, booking) => total + booking.amount, 0);
+      console.log("Today's revenue:", todayRevenueINR);
       const allBookings = await storage.getBookings();
+      console.log("All bookings count:", allBookings.length);
       let todayMessages = 0;
       for (const booking of todayBookings) {
         const messages2 = await storage.getMessages(booking.conversationId);
+        console.log(`Messages for booking ${booking.id}:`, messages2.length);
         todayMessages += messages2.length;
       }
+      console.log("Today's messages count:", todayMessages);
       let responseRate = 98;
       if (todayMessages > 0) {
         const botMessages = Math.floor(todayMessages / 2);
@@ -3556,6 +3562,7 @@ We apologize for any inconvenience caused.`;
         responseRate,
         totalBookings: allBookings.length
       };
+      console.log("Stats response:", stats);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);

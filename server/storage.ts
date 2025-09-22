@@ -302,11 +302,14 @@ export class DatabaseStorageImpl implements IStorage {
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    return await database
+    const messages = await database
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.timestamp);
+      
+    console.log(`Retrieved ${messages.length} messages for conversation ${conversationId}`);
+    return messages;
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
@@ -342,17 +345,20 @@ export class DatabaseStorageImpl implements IStorage {
   }
 
   async getTodayBookings(): Promise<Booking[]> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Create a more robust date range for today
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Start of today
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1); // Start of tomorrow
+    
+    console.log("Querying bookings between:", todayStart, "and", todayEnd);
     
     return await database
       .select()
       .from(bookings)
       .where(and(
-        gte(bookings.createdAt, today),
-        lt(bookings.createdAt, tomorrow)
+        gte(bookings.createdAt, todayStart),
+        lt(bookings.createdAt, todayEnd)
       ));
   }
 

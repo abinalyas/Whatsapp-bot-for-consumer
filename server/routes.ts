@@ -720,21 +720,27 @@ We apologize for any inconvenience caused.`;
     try {
       // Get today's bookings
       const todayBookings = await storage.getTodayBookings();
+      console.log("Today's bookings count:", todayBookings.length);
+      console.log("Today's bookings:", todayBookings);
       
       // Calculate today's revenue (already in INR)
       const todayRevenueINR = todayBookings
         .filter(booking => booking.status === "confirmed")
         .reduce((total, booking) => total + booking.amount, 0);
+      console.log("Today's revenue:", todayRevenueINR);
       
       // Get all bookings for total count
       const allBookings = await storage.getBookings();
+      console.log("All bookings count:", allBookings.length);
       
       // Calculate today's messages by getting all messages for today's conversations
       let todayMessages = 0;
       for (const booking of todayBookings) {
         const messages = await storage.getMessages(booking.conversationId);
+        console.log(`Messages for booking ${booking.id}:`, messages.length);
         todayMessages += messages.length;
       }
+      console.log("Today's messages count:", todayMessages);
       
       // Calculate response rate (simplified calculation)
       // For now, we'll calculate based on the ratio of bot messages to total messages
@@ -754,6 +760,7 @@ We apologize for any inconvenience caused.`;
         totalBookings: allBookings.length,
       };
       
+      console.log("Stats response:", stats);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
