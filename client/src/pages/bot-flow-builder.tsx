@@ -12,13 +12,49 @@ import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 const api = {
   async getBotFlow(flowId: string): Promise<BotFlow | null> {
     try {
-      const response = await fetch(`/api/bot-flows/${flowId}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`/api/bot-flows/${flowId}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch bot flow');
+        throw new Error(`Failed to fetch bot flow: ${response.status} ${response.statusText}`);
       }
-      return await response.json();
+      
+      const flow = await response.json();
+      return flow;
     } catch (error) {
       console.error('Error fetching bot flow:', error);
+      
+      // If it's the specific salon flow, return mock data
+      if (flowId === 'current_salon_flow') {
+        return {
+          id: 'current_salon_flow',
+          name: '🟢 Current Salon Flow (ACTIVE)',
+          description: 'This is the exact flow currently running on WhatsApp',
+          businessType: 'salon',
+          isActive: true,
+          isTemplate: false,
+          version: '1.0.0',
+          nodes: [
+            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: [],
+          metadata: {}
+        };
+      }
+      
       return null;
     }
   },
@@ -128,44 +164,27 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const tenantId = 'tenant_123';
 
   useEffect(() => {
+    console.log('useEffect triggered with flowId:', flowId);
     loadFlow();
   }, [flowId]);
 
   const loadFlow = async () => {
+    console.log('Loading flow with ID:', flowId);
     setLoading(true);
     try {
       if (flowId && flowId !== 'new') {
         const loadedFlow = await api.getBotFlow(flowId);
+        console.log('Loaded flow:', loadedFlow);
+        setFlow(loadedFlow);
         if (loadedFlow) {
-          setFlow(loadedFlow);
           setBusinessType(loadedFlow.businessType);
         } else {
-          // Use mock flow if API returns null
-          setFlow({
-            id: 'current_salon_flow',
-            name: '🟢 Current Salon Flow (ACTIVE)',
-            description: 'This is the exact flow currently running on WhatsApp',
-            businessType: 'salon',
-            isActive: true,
-            isTemplate: false,
-            version: '1.0.0',
-            nodes: [
-              { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-              { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
-            ],
-            variables: [],
-            metadata: {}
-          });
-          setBusinessType('salon');
+          // If flow is null, show not found
+          console.log('Flow not found, showing not found message');
         }
       } else {
         // Create new flow
+        console.log('Creating new flow');
         setFlow({
           id: '',
           name: 'New Bot Flow',
@@ -181,30 +200,33 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       }
     } catch (error) {
       console.error('Error loading flow:', error);
-      // Use mock flow if there's an error
-      setFlow({
-        id: 'current_salon_flow',
-        name: '🟢 Current Salon Flow (ACTIVE)',
-        description: 'This is the exact flow currently running on WhatsApp',
-        businessType: 'salon',
-        isActive: true,
-        isTemplate: false,
-        version: '1.0.0',
-        nodes: [
-          { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
-        ],
-        variables: [],
-        metadata: {}
-      });
-      setBusinessType('salon');
+      // Even in case of error, if it's the salon flow, provide mock data
+      if (flowId === 'current_salon_flow') {
+        setFlow({
+          id: 'current_salon_flow',
+          name: '🟢 Current Salon Flow (ACTIVE)',
+          description: 'This is the exact flow currently running on WhatsApp',
+          businessType: 'salon',
+          isActive: true,
+          isTemplate: false,
+          version: '1.0.0',
+          nodes: [
+            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
+            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
+          ],
+          variables: [],
+          metadata: {}
+        });
+        setBusinessType('salon');
+      }
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };

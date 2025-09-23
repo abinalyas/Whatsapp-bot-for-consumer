@@ -35,12 +35,19 @@ const api = {
         queryParams.append('isActive', filters.status === 'active' ? 'true' : 'false');
       }
       
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`/api/bot-flows?${queryParams.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         // If response is not ok, throw an error to trigger the catch block
@@ -52,8 +59,14 @@ const api = {
         flows: result.flows,
         total: result.total
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching bot flows:', error);
+      
+      // If it's an abort error (timeout), still return mock data
+      if (error.name === 'AbortError') {
+        console.log('Request timed out, returning mock data');
+      }
+      
       // Re-throw the error so the calling function can handle it
       throw error;
     }
@@ -214,7 +227,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
       });
       console.log('Flows loaded successfully:', result.flows);
       setFlows(result.flows);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading flows:', error);
       // Fallback to mock data if API fails
       const mockFlows = [
