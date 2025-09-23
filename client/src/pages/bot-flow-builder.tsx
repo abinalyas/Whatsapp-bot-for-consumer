@@ -12,77 +12,24 @@ import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 const api = {
   async getBotFlow(flowId: string): Promise<BotFlow | null> {
     try {
-      // Add timeout to fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(`/api/bot-flows/${flowId}`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
+      console.log('Fetching bot flow with ID:', flowId);
+      const response = await fetch(`/api/bot-flows/${flowId}`);
+      console.log('Bot flow response status:', response.status);
       if (!response.ok) {
-        // If we get an error (including timeout), return mock data
-        console.log('API error, returning mock salon flow');
-        return {
-          id: 'current_salon_flow',
-          name: '🟢 Current Salon Flow (ACTIVE)',
-          description: 'This is the exact flow currently running on WhatsApp',
-          businessType: 'salon',
-          isActive: true,
-          isTemplate: false,
-          version: '1.0.0',
-          nodes: [
-            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
-          ],
-          variables: [],
-          metadata: {}
-        };
+        throw new Error('Failed to fetch bot flow');
       }
-      return await response.json();
+      const data = await response.json();
+      console.log('Bot flow data:', data);
+      return data;
     } catch (error) {
       console.error('Error fetching bot flow:', error);
-      // Return mock data on network errors (including timeouts)
-      console.log('Network error, returning mock salon flow');
-      return {
-        id: 'current_salon_flow',
-        name: '🟢 Current Salon Flow (ACTIVE)',
-        description: 'This is the exact flow currently running on WhatsApp',
-        businessType: 'salon',
-        isActive: true,
-        isTemplate: false,
-        version: '1.0.0',
-        nodes: [
-          { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-          { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
-        ],
-        variables: [],
-        metadata: {}
-      };
+      return null;
     }
   },
 
   async saveBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
     try {
       let response;
-      
-      // Add timeout to fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
       if (flow.id) {
         // Update existing flow
@@ -92,7 +39,6 @@ const api = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(flow),
-          signal: controller.signal
         });
       } else {
         // Create new flow
@@ -102,11 +48,8 @@ const api = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(flow),
-          signal: controller.signal
         });
       }
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error('Failed to save bot flow');
@@ -129,20 +72,13 @@ const api = {
 
   async testBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
     try {
-      // Add timeout to fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
       const response = await fetch(`/api/bot-flows/${flow.id || 'new'}/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(flow),
-        signal: controller.signal
       });
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error('Failed to test bot flow');
@@ -165,16 +101,7 @@ const api = {
 
   async getBotFlowTemplates(businessType: string): Promise<BotFlow[]> {
     try {
-      // Add timeout to fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(`/api/bot-flows?businessType=${businessType}&templates=true`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
+      const response = await fetch(`/api/bot-flows?businessType=${businessType}&templates=true`);
       if (!response.ok) {
         throw new Error('Failed to fetch templates');
       }
@@ -209,16 +136,20 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   }, [flowId]);
 
   const loadFlow = async () => {
+    console.log('Loading flow with ID:', flowId);
     setLoading(true);
     try {
       if (flowId && flowId !== 'new') {
+        console.log('Fetching bot flow from API');
         const loadedFlow = await api.getBotFlow(flowId);
+        console.log('Loaded flow:', loadedFlow);
         setFlow(loadedFlow);
         if (loadedFlow) {
           setBusinessType(loadedFlow.businessType);
         }
       } else {
         // Create new flow
+        console.log('Creating new flow');
         setFlow({
           id: '',
           name: 'New Bot Flow',
@@ -232,6 +163,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
     } catch (error) {
       console.error('Error loading flow:', error);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
