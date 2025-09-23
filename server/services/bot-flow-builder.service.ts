@@ -221,10 +221,16 @@ export class BotFlowBuilderService {
     // Only use database if connection string is provided and valid
     if (connectionString && connectionString.trim() !== '') {
       try {
-        this.pool = new Pool({ connectionString });
+        this.pool = new Pool({ 
+          connectionString,
+          // Add timeout configuration
+          statement_timeout: 5000, // 5 seconds
+          connection_timeout: 5000, // 5 seconds
+          idle_timeout: 10000, // 10 seconds
+        });
         this.db = drizzle(this.pool, { schema });
         this.useDatabase = true;
-        console.log('BotFlowBuilderService: Database connection initialized');
+        console.log('BotFlowBuilderService: Database connection initialized with timeout settings');
       } catch (error) {
         console.warn('BotFlowBuilderService: Failed to initialize database connection, using mock data:', error);
         this.useDatabase = false;
@@ -371,7 +377,7 @@ export class BotFlowBuilderService {
   ): Promise<ServiceResponse<{ flows: BotFlow[]; total: number; page: number; limit: number }>> {
     // If database is not available, return mock data
     if (!this.useDatabase) {
-      console.log('BotFlowBuilderService: Returning mock data for listBotFlows');
+      console.log('BotFlowBuilderService: Returning mock data for listBotFlows (database not available)');
       return {
         success: true,
         data: {
@@ -505,6 +511,7 @@ export class BotFlowBuilderService {
     }
 
     try {
+      console.log('BotFlowBuilderService: Starting database query for listBotFlows');
       const { businessType, isActive, isTemplate, page = 1, limit = 50 } = options;
       const offset = (page - 1) * limit;
 
@@ -523,29 +530,60 @@ export class BotFlowBuilderService {
         conditions.push(eq(schema.botFlows.isTemplate, isTemplate));
       }
 
-      // Get flows
-      const flows = await this.db!
+      console.log('BotFlowBuilderService: Executing flows query');
+      // Get flows with timeout
+      const flowsQuery = this.db!
         .select()
         .from(schema.botFlows)
         .where(and(...conditions))
         .orderBy(desc(schema.botFlows.updatedAt))
         .limit(limit)
         .offset(offset);
+      
+      // Add timeout to the query
+      const flows = await Promise.race([
+        flowsQuery,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Flows query timeout')), 5000)
+        )
+      ]) as any[];
+      console.log('BotFlowBuilderService: Flows query completed, found', flows.length, 'flows');
 
-      // Get total count
-      const [{ count }] = await this.db!
+      console.log('BotFlowBuilderService: Executing count query');
+      // Get total count with timeout
+      const countQuery = this.db!
         .select({ count: sql<number>`count(*)` })
         .from(schema.botFlows)
         .where(and(...conditions));
+      
+      // Add timeout to the query
+      const [{ count }] = await Promise.race([
+        countQuery,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Count query timeout')), 5000)
+        )
+      ]) as [{ count: number }];
+      console.log('BotFlowBuilderService: Count query completed, total count:', count);
 
       // Get nodes for each flow
       const flowsWithNodes: BotFlow[] = [];
-      for (const flow of flows) {
-        const nodes = await this.db!
+      console.log('BotFlowBuilderService: Starting to fetch nodes for', flows.length, 'flows');
+      for (const [index, flow] of flows.entries()) {
+        console.log('BotFlowBuilderService: Fetching nodes for flow', index + 1, 'of', flows.length, 'flowId:', flow.id);
+        const nodesQuery = this.db!
           .select()
           .from(schema.botFlowNodes)
           .where(eq(schema.botFlowNodes.flowId, flow.id))
           .orderBy(asc(schema.botFlowNodes.createdAt));
+        
+        // Add timeout to the query
+        const nodes = await Promise.race([
+          nodesQuery,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`Nodes query timeout for flow ${flow.id}`)), 5000)
+          )
+        ]) as any[];
+        console.log('BotFlowBuilderService: Fetched', nodes.length, 'nodes for flow', flow.id);
 
         flowsWithNodes.push({
           ...flow,
@@ -560,8 +598,9 @@ export class BotFlowBuilderService {
           metadata: flow.metadata as Record<string, any>,
         });
       }
+      console.log('BotFlowBuilderService: Finished fetching nodes for all flows');
 
-      return {
+      const result = {
         success: true,
         data: {
           flows: flowsWithNodes,
@@ -570,6 +609,9 @@ export class BotFlowBuilderService {
           limit,
         },
       };
+      
+      console.log('BotFlowBuilderService: listBotFlows completed successfully');
+      return result;
     } catch (error) {
       console.error('Error listing bot flows:', error);
       // Fallback to mock data in case of database error

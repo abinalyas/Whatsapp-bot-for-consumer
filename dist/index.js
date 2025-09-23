@@ -1504,10 +1504,19 @@ var BotFlowBuilderService = class {
   constructor(connectionString) {
     if (connectionString && connectionString.trim() !== "") {
       try {
-        this.pool = new Pool2({ connectionString });
+        this.pool = new Pool2({
+          connectionString,
+          // Add timeout configuration
+          statement_timeout: 5e3,
+          // 5 seconds
+          connection_timeout: 5e3,
+          // 5 seconds
+          idle_timeout: 1e4
+          // 10 seconds
+        });
         this.db = drizzle2(this.pool, { schema: schema_exports });
         this.useDatabase = true;
-        console.log("BotFlowBuilderService: Database connection initialized");
+        console.log("BotFlowBuilderService: Database connection initialized with timeout settings");
       } catch (error) {
         console.warn("BotFlowBuilderService: Failed to initialize database connection, using mock data:", error);
         this.useDatabase = false;
@@ -1619,7 +1628,7 @@ var BotFlowBuilderService = class {
    */
   async listBotFlows(tenantId, options = {}) {
     if (!this.useDatabase) {
-      console.log("BotFlowBuilderService: Returning mock data for listBotFlows");
+      console.log("BotFlowBuilderService: Returning mock data for listBotFlows (database not available)");
       return {
         success: true,
         data: {
@@ -1752,6 +1761,7 @@ var BotFlowBuilderService = class {
       };
     }
     try {
+      console.log("BotFlowBuilderService: Starting database query for listBotFlows");
       const { businessType, isActive, isTemplate, page = 1, limit = 50 } = options;
       const offset = (page - 1) * limit;
       const conditions = [eq3(botFlows.tenantId, tenantId)];
@@ -1764,11 +1774,36 @@ var BotFlowBuilderService = class {
       if (isTemplate !== void 0) {
         conditions.push(eq3(botFlows.isTemplate, isTemplate));
       }
-      const flows = await this.db.select().from(botFlows).where(and3(...conditions)).orderBy(desc(botFlows.updatedAt)).limit(limit).offset(offset);
-      const [{ count }] = await this.db.select({ count: sql3`count(*)` }).from(botFlows).where(and3(...conditions));
+      console.log("BotFlowBuilderService: Executing flows query");
+      const flowsQuery = this.db.select().from(botFlows).where(and3(...conditions)).orderBy(desc(botFlows.updatedAt)).limit(limit).offset(offset);
+      const flows = await Promise.race([
+        flowsQuery,
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Flows query timeout")), 5e3)
+        )
+      ]);
+      console.log("BotFlowBuilderService: Flows query completed, found", flows.length, "flows");
+      console.log("BotFlowBuilderService: Executing count query");
+      const countQuery = this.db.select({ count: sql3`count(*)` }).from(botFlows).where(and3(...conditions));
+      const [{ count }] = await Promise.race([
+        countQuery,
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Count query timeout")), 5e3)
+        )
+      ]);
+      console.log("BotFlowBuilderService: Count query completed, total count:", count);
       const flowsWithNodes = [];
-      for (const flow of flows) {
-        const nodes = await this.db.select().from(botFlowNodes).where(eq3(botFlowNodes.flowId, flow.id)).orderBy(asc(botFlowNodes.createdAt));
+      console.log("BotFlowBuilderService: Starting to fetch nodes for", flows.length, "flows");
+      for (const [index, flow] of flows.entries()) {
+        console.log("BotFlowBuilderService: Fetching nodes for flow", index + 1, "of", flows.length, "flowId:", flow.id);
+        const nodesQuery = this.db.select().from(botFlowNodes).where(eq3(botFlowNodes.flowId, flow.id)).orderBy(asc(botFlowNodes.createdAt));
+        const nodes = await Promise.race([
+          nodesQuery,
+          new Promise(
+            (_, reject) => setTimeout(() => reject(new Error(`Nodes query timeout for flow ${flow.id}`)), 5e3)
+          )
+        ]);
+        console.log("BotFlowBuilderService: Fetched", nodes.length, "nodes for flow", flow.id);
         flowsWithNodes.push({
           ...flow,
           nodes: nodes.map((node) => ({
@@ -1782,7 +1817,8 @@ var BotFlowBuilderService = class {
           metadata: flow.metadata
         });
       }
-      return {
+      console.log("BotFlowBuilderService: Finished fetching nodes for all flows");
+      const result = {
         success: true,
         data: {
           flows: flowsWithNodes,
@@ -1791,6 +1827,8 @@ var BotFlowBuilderService = class {
           limit
         }
       };
+      console.log("BotFlowBuilderService: listBotFlows completed successfully");
+      return result;
     } catch (error) {
       console.error("Error listing bot flows:", error);
       console.log("BotFlowBuilderService: Falling back to mock data due to database error");
@@ -2924,18 +2962,23 @@ var getBotFlowService = () => {
   return botFlowService;
 };
 router.get("/", async (req, res) => {
+  console.log("BotFlowRoutes: Received request to list bot flows");
   try {
     const { tenantId } = req.tenantContext;
     const { businessType, isActive, isTemplate, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     if (isNaN(pageNum) || pageNum < 1) {
+      console.log("BotFlowRoutes: Invalid page parameter");
       return res.status(400).json({ error: "Invalid page parameter" });
     }
     if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      console.log("BotFlowRoutes: Invalid limit parameter");
       return res.status(400).json({ error: "Invalid limit parameter (must be between 1 and 100)" });
     }
+    console.log("BotFlowRoutes: Getting bot flow service");
     const service = getBotFlowService();
+    console.log("BotFlowRoutes: Calling listBotFlows method");
     const result = await service.listBotFlows(tenantId, {
       businessType,
       isActive: isActive === "true" ? true : isActive === "false" ? false : void 0,
@@ -2943,8 +2986,9 @@ router.get("/", async (req, res) => {
       page: pageNum,
       limit: limitNum
     });
+    console.log("BotFlowRoutes: listBotFlows method completed");
     if (!result.success) {
-      console.error("Bot flow service error:", result.error);
+      console.error("BotFlowRoutes: Bot flow service error:", result.error);
       return res.json({
         flows: [
           {
@@ -2975,9 +3019,10 @@ router.get("/", async (req, res) => {
         limit: 50
       });
     }
+    console.log("BotFlowRoutes: Sending successful response with", result.data.flows.length, "flows");
     res.json(result.data);
   } catch (error) {
-    console.error("Error listing bot flows:", error);
+    console.error("BotFlowRoutes: Error listing bot flows:", error);
     const { tenantId } = req.tenantContext;
     res.json({
       flows: [

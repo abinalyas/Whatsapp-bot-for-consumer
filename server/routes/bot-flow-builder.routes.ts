@@ -28,6 +28,7 @@ const getBotFlowService = () => {
  * List all bot flows for tenant
  */
 router.get('/', async (req, res) => {
+  console.log('BotFlowRoutes: Received request to list bot flows');
   try {
     const { tenantId } = req.tenantContext!;
     const { businessType, isActive, isTemplate, page = 1, limit = 50 } = req.query;
@@ -37,15 +38,19 @@ router.get('/', async (req, res) => {
     const limitNum = parseInt(limit as string);
     
     if (isNaN(pageNum) || pageNum < 1) {
+      console.log('BotFlowRoutes: Invalid page parameter');
       return res.status(400).json({ error: 'Invalid page parameter' });
     }
     
     if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      console.log('BotFlowRoutes: Invalid limit parameter');
       return res.status(400).json({ error: 'Invalid limit parameter (must be between 1 and 100)' });
     }
 
+    console.log('BotFlowRoutes: Getting bot flow service');
     // Use lazy initialization to prevent timeouts
     const service = getBotFlowService();
+    console.log('BotFlowRoutes: Calling listBotFlows method');
     const result = await service.listBotFlows(tenantId, {
       businessType: businessType as string,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
@@ -53,9 +58,10 @@ router.get('/', async (req, res) => {
       page: pageNum,
       limit: limitNum
     });
+    console.log('BotFlowRoutes: listBotFlows method completed');
 
     if (!result.success) {
-      console.error('Bot flow service error:', result.error);
+      console.error('BotFlowRoutes: Bot flow service error:', result.error);
       // Even if there's an error, return mock data to ensure the UI works
       return res.json({
         flows: [
@@ -88,9 +94,10 @@ router.get('/', async (req, res) => {
       });
     }
 
+    console.log('BotFlowRoutes: Sending successful response with', result.data.flows.length, 'flows');
     res.json(result.data);
   } catch (error) {
-    console.error('Error listing bot flows:', error);
+    console.error('BotFlowRoutes: Error listing bot flows:', error);
     // Return mock data in case of any unexpected errors
     const { tenantId } = req.tenantContext!;
     res.json({
