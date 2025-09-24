@@ -410,14 +410,14 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         const midY = (transformedStartY + transformedEndY) / 2;
 
         connections.push(
-          <g key={connection.id} style={{ pointerEvents: 'auto' }}>
+          <g key={connection.id} style={{ pointerEvents: 'auto', cursor: 'default' }}>
             <path
               d={`M ${transformedStartX} ${transformedStartY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${transformedEndX} ${transformedEndY}`}
               stroke="#6b7280"
               strokeWidth="2"
               fill="none"
               markerEnd="url(#arrowhead)"
-              style={{ pointerEvents: 'auto' }}
+              style={{ pointerEvents: 'none' }}
             />
             {connection.label && (
               <text
@@ -426,7 +426,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 textAnchor="middle"
                 className="text-xs fill-gray-600"
                 style={{ 
-                  pointerEvents: 'auto',
+                  pointerEvents: 'none',
                   background: 'white',
                   paintOrder: 'stroke',
                   strokeWidth: '2px',
@@ -439,28 +439,41 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
             <circle
               cx={midX}
               cy={midY}
-              r="8"
+              r="12"
               fill="white"
               stroke="#ef4444"
               strokeWidth="2"
               style={{ 
                 cursor: 'pointer',
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                zIndex: 10
               }}
-              className="hover:fill-red-50"
+              className="hover:fill-red-50 hover:stroke-red-600"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 console.log('Delete connection clicked:', connection.id);
                 deleteConnection(node.id, connection.id);
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.fill = '#fef2f2';
+                e.currentTarget.style.stroke = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.fill = 'white';
+                e.currentTarget.style.stroke = '#ef4444';
+              }}
             />
             <text
               x={midX}
               y={midY + 1}
               textAnchor="middle"
-              className="text-xs fill-red-500"
-              style={{ pointerEvents: 'none' }}
+              className="text-xs fill-red-500 font-bold"
+              style={{ 
+                pointerEvents: 'none',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}
             >
               ×
             </text>
@@ -813,8 +826,13 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                       setIsConnecting(false);
                       setConnectionStart(null);
                     }}
-                    className="ml-2 text-blue-600 hover:text-blue-900 font-medium underline cursor-pointer"
+                    className="ml-2 px-3 py-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 font-medium underline rounded cursor-pointer transition-colors"
                     type="button"
+                    style={{ 
+                      cursor: 'pointer',
+                      pointerEvents: 'auto',
+                      zIndex: 1000
+                    }}
                   >
                     Cancel
                   </button>
@@ -832,9 +850,18 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                     <div className="text-green-700">Successfully connected nodes</div>
                   </div>
                   <button 
-                    onClick={() => setConnectionSuccess(null)}
-                    className="ml-2 text-green-600 hover:text-green-900 font-medium underline cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setConnectionSuccess(null);
+                    }}
+                    className="ml-2 px-2 py-1 text-green-600 hover:text-green-900 hover:bg-green-50 font-medium rounded cursor-pointer transition-colors"
                     type="button"
+                    style={{ 
+                      cursor: 'pointer',
+                      pointerEvents: 'auto',
+                      zIndex: 1000
+                    }}
                   >
                     ×
                   </button>
