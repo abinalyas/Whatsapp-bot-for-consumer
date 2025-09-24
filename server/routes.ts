@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, getStorageBackendName } from "./storage";
 import { z } from "zod";
 import { send } from "process";
 // import businessConfigRoutes from "./routes/business-config.routes"; // Temporarily disabled
@@ -725,6 +725,7 @@ We apologize for any inconvenience caused.`;
 
   app.get("/api/stats", async (req, res) => {
     try {
+      const backend = getStorageBackendName();
       const parseDbTimestamp = (value: unknown): Date => {
         if (value instanceof Date) return value;
         if (typeof value === 'string') {
@@ -798,6 +799,7 @@ We apologize for any inconvenience caused.`;
         todayRevenue: todayRevenueINR, // Already in INR
         responseRate,
         totalBookings: allBookings.length,
+        backend,
       };
       
       console.log("Stats response:", stats);

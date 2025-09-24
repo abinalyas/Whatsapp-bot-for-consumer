@@ -384,6 +384,14 @@ class HybridStorage implements IStorage {
     this.memoryStorage = new InMemoryStorage();
   }
 
+  // Expose which backend is in use
+  public isUsingDatabase(): boolean {
+    return this.useDatabase;
+  }
+  public getBackendName(): 'database' | 'memory' {
+    return this.useDatabase ? 'database' : 'memory';
+  }
+
   private async tryDatabase<T>(operation: () => Promise<T>): Promise<T> {
     if (!this.useDatabase) {
       throw new Error("Database disabled");
@@ -521,3 +529,13 @@ class HybridStorage implements IStorage {
 
 // Export the hybrid storage that falls back gracefully
 export const storage: IStorage = new HybridStorage();
+
+// Utility to introspect current storage backend
+export function getStorageBackendName(): 'database' | 'memory' | 'unknown' {
+  try {
+    const hybrid = storage as unknown as { getBackendName?: () => 'database' | 'memory' };
+    return hybrid.getBackendName ? hybrid.getBackendName() : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
