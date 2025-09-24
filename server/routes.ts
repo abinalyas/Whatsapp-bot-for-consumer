@@ -359,14 +359,21 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
               response = `Perfect! Your appointment is scheduled for ${selectedTime}.\n\n`;
               response += `📋 Booking Summary:\n`;
               response += `Service: ${selectedService.name}\n`;
-              response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+              response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' })}\n`;
               response += `Time: ${selectedTime}\n`;
               response += `Amount: ₹${selectedService.price}\n\n`;
               response += `💳 Please complete your payment:\n${upiLink}\n\n`;
               response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
               
-              // Create booking record with appointment details
-              const appointmentDateTime = new Date(`${latestConversation.selectedDate}T${timeChoice === 1 ? '10:00' : timeChoice === 2 ? '11:30' : timeChoice === 3 ? '14:00' : timeChoice === 4 ? '15:30' : '17:00'}:00`);
+              // Create booking record with appointment details using IST-accurate datetime
+              const time24 = timeChoice === 1 ? '10:00' : timeChoice === 2 ? '11:30' : timeChoice === 3 ? '14:00' : timeChoice === 4 ? '15:30' : '17:00';
+              const [hourStr, minuteStr] = time24.split(":");
+              const istOffsetMs = 5.5 * 60 * 60 * 1000;
+              // Build an IST midnight Date for the selected day, then add hours/minutes, then convert to UTC Date
+              const [y, m, d] = latestConversation.selectedDate.split('-').map((v) => parseInt(v, 10));
+              const istMidnight = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+              const istDateTimeMs = istMidnight.getTime() + (parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10)) * 60 * 1000;
+              const utcDateTime = new Date(istDateTimeMs - istOffsetMs);
               
               await withTimeout(storage.createBooking({
                 conversationId: conversation.id,
@@ -374,7 +381,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
                 phoneNumber: from,
                 amount: selectedService.price, // Already in INR
                 status: "pending",
-                appointmentDate: appointmentDateTime,
+                appointmentDate: utcDateTime,
                 appointmentTime: selectedTime,
               }), 5000);
             }
@@ -393,7 +400,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
         response += "📋 Booking Details:\n";
         response += `Service: ${conversation.selectedService}\n`;
         if (conversation.selectedDate) {
-          response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+          response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' })}\n`;
         }
         if (conversation.selectedTime) {
           response += `Time: ${conversation.selectedTime}\n`;
