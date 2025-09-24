@@ -436,16 +436,18 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 {connection.label}
               </text>
             )}
-            {/* Simple clickable delete text */}
-            <text
-              x={midX + 20}
-              y={midY - 10}
-              textAnchor="middle"
-              className="text-xs fill-red-500 font-bold cursor-pointer hover:fill-red-700"
+            {/* Clickable delete button with background */}
+            <rect
+              x={midX + 10}
+              y={midY - 20}
+              width="50"
+              height="20"
+              fill="white"
+              stroke="#ef4444"
+              strokeWidth="1"
+              rx="3"
               style={{ 
                 pointerEvents: 'auto',
-                fontSize: '12px',
-                fontWeight: 'bold',
                 cursor: 'pointer'
               }}
               onClick={(e) => {
@@ -453,6 +455,25 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 e.preventDefault();
                 console.log('Delete connection clicked:', connection.id);
                 deleteConnection(node.id, connection.id);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.fill = '#fef2f2';
+                e.currentTarget.style.stroke = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.fill = 'white';
+                e.currentTarget.style.stroke = '#ef4444';
+              }}
+            />
+            <text
+              x={midX + 35}
+              y={midY - 7}
+              textAnchor="middle"
+              className="text-xs fill-red-500 font-bold"
+              style={{ 
+                pointerEvents: 'none',
+                fontSize: '11px',
+                fontWeight: 'bold'
               }}
             >
               Delete
