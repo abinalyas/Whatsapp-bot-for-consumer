@@ -57,7 +57,17 @@ const api = {
     try {
       const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
       console.log('Loaded bot flows from localStorage:', savedFlows.length);
-      return savedFlows;
+      
+      // Validate and fix flow data structure
+      const validatedFlows = savedFlows.map((flow: any) => ({
+        ...flow,
+        nodes: flow.nodes || [],
+        connections: flow.connections || [],
+        variables: flow.variables || [],
+        metadata: flow.metadata || {}
+      }));
+      
+      return validatedFlows;
     } catch (error) {
       console.error('Error loading bot flows:', error);
       return [];
@@ -506,7 +516,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
                       </div>
                       <div className="flex items-center text-gray-600">
                         <Users size={16} className="mr-2" />
-                        {flow.variables.length} variables
+                        {flow.variables?.length || 0} variables
                       </div>
                     </div>
                   </div>
