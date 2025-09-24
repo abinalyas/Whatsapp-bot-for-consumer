@@ -725,6 +725,18 @@ We apologize for any inconvenience caused.`;
 
   app.get("/api/stats", async (req, res) => {
     try {
+      const parseDbTimestamp = (value: unknown): Date => {
+        if (value instanceof Date) return value;
+        if (typeof value === 'string') {
+          const isoLike = value.includes('T') ? value : value.replace(' ', 'T');
+          const withZ = /Z$/i.test(isoLike) ? isoLike : `${isoLike}Z`;
+          const d = new Date(withZ);
+          if (!isNaN(d.getTime())) return d;
+          // Fallback to native parsing
+          return new Date(value);
+        }
+        return new Date(value as any);
+      };
       // Get today's bookings
       const todayBookings = await storage.getTodayBookings();
       console.log("Today's bookings count:", todayBookings.length);
@@ -754,7 +766,8 @@ We apologize for any inconvenience caused.`;
       for (const cid of conversationIds) {
         const messages = await storage.getMessages(cid);
         const countToday = messages.filter(m => {
-          const ts = m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp as unknown as string);
+          const raw = (m as any).timestamp ?? (m as any).createdAt;
+          const ts = parseDbTimestamp(raw);
           return ts >= utcStart && ts < utcEnd;
         }).length;
         todayMessages += countToday;
@@ -771,7 +784,8 @@ We apologize for any inconvenience caused.`;
         for (const cid of conversationIds) {
           const messages = await storage.getMessages(cid);
           botToday += messages.filter(m => {
-            const ts = m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp as unknown as string);
+            const raw = (m as any).timestamp ?? (m as any).createdAt;
+            const ts = parseDbTimestamp(raw);
             return m.isFromBot && ts >= utcStart && ts < utcEnd;
           }).length;
         }

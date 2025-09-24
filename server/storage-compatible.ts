@@ -39,7 +39,8 @@ const compatibleMessages = pgTable("messages", {
   messageType: varchar("message_type", { length: 50 }).notNull().default("text"),
   isFromBot: boolean("is_from_bot").notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  // Production DB uses created_at, not timestamp
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 const compatibleBookings = pgTable("bookings", {
@@ -374,7 +375,7 @@ export class CompatibleDatabaseStorage implements IStorage {
         .select()
         .from(compatibleMessages)
         .where(eq(compatibleMessages.conversationId, conversationId))
-        .orderBy(compatibleMessages.timestamp);
+        .orderBy(compatibleMessages.createdAt);
     } catch (error) {
       console.error("Error fetching messages:", error);
       return [];
