@@ -450,6 +450,8 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               className="hover:fill-red-50"
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                console.log('Delete connection clicked:', connection.id);
                 deleteConnection(node.id, connection.id);
               }}
             />
@@ -804,11 +806,15 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      console.log('Cancel connection clicked');
                       setIsConnecting(false);
                       setConnectionStart(null);
                     }}
-                    className="ml-2 text-blue-600 hover:text-blue-900 font-medium underline"
+                    className="ml-2 text-blue-600 hover:text-blue-900 font-medium underline cursor-pointer"
+                    type="button"
                   >
                     Cancel
                   </button>
@@ -825,6 +831,13 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                     <div className="font-medium">Connection created!</div>
                     <div className="text-green-700">Successfully connected nodes</div>
                   </div>
+                  <button 
+                    onClick={() => setConnectionSuccess(null)}
+                    className="ml-2 text-green-600 hover:text-green-900 font-medium underline cursor-pointer"
+                    type="button"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             )}
