@@ -705,7 +705,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
         {/* Canvas */}
         <div 
-          className="flex-1 relative overflow-hidden"
+          className="flex-1 relative overflow-auto"
           style={{ 
             width: '100%', 
             height: '100%',
@@ -714,11 +714,13 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         >
           <div
             ref={canvasRef}
-            className="w-full h-full relative cursor-crosshair"
+            className="relative cursor-crosshair"
             style={{ 
-              width: '100%', 
-              height: '100%',
-              position: 'relative'
+              width: '3000px', // Large canvas to accommodate all nodes
+              height: '2000px',
+              position: 'relative',
+              minWidth: '100%',
+              minHeight: '100%'
             }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -908,8 +910,8 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               Message Text
             </label>
             <textarea
-              value={node.configuration.messageText || ''}
-              onChange={(e) => updateConfiguration({ messageText: e.target.value })}
+              value={node.configuration.message || ''}
+              onChange={(e) => updateConfiguration({ message: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows={3}
               placeholder="Enter the message to send..."
@@ -924,24 +926,11 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 Question Text
               </label>
               <textarea
-                value={node.configuration.questionText || ''}
-                onChange={(e) => updateConfiguration({ questionText: e.target.value })}
+                value={node.configuration.question || ''}
+                onChange={(e) => updateConfiguration({ question: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={3}
                 placeholder="Enter the question to ask..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Variable Name
-              </label>
-              <input
-                type="text"
-                value={node.configuration.variableName || ''}
-                onChange={(e) => updateConfiguration({ variableName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="variable_name"
               />
             </div>
 
@@ -955,37 +944,36 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="choice">Multiple Choice</option>
                 <option value="date">Date</option>
+                <option value="choice">Multiple Choice</option>
                 <option value="phone">Phone</option>
                 <option value="email">Email</option>
               </select>
             </div>
 
-            {node.configuration.inputType === 'choice' && (
+            {(node.configuration.inputType === 'choice' || node.configuration.options) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Choices
+                  Options
                 </label>
                 <div className="space-y-2">
-                  {(node.configuration.choices || []).map((choice, index) => (
+                  {(node.configuration.options || []).map((option, index) => (
                     <div key={index} className="flex space-x-2">
                       <input
                         type="text"
-                        value={choice.label}
+                        value={option}
                         onChange={(e) => {
-                          const newChoices = [...(node.configuration.choices || [])];
-                          newChoices[index] = { ...choice, label: e.target.value, value: e.target.value };
-                          updateConfiguration({ choices: newChoices });
+                          const newOptions = [...(node.configuration.options || [])];
+                          newOptions[index] = e.target.value;
+                          updateConfiguration({ options: newOptions });
                         }}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Choice text"
+                        placeholder="Option text"
                       />
                       <button
                         onClick={() => {
-                          const newChoices = (node.configuration.choices || []).filter((_, i) => i !== index);
-                          updateConfiguration({ choices: newChoices });
+                          const newOptions = (node.configuration.options || []).filter((_, i) => i !== index);
+                          updateConfiguration({ options: newOptions });
                         }}
                         className="px-2 py-2 text-red-600 hover:text-red-800"
                       >
@@ -995,13 +983,13 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   ))}
                   <button
                     onClick={() => {
-                      const newChoices = [...(node.configuration.choices || []), { value: '', label: '' }];
-                      updateConfiguration({ choices: newChoices });
+                      const newOptions = [...(node.configuration.options || []), ''];
+                      updateConfiguration({ options: newOptions });
                     }}
                     className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800"
                   >
                     <Plus size={16} className="inline mr-1" />
-                    Add Choice
+                    Add Option
                   </button>
                 </div>
               </div>
@@ -1016,16 +1004,29 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 Action Type
               </label>
               <select
-                value={node.configuration.actionType || ''}
-                onChange={(e) => updateConfiguration({ actionType: e.target.value as any })}
+                value={node.configuration.action || ''}
+                onChange={(e) => updateConfiguration({ action: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select action...</option>
-                <option value="create_transaction">Create Transaction</option>
-                <option value="update_transaction">Update Transaction</option>
+                <option value="request_payment">Request Payment</option>
+                <option value="create_booking">Create Booking</option>
                 <option value="send_notification">Send Notification</option>
                 <option value="call_webhook">Call Webhook</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Action Message
+              </label>
+              <textarea
+                value={node.configuration.message || ''}
+                onChange={(e) => updateConfiguration({ message: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="Enter the action message..."
+              />
             </div>
           </>
         )}
