@@ -436,19 +436,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 {connection.label}
               </text>
             )}
+            {/* Invisible larger clickable area */}
             <circle
               cx={midX}
               cy={midY}
-              r="12"
-              fill="white"
-              stroke="#ef4444"
-              strokeWidth="2"
+              r="16"
+              fill="transparent"
+              stroke="none"
               style={{ 
                 cursor: 'pointer',
-                pointerEvents: 'auto',
-                zIndex: 10
+                pointerEvents: 'auto'
               }}
-              className="hover:fill-red-50 hover:stroke-red-600"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -456,12 +454,33 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 deleteConnection(node.id, connection.id);
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.fill = '#fef2f2';
-                e.currentTarget.style.stroke = '#dc2626';
+                // Find the visible circle and update its appearance
+                const visibleCircle = document.getElementById(`delete-btn-${connection.id}`) as SVGElement;
+                if (visibleCircle) {
+                  visibleCircle.style.fill = '#fef2f2';
+                  visibleCircle.style.stroke = '#dc2626';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.fill = 'white';
-                e.currentTarget.style.stroke = '#ef4444';
+                // Reset the visible circle appearance
+                const visibleCircle = document.getElementById(`delete-btn-${connection.id}`) as SVGElement;
+                if (visibleCircle) {
+                  visibleCircle.style.fill = 'white';
+                  visibleCircle.style.stroke = '#ef4444';
+                }
+              }}
+            />
+            {/* Visible delete button */}
+            <circle
+              id={`delete-btn-${connection.id}`}
+              cx={midX}
+              cy={midY}
+              r="12"
+              fill="white"
+              stroke="#ef4444"
+              strokeWidth="2"
+              style={{ 
+                pointerEvents: 'none'
               }}
             />
             <text
@@ -471,7 +490,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               className="text-xs fill-red-500 font-bold"
               style={{ 
                 pointerEvents: 'none',
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: 'bold'
               }}
             >
