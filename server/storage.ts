@@ -345,11 +345,10 @@ export class DatabaseStorageImpl implements IStorage {
   }
 
   async getTodayBookings(): Promise<Booking[]> {
-    // Create a more robust date range for today
+    // Use UTC-normalized day window to avoid timezone discrepancies with DB
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Start of today
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1); // Start of tomorrow
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
     
     console.log("Querying bookings between:", todayStart, "and", todayEnd);
     

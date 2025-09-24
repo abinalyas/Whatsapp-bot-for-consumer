@@ -733,23 +733,31 @@ We apologize for any inconvenience caused.`;
       const allBookings = await storage.getBookings();
       console.log("All bookings count:", allBookings.length);
       
-      // Calculate today's messages by getting all messages for today's conversations
+      // Calculate today's messages by counting only messages from today across all conversations
       let todayMessages = 0;
-      for (const booking of todayBookings) {
-        const messages = await storage.getMessages(booking.conversationId);
-        console.log(`Messages for booking ${booking.id}:`, messages.length);
-        todayMessages += messages.length;
+      const utcStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 0, 0, 0, 0));
+      const utcEnd = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 0, 0, 0, 0));
+      const allBookings = await storage.getBookings();
+      const conversationIds = Array.from(new Set(allBookings.map(b => b.conversationId)));
+      for (const cid of conversationIds) {
+        const messages = await storage.getMessages(cid);
+        const countToday = messages.filter(m => m.timestamp >= utcStart && m.timestamp < utcEnd).length;
+        todayMessages += countToday;
       }
       console.log("Today's messages count:", todayMessages);
       
       // Calculate response rate (simplified calculation)
       // For now, we'll calculate based on the ratio of bot messages to total messages
       // A more accurate calculation would require tracking message responses
-      let responseRate = 98; // Default
+      let responseRate = 0; // Default to 0 when no messages
       if (todayMessages > 0) {
-        // Estimate that about half of messages are from the bot
-        const botMessages = Math.floor(todayMessages / 2);
-        responseRate = Math.min(100, Math.round((botMessages / todayMessages) * 100));
+        // Approximate: bot replies are those marked isFromBot within today's window
+        let botToday = 0;
+        for (const cid of conversationIds) {
+          const messages = await storage.getMessages(cid);
+          botToday += messages.filter(m => m.isFromBot && m.timestamp >= utcStart && m.timestamp < utcEnd).length;
+        }
+        responseRate = Math.min(100, Math.round((botToday / todayMessages) * 100));
       }
       
       const stats = {
