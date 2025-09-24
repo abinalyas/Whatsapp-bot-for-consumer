@@ -856,8 +856,8 @@ var compatibleMessages = pgTable2("messages", {
   messageType: varchar2("message_type", { length: 50 }).notNull().default("text"),
   isFromBot: boolean2("is_from_bot").notNull(),
   metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
-  // Production DB uses created_at, not timestamp
-  createdAt: timestamp2("created_at").notNull().defaultNow()
+  // Production DB uses "timestamp" for messages time column
+  createdAt: timestamp2("timestamp").notNull().defaultNow()
 });
 var compatibleBookings = pgTable2("bookings", {
   id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),

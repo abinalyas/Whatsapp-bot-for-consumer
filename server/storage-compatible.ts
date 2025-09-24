@@ -39,8 +39,8 @@ const compatibleMessages = pgTable("messages", {
   messageType: varchar("message_type", { length: 50 }).notNull().default("text"),
   isFromBot: boolean("is_from_bot").notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
-  // Production DB uses created_at, not timestamp
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Production DB uses "timestamp" for messages time column
+  createdAt: timestamp("timestamp").notNull().defaultNow(),
 });
 
 const compatibleBookings = pgTable("bookings", {
