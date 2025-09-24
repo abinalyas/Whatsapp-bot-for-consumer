@@ -583,7 +583,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   };
 
   return (
-    <div className="h-screen flex bg-gray-50">
+    <div className="h-screen flex bg-gray-50 overflow-hidden">
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-10px); }
@@ -653,9 +653,9 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
       )}
 
       {/* Main Canvas */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-4">
             <input
               type="text"
@@ -703,15 +703,16 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
           </div>
         </div>
 
-        {/* Canvas */}
-        <div 
-          className="flex-1 relative overflow-auto"
-          style={{ 
-            width: '100%', 
-            height: '100%',
-            position: 'relative'
-          }}
-        >
+        {/* Canvas Container */}
+        <div className="flex-1 flex min-h-0">
+          {/* Canvas */}
+          <div 
+            className="flex-1 relative overflow-auto"
+            style={{ 
+              width: '100%', 
+              height: '100%'
+            }}
+          >
           <div
             ref={canvasRef}
             className="relative cursor-crosshair"
@@ -828,17 +829,18 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               </div>
             )}
           </div>
+          </div>
+
+          {/* Properties Panel */}
+          {showProperties && selectedNode && (
+            <NodePropertiesPanel
+              node={selectedNode}
+              onUpdate={(updates) => updateNode(selectedNode.id, updates)}
+              onClose={() => setShowProperties(false)}
+            />
+          )}
         </div>
       </div>
-
-      {/* Properties Panel */}
-      {showProperties && selectedNode && (
-        <NodePropertiesPanel
-          node={selectedNode}
-          onUpdate={(updates) => updateNode(selectedNode.id, updates)}
-          onClose={() => setShowProperties(false)}
-        />
-      )}
     </div>
   );
 };
@@ -866,7 +868,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   };
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto">
+    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto flex-shrink-0">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Properties</h3>
         <button
