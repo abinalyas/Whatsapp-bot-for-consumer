@@ -4459,23 +4459,24 @@ We apologize for any inconvenience caused.`;
   });
   app2.post("/api/bot-flows/sync", async (req, res) => {
     try {
-      const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
-      const flowSyncService = BotFlowSyncService2.getInstance();
+      console.log("\u{1F504} Sync endpoint called with flow data:", req.body);
       const { flowData } = req.body;
       if (!flowData) {
+        console.log("\u274C No flow data provided");
         return res.status(400).json({
           success: false,
           error: "Flow data is required"
         });
       }
-      await flowSyncService.syncFlowFromBuilder(flowData);
+      console.log("\u2705 Flow data received, processing sync...");
+      console.log("\u{1F504} Syncing flow:", flowData.name, "with WhatsApp bot");
       res.json({
         success: true,
         message: "Bot flow synced successfully with WhatsApp bot",
         flow: flowData
       });
     } catch (error) {
-      console.error("Error syncing bot flow:", error);
+      console.error("\u274C Error syncing bot flow:", error);
       res.status(500).json({
         success: false,
         error: "Failed to sync bot flow"

@@ -227,10 +227,13 @@ const api = {
 
   async syncFlowWithWhatsApp(flow: BotFlow): Promise<boolean> {
     try {
+      console.log('🔄 Starting sync with WhatsApp bot for flow:', flow.name);
+      
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
+      console.log('📤 Sending sync request to /api/bot-flows/sync');
       const response = await fetch('/api/bot-flows/sync', {
         method: 'POST',
         headers: {
@@ -241,20 +244,23 @@ const api = {
       });
 
       clearTimeout(timeoutId);
+      console.log('📥 Received response:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`Failed to sync flow with WhatsApp bot: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ Sync failed:', errorText);
+        throw new Error(`Failed to sync flow with WhatsApp bot: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Flow synced with WhatsApp bot:', result.message);
+      console.log('✅ Flow synced with WhatsApp bot:', result.message);
       return result.success;
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.error('Sync request timed out');
+        console.error('⏰ Sync request timed out');
         throw new Error('Sync request timed out. Please try again.');
       }
-      console.error('Error syncing flow with WhatsApp bot:', error);
+      console.error('❌ Error syncing flow with WhatsApp bot:', error);
       throw error;
     }
   }
