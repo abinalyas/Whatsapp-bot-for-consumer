@@ -40,75 +40,109 @@ const api = {
             connections: [{ id: 'conn_1', sourceNodeId: 'start_1', targetNodeId: 'welcome_msg', label: '' }], 
             metadata: {} 
           },
-          { 
-            id: 'welcome_msg', 
-            type: 'message', 
-            name: 'Welcome Message', 
-            position: { x: 400, y: 100 }, 
-            configuration: { 
-              message: 'Hello! Welcome to our salon. I can help you book an appointment. What service would you like?' 
-            }, 
-            connections: [{ id: 'conn_2', sourceNodeId: 'welcome_msg', targetNodeId: 'service_question', label: '' }], 
-            metadata: {} 
-          },
+            { 
+              id: 'welcome_msg', 
+              type: 'message', 
+              name: 'Welcome Message', 
+              position: { x: 400, y: 100 }, 
+              configuration: { 
+                message: '👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut – ₹120\n💇‍♀️ Hair Color – ₹600\n💇‍♀️ Hair Styling – ₹300\n💅 Manicure – ₹200\n🦶 Pedicure – ₹65\n\nReply with the number or name of the service to book.' 
+              }, 
+              connections: [{ id: 'conn_2', sourceNodeId: 'welcome_msg', targetNodeId: 'service_question', label: '' }], 
+              metadata: {} 
+            },
           { 
             id: 'service_question', 
             type: 'question', 
             name: 'Service Selection', 
             position: { x: 700, y: 100 }, 
             configuration: { 
-              question: 'Which service would you like?',
-              options: ['Haircut', 'Hair Color', 'Manicure', 'Pedicure', 'Facial']
+              question: 'Please select a service:',
+              inputType: 'text'
             }, 
-            connections: [{ id: 'conn_3', sourceNodeId: 'service_question', targetNodeId: 'date_question', label: '' }], 
+            connections: [{ id: 'conn_3', sourceNodeId: 'service_question', targetNodeId: 'service_confirmed', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'service_confirmed', 
+            type: 'message', 
+            name: 'Service Confirmed', 
+            position: { x: 900, y: 100 }, 
+            configuration: { 
+              message: 'Perfect! You\'ve selected {selectedService} (₹{price}).\n\n📅 Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date.' 
+            }, 
+            connections: [{ id: 'conn_4', sourceNodeId: 'service_confirmed', targetNodeId: 'date_question', label: '' }], 
             metadata: {} 
           },
           { 
             id: 'date_question', 
             type: 'question', 
             name: 'Date Selection', 
-            position: { x: 1000, y: 100 }, 
+            position: { x: 1100, y: 100 }, 
             configuration: { 
-              question: 'What date would you prefer?',
-              inputType: 'date'
+              question: 'Please select your preferred date:',
+              inputType: 'choice',
+              options: ['1', '2', '3', '4', '5', '6', '7']
             }, 
-            connections: [{ id: 'conn_4', sourceNodeId: 'date_question', targetNodeId: 'time_question', label: '' }], 
+            connections: [{ id: 'conn_5', sourceNodeId: 'date_question', targetNodeId: 'date_confirmed', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'date_confirmed', 
+            type: 'message', 
+            name: 'Date Confirmed', 
+            position: { x: 1300, y: 100 }, 
+            configuration: { 
+              message: 'Great! You\'ve selected {selectedDate}.\n\n🕐 Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time.' 
+            }, 
+            connections: [{ id: 'conn_6', sourceNodeId: 'date_confirmed', targetNodeId: 'time_question', label: '' }], 
             metadata: {} 
           },
           { 
             id: 'time_question', 
             type: 'question', 
             name: 'Time Selection', 
-            position: { x: 1300, y: 100 }, 
+            position: { x: 1500, y: 100 }, 
             configuration: { 
-              question: 'What time works best for you?',
-              options: ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
+              question: 'Please select your preferred time:',
+              inputType: 'choice',
+              options: ['1', '2', '3', '4', '5']
             }, 
-            connections: [{ id: 'conn_5', sourceNodeId: 'time_question', targetNodeId: 'customer_details', label: '' }], 
+            connections: [{ id: 'conn_7', sourceNodeId: 'time_question', targetNodeId: 'booking_summary', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'booking_summary', 
+            type: 'message', 
+            name: 'Booking Summary', 
+            position: { x: 1700, y: 100 }, 
+            configuration: { 
+              message: 'Perfect! Your appointment is scheduled for {selectedTime}.\n\n📋 Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: ₹{price}\n\n💳 Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply \'paid\' to confirm your booking.' 
+            }, 
+            connections: [{ id: 'conn_8', sourceNodeId: 'booking_summary', targetNodeId: 'customer_details', label: '' }], 
             metadata: {} 
           },
           { 
             id: 'customer_details', 
             type: 'question', 
-            name: 'Customer Name', 
-            position: { x: 1600, y: 100 }, 
+            name: 'Payment Confirmation', 
+            position: { x: 1900, y: 100 }, 
             configuration: { 
-              question: 'What is your name?',
+              question: 'Please confirm your payment:',
               inputType: 'text'
             }, 
-            connections: [{ id: 'conn_6', sourceNodeId: 'customer_details', targetNodeId: 'payment_action', label: '' }], 
+            connections: [{ id: 'conn_9', sourceNodeId: 'customer_details', targetNodeId: 'payment_confirmed', label: '' }], 
             metadata: {} 
           },
           { 
-            id: 'payment_action', 
-            type: 'action', 
-            name: 'Payment Request', 
-            position: { x: 1900, y: 100 }, 
+            id: 'payment_confirmed', 
+            type: 'message', 
+            name: 'Payment Confirmed', 
+            position: { x: 2100, y: 100 }, 
             configuration: { 
-              action: 'request_payment',
-              message: 'Please confirm your booking details and make payment to secure your appointment.'
+              message: '✅ Payment received! Your appointment is now confirmed.\n\n📋 Booking Details:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\n\n🎉 Thank you for choosing Spark Salon! We look forward to serving you.' 
             }, 
-            connections: [{ id: 'conn_7', sourceNodeId: 'payment_action', targetNodeId: 'confirmation_end', label: '' }], 
+            connections: [{ id: 'conn_10', sourceNodeId: 'payment_confirmed', targetNodeId: 'confirmation_end', label: '' }], 
             metadata: {} 
           },
           { 
