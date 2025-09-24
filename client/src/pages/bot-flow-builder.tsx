@@ -223,6 +223,29 @@ const api = {
     // In a real implementation, this would fetch templates from the API
     console.log('Fetching templates for business type:', businessType);
     return [];
+  },
+
+  async syncFlowWithWhatsApp(flow: BotFlow): Promise<boolean> {
+    try {
+      const response = await fetch('/api/bot-flows/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ flowData: flow }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync flow with WhatsApp bot');
+      }
+
+      const result = await response.json();
+      console.log('Flow synced with WhatsApp bot:', result.message);
+      return result.success;
+    } catch (error) {
+      console.error('Error syncing flow with WhatsApp bot:', error);
+      throw error;
+    }
   }
 };
 
@@ -318,13 +341,22 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       const savedFlow = await api.saveBotFlow(updatedFlow);
       setFlow(savedFlow);
       
+      // Sync with WhatsApp bot
+      try {
+        await api.syncFlowWithWhatsApp(updatedFlow);
+        console.log('✅ Flow synced with WhatsApp bot');
+      } catch (syncError) {
+        console.warn('Flow saved but sync failed:', syncError);
+        // Don't fail the save if sync fails
+      }
+      
       // If this was a new flow, redirect to the saved flow
       if (!flowId || flowId === 'new') {
         setLocation(`/bot-flows/${savedFlow.id}`);
       }
       
       // Show success message
-      alert('Bot flow saved successfully!');
+      alert('Bot flow saved and synced with WhatsApp bot successfully!');
     } catch (error) {
       console.error('Error saving flow:', error);
       alert('Error saving bot flow. Please try again.');

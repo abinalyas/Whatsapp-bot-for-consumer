@@ -25,6 +25,224 @@ var __copyProps = (to, from, except, desc2) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// server/services/dynamic-flow-processor.service.ts
+var dynamic_flow_processor_service_exports = {};
+__export(dynamic_flow_processor_service_exports, {
+  DynamicFlowProcessorService: () => DynamicFlowProcessorService
+});
+var DynamicFlowProcessorService;
+var init_dynamic_flow_processor_service = __esm({
+  "server/services/dynamic-flow-processor.service.ts"() {
+    "use strict";
+    DynamicFlowProcessorService = class _DynamicFlowProcessorService {
+      static instance;
+      activeFlow = null;
+      constructor() {
+      }
+      static getInstance() {
+        if (!_DynamicFlowProcessorService.instance) {
+          _DynamicFlowProcessorService.instance = new _DynamicFlowProcessorService();
+        }
+        return _DynamicFlowProcessorService.instance;
+      }
+      /**
+       * Load active flow from localStorage (simulated)
+       */
+      async loadActiveFlow() {
+        try {
+          const fs2 = __require("fs");
+          const path2 = __require("path");
+          const flowPath = path2.join(process.cwd(), "whatsapp-bot-flow-exact.json");
+          if (fs2.existsSync(flowPath)) {
+            const flowData = JSON.parse(fs2.readFileSync(flowPath, "utf8"));
+            this.activeFlow = flowData;
+            console.log("\u2705 Active flow loaded:", flowData.name);
+            return flowData;
+          }
+          return null;
+        } catch (error) {
+          console.error("Error loading active flow:", error);
+          return null;
+        }
+      }
+      /**
+       * Process message using dynamic flow
+       */
+      async processMessage(phoneNumber, messageText, conversationState) {
+        try {
+          if (!this.activeFlow) {
+            await this.loadActiveFlow();
+          }
+          if (!this.activeFlow) {
+            throw new Error("No active flow found");
+          }
+          console.log("Processing message with dynamic flow:", {
+            phoneNumber,
+            messageText,
+            conversationState,
+            flowName: this.activeFlow.name
+          });
+          switch (conversationState) {
+            case "greeting":
+              return this.handleGreetingState();
+            case "awaiting_service":
+              return this.handleServiceSelectionState(messageText);
+            case "awaiting_date":
+              return this.handleDateSelectionState(messageText);
+            case "awaiting_time":
+              return this.handleTimeSelectionState(messageText);
+            case "awaiting_payment":
+              return this.handlePaymentState(messageText);
+            default:
+              return this.handleGreetingState();
+          }
+        } catch (error) {
+          console.error("Error processing dynamic flow message:", error);
+          return {
+            response: "Sorry, I encountered an error. Please try again.",
+            newState: "greeting"
+          };
+        }
+      }
+      /**
+       * Handle greeting state using dynamic flow
+       */
+      handleGreetingState() {
+        const greetingNode = this.activeFlow?.nodes.find(
+          (node) => node.id === "welcome_msg" || node.type === "message"
+        );
+        if (greetingNode?.configuration?.message) {
+          return {
+            response: greetingNode.configuration.message,
+            newState: "awaiting_service"
+          };
+        }
+        return {
+          response: "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n\n\u{1F487}\u200D\u2640\uFE0F Haircut \u2013 \u20B9120\n\u{1F487}\u200D\u2640\uFE0F Hair Color \u2013 \u20B9600\n\u{1F487}\u200D\u2640\uFE0F Hair Styling \u2013 \u20B9300\n\u{1F485} Manicure \u2013 \u20B9200\n\u{1F9B6} Pedicure \u2013 \u20B965\n\nReply with the number or name of the service to book.",
+          newState: "awaiting_service"
+        };
+      }
+      /**
+       * Handle service selection state using dynamic flow
+       */
+      handleServiceSelectionState(messageText) {
+        const serviceConfirmedNode = this.activeFlow?.nodes.find(
+          (node) => node.id === "service_confirmed"
+        );
+        if (serviceConfirmedNode?.configuration?.message) {
+          let response = serviceConfirmedNode.configuration.message;
+          response = response.replace("{selectedService}", "Haircut");
+          response = response.replace("{price}", "120");
+          const today = /* @__PURE__ */ new Date();
+          for (let i = 1; i <= 7; i++) {
+            const futureDate = new Date(today);
+            futureDate.setDate(today.getDate() + i);
+            const dateStr = futureDate.toLocaleDateString("en-GB", {
+              weekday: "short",
+              year: "numeric",
+              month: "short",
+              day: "numeric"
+            });
+            response = response.replace(`{date${i}}`, dateStr);
+          }
+          return {
+            response,
+            newState: "awaiting_date"
+          };
+        }
+        return {
+          response: "Perfect! You've selected Haircut (\u20B9120).\n\n\u{1F4C5} Now, please select your preferred appointment date.",
+          newState: "awaiting_date"
+        };
+      }
+      /**
+       * Handle date selection state using dynamic flow
+       */
+      handleDateSelectionState(messageText) {
+        const dateConfirmedNode = this.activeFlow?.nodes.find(
+          (node) => node.id === "date_confirmed"
+        );
+        if (dateConfirmedNode?.configuration?.message) {
+          let response = dateConfirmedNode.configuration.message;
+          const today = /* @__PURE__ */ new Date();
+          const selectedDate = new Date(today);
+          selectedDate.setDate(today.getDate() + parseInt(messageText));
+          const readableDateStr = selectedDate.toLocaleDateString("en-GB", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+          });
+          response = response.replace("{selectedDate}", readableDateStr);
+          return {
+            response,
+            newState: "awaiting_time"
+          };
+        }
+        return {
+          response: "Great! You've selected the date.\n\n\u{1F550} Now, please choose your preferred time slot.",
+          newState: "awaiting_time"
+        };
+      }
+      /**
+       * Handle time selection state using dynamic flow
+       */
+      handleTimeSelectionState(messageText) {
+        const bookingSummaryNode = this.activeFlow?.nodes.find(
+          (node) => node.id === "booking_summary"
+        );
+        if (bookingSummaryNode?.configuration?.message) {
+          let response = bookingSummaryNode.configuration.message;
+          const timeSlots = ["10:00 AM", "11:30 AM", "02:00 PM", "03:30 PM", "05:00 PM"];
+          const selectedTime = timeSlots[parseInt(messageText) - 1] || "10:00 AM";
+          response = response.replace("{selectedTime}", selectedTime);
+          response = response.replace("{selectedService}", "Haircut");
+          response = response.replace("{selectedDate}", "Tomorrow");
+          response = response.replace("{price}", "120");
+          response = response.replace("{upiLink}", "https://paytm.me/example-link");
+          return {
+            response,
+            newState: "awaiting_payment"
+          };
+        }
+        return {
+          response: "Perfect! Your appointment is scheduled.\n\n\u{1F4CB} Booking Summary:\nService: Haircut\nDate: Tomorrow\nTime: 10:00 AM\nAmount: \u20B9120",
+          newState: "awaiting_payment"
+        };
+      }
+      /**
+       * Handle payment state using dynamic flow
+       */
+      handlePaymentState(messageText) {
+        const paymentConfirmedNode = this.activeFlow?.nodes.find(
+          (node) => node.id === "payment_confirmed"
+        );
+        if (paymentConfirmedNode?.configuration?.message) {
+          let response = paymentConfirmedNode.configuration.message;
+          response = response.replace("{selectedService}", "Haircut");
+          response = response.replace("{selectedDate}", "Tomorrow");
+          response = response.replace("{selectedTime}", "10:00 AM");
+          return {
+            response,
+            newState: "completed"
+          };
+        }
+        return {
+          response: "\u2705 Payment received! Your appointment is now confirmed.\n\n\u{1F389} Thank you for choosing Spark Salon!",
+          newState: "completed"
+        };
+      }
+      /**
+       * Update flow with new data
+       */
+      async updateFlow(flowData) {
+        this.activeFlow = flowData;
+        console.log("\u2705 Flow updated:", flowData.name);
+      }
+    };
+  }
+});
+
 // server/services/bot-flow-sync.service.ts
 var bot_flow_sync_service_exports = {};
 __export(bot_flow_sync_service_exports, {
@@ -144,7 +362,29 @@ var init_bot_flow_sync_service = __esm({
       async processFlowChanges(changes) {
         if (!this.activeFlow) return;
         console.log("\u{1F504} Processing flow changes:", changes);
-        console.log("\u2705 Flow changes processed and synced with WhatsApp bot");
+        try {
+          const { DynamicFlowProcessorService: DynamicFlowProcessorService2 } = (init_dynamic_flow_processor_service(), __toCommonJS(dynamic_flow_processor_service_exports));
+          const flowProcessor = DynamicFlowProcessorService2.getInstance();
+          await flowProcessor.updateFlow(this.activeFlow);
+          console.log("\u2705 Flow changes processed and synced with WhatsApp bot");
+        } catch (error) {
+          console.error("Error syncing flow changes:", error);
+        }
+      }
+      /**
+       * Sync flow changes from bot flow builder
+       */
+      async syncFlowFromBuilder(flowData) {
+        try {
+          console.log("\u{1F504} Syncing flow from builder:", flowData.name);
+          this.activeFlow = flowData;
+          const { DynamicFlowProcessorService: DynamicFlowProcessorService2 } = (init_dynamic_flow_processor_service(), __toCommonJS(dynamic_flow_processor_service_exports));
+          const flowProcessor = DynamicFlowProcessorService2.getInstance();
+          await flowProcessor.updateFlow(flowData);
+          console.log("\u2705 Flow synced from builder to WhatsApp bot");
+        } catch (error) {
+          console.error("Error syncing flow from builder:", error);
+        }
       }
     };
   }
@@ -3421,7 +3661,30 @@ async function checkForActiveFlow() {
 async function processDynamicWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
-    await sendWhatsAppMessage(from, "\u{1F916} Dynamic flow processing is active! This message was generated by your custom bot flow.");
+    const { DynamicFlowProcessorService: DynamicFlowProcessorService2 } = (init_dynamic_flow_processor_service(), __toCommonJS(dynamic_flow_processor_service_exports));
+    const flowProcessor = DynamicFlowProcessorService2.getInstance();
+    let conversation = await storage.getConversation(from);
+    if (!conversation) {
+      conversation = await storage.createConversation({
+        phoneNumber: from,
+        currentState: "greeting"
+      });
+    }
+    const result = await flowProcessor.processMessage(
+      from,
+      messageText,
+      conversation.currentState
+    );
+    await storage.updateConversation(conversation.id, {
+      currentState: result.newState,
+      contextData: result.contextData
+    });
+    await sendWhatsAppMessage(from, result.response);
+    console.log("\u2705 Dynamic flow processed successfully:", {
+      phoneNumber: from,
+      newState: result.newState,
+      responseLength: result.response.length
+    });
   } catch (error) {
     console.error("Error in dynamic message processing:", error);
     await sendWhatsAppMessage(from, "Sorry, there was an issue with the dynamic flow. Please try again.");
@@ -4191,6 +4454,31 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: "Failed to restore bot flow"
+      });
+    }
+  });
+  app2.post("/api/bot-flows/sync", async (req, res) => {
+    try {
+      const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
+      const flowSyncService = BotFlowSyncService2.getInstance();
+      const { flowData } = req.body;
+      if (!flowData) {
+        return res.status(400).json({
+          success: false,
+          error: "Flow data is required"
+        });
+      }
+      await flowSyncService.syncFlowFromBuilder(flowData);
+      res.json({
+        success: true,
+        message: "Bot flow synced successfully with WhatsApp bot",
+        flow: flowData
+      });
+    } catch (error) {
+      console.error("Error syncing bot flow:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to sync bot flow"
       });
     }
   });

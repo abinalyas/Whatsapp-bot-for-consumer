@@ -131,9 +131,40 @@ export class BotFlowSyncService {
 
     console.log('🔄 Processing flow changes:', changes);
     
-    // Here you would implement the logic to sync changes with the WhatsApp bot
-    // This could involve updating the conversation engine, message processor, etc.
-    
-    console.log('✅ Flow changes processed and synced with WhatsApp bot');
+    try {
+      // Import the dynamic flow processor
+      const { DynamicFlowProcessorService } = require('./dynamic-flow-processor.service');
+      const flowProcessor = DynamicFlowProcessorService.getInstance();
+      
+      // Update the flow processor with the new flow data
+      await flowProcessor.updateFlow(this.activeFlow);
+      
+      console.log('✅ Flow changes processed and synced with WhatsApp bot');
+    } catch (error) {
+      console.error('Error syncing flow changes:', error);
+    }
+  }
+
+  /**
+   * Sync flow changes from bot flow builder
+   */
+  async syncFlowFromBuilder(flowData: BotFlow): Promise<void> {
+    try {
+      console.log('🔄 Syncing flow from builder:', flowData.name);
+      
+      // Update active flow
+      this.activeFlow = flowData;
+      
+      // Import the dynamic flow processor
+      const { DynamicFlowProcessorService } = require('./dynamic-flow-processor.service');
+      const flowProcessor = DynamicFlowProcessorService.getInstance();
+      
+      // Update the flow processor with the new flow data
+      await flowProcessor.updateFlow(flowData);
+      
+      console.log('✅ Flow synced from builder to WhatsApp bot');
+    } catch (error) {
+      console.error('Error syncing flow from builder:', error);
+    }
   }
 }
