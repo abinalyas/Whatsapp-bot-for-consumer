@@ -20,6 +20,10 @@ interface Stats {
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<Stats>({
     queryKey: ["/api/stats"],
+    // Ensure dashboard KPIs reflect new bookings/messages quickly
+    staleTime: 5000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
   });
 
   const handleRefresh = () => {

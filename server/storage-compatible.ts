@@ -374,7 +374,7 @@ export class CompatibleDatabaseStorage implements IStorage {
         .select()
         .from(compatibleMessages)
         .where(eq(compatibleMessages.conversationId, conversationId))
-        .orderBy(compatibleMessages.createdAt);
+        .orderBy(compatibleMessages.timestamp);
     } catch (error) {
       console.error("Error fetching messages:", error);
       return [];
@@ -494,8 +494,8 @@ export class CompatibleDatabaseStorage implements IStorage {
         .from(compatibleBookings)
         .where(
           and(
-            gte(compatibleBookings.appointmentDate, today),
-            lt(compatibleBookings.appointmentDate, tomorrow)
+            gte(compatibleBookings.createdAt, today),
+            lt(compatibleBookings.createdAt, tomorrow)
           )
         );
     } catch (error) {
@@ -523,8 +523,8 @@ export class CompatibleDatabaseStorage implements IStorage {
         .where(
           and(
             eq(compatibleBookings.status, 'confirmed'),
-            gte(compatibleBookings.appointmentDate, today),
-            lt(compatibleBookings.appointmentDate, tomorrow)
+            gte(compatibleBookings.createdAt, today),
+            lt(compatibleBookings.createdAt, tomorrow)
           )
         );
       
