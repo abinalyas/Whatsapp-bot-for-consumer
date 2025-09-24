@@ -359,8 +359,8 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       // Try to sync with WhatsApp bot (optional, don't fail if this fails)
       let syncSuccess = false;
       
-      // For now, disable sync to prevent hanging - can be enabled later
-      const ENABLE_SYNC = false;
+      // Enable sync to apply changes immediately to WhatsApp bot
+      const ENABLE_SYNC = true;
       
       if (ENABLE_SYNC) {
         try {
@@ -383,9 +383,9 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // Show success message
       if (syncSuccess) {
-        alert('Bot flow saved and synced with WhatsApp bot successfully!');
+        alert('✅ Bot flow saved and synced with WhatsApp bot! Changes will apply immediately.');
       } else {
-        alert('Bot flow saved successfully! (Changes saved to localStorage)');
+        alert('⚠️ Bot flow saved locally, but sync failed. WhatsApp bot will use old messages until sync is fixed.');
       }
       
     } catch (error) {
