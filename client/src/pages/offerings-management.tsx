@@ -3,7 +3,7 @@
  * Manage business offerings (services/products/appointments)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,122 +28,24 @@ import {
   Loader2
 } from 'lucide-react';
 
-// Types
-interface Offering {
-  id: string;
-  name: string;
-  description?: string;
-  basePrice: number;
-  category?: string;
-  isActive: boolean;
-  metadata?: Record<string, any>;
-  customFieldValues?: Record<string, any>;
-  variants?: OfferingVariant[];
-  availability?: {
-    isScheduled: boolean;
-    duration?: number;
-    capacity?: number;
-    advanceBookingDays?: number;
-    timeSlots?: TimeSlot[];
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface OfferingVariant {
-  id: string;
-  name: string;
-  description?: string;
-  priceModifier: number;
-  isActive: boolean;
-}
-
-interface TimeSlot {
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
-}
+import { useQuery } from '@tanstack/react-query';
+import type { Service } from '@shared/schema';
 
 export const OfferingsManagementPage: React.FC = () => {
-  const [offerings, setOfferings] = useState<Offering[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: services, isLoading: loading } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingOffering, setEditingOffering] = useState<Offering | null>(null);
+  const [editingOffering, setEditingOffering] = useState<Service | null>(null);
 
-  // Mock data for demo
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setOfferings([
-        {
-          id: '1',
-          name: 'Haircut & Style',
-          description: 'Professional haircut with styling',
-          basePrice: 45.00,
-          category: 'Hair Services',
-          isActive: true,
-          availability: {
-            isScheduled: true,
-            duration: 60,
-            capacity: 1,
-            advanceBookingDays: 14,
-            timeSlots: [
-              { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
-              { dayOfWeek: 2, startTime: '09:00', endTime: '17:00' },
-            ]
-          },
-          variants: [
-            { id: '1a', name: 'Short Hair', description: 'For short hair', priceModifier: 0, isActive: true },
-            { id: '1b', name: 'Long Hair', description: 'For long hair', priceModifier: 15, isActive: true },
-          ],
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-        {
-          id: '2',
-          name: 'Color Treatment',
-          description: 'Full hair coloring service',
-          basePrice: 120.00,
-          category: 'Hair Services',
-          isActive: true,
-          availability: {
-            isScheduled: true,
-            duration: 180,
-            capacity: 1,
-            advanceBookingDays: 21,
-          },
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-        {
-          id: '3',
-          name: 'Manicure',
-          description: 'Professional nail care and polish',
-          basePrice: 25.00,
-          category: 'Nail Services',
-          isActive: true,
-          availability: {
-            isScheduled: true,
-            duration: 45,
-            capacity: 2,
-            advanceBookingDays: 7,
-          },
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z',
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  const offerings = (services || []).map<Service>((s) => s);
 
-  const categories = ['all', ...Array.from(new Set(offerings.map(o => o.category).filter(Boolean)))];
+  const categories = ['all', ...Array.from(new Set(offerings.map(o => (o as any).category).filter(Boolean)))];
 
-  const filteredOfferings = offerings.filter(offering => {
+  const filteredOfferings = offerings.filter((offering) => {
     const matchesSearch = offering.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offering.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || offering.category === selectedCategory;
+      (offering.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || (offering as any).category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -319,50 +221,12 @@ export const OfferingsManagementPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">{formatPrice(offering.basePrice)}</span>
+                  <span className="font-semibold">{formatPrice(offering.price)}</span>
                 </div>
                 <Badge variant={offering.isActive ? "default" : "secondary"}>
                   {offering.isActive ? "Active" : "Inactive"}
                 </Badge>
               </div>
-
-              {offering.availability?.isScheduled && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatDuration(offering.availability.duration || 0)}</span>
-                    {offering.availability.capacity && (
-                      <>
-                        <Users className="h-4 w-4 ml-2" />
-                        <span>{offering.availability.capacity} max</span>
-                      </>
-                    )}
-                  </div>
-                  
-                  {offering.availability.timeSlots && offering.availability.timeSlots.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      Available: {offering.availability.timeSlots.map(slot => 
-                        getDayName(slot.dayOfWeek)
-                      ).join(', ')}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {offering.variants && offering.variants.length > 0 && (
-                <div>
-                  <div className="text-sm font-medium mb-2">Variants:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {offering.variants.map(variant => (
-                      <Badge key={variant.id} variant="outline" className="text-xs">
-                        {variant.name} {variant.priceModifier !== 0 && 
-                          `(${variant.priceModifier > 0 ? '+' : ''}${formatPrice(variant.priceModifier)})`
-                        }
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}

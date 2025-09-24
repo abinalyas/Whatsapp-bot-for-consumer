@@ -3,7 +3,7 @@
  * Manage orders, bookings, appointments, and other transactions
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,37 +30,8 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 
-// Types
-interface Transaction {
-  id: string;
-  customerName: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  offeringId: string;
-  offeringName: string;
-  variantId?: string;
-  variantName?: string;
-  quantity: number;
-  totalAmount: number;
-  status: string;
-  scheduledDate?: string;
-  scheduledTime?: string;
-  notes?: string;
-  customFieldValues?: Record<string, any>;
-  metadata?: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
-  history: TransactionHistoryEntry[];
-}
-
-interface TransactionHistoryEntry {
-  id: string;
-  fromState: string;
-  toState: string;
-  notes?: string;
-  timestamp: string;
-  userId?: string;
-}
+import { useQuery } from '@tanstack/react-query';
+import type { Booking, Service } from '@shared/schema';
 
 const statusConfig = {
   pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
@@ -72,137 +43,30 @@ const statusConfig = {
 };
 
 export const TransactionsManagementPage: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: bookings, isLoading: loading } = useQuery<Booking[]>({ queryKey: ["/api/bookings"] });
+  const { data: services } = useQuery<Service[]>({ queryKey: ["/api/services"] });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Booking | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [sortBy, setSortBy] = useState<'createdAt' | 'scheduledDate' | 'totalAmount'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Mock data for demo
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setTransactions([
-        {
-          id: '1',
-          customerName: 'Sarah Johnson',
-          customerPhone: '+1-555-0123',
-          customerEmail: 'sarah@example.com',
-          offeringId: '1',
-          offeringName: 'Haircut & Style',
-          variantId: '1b',
-          variantName: 'Long Hair',
-          quantity: 1,
-          totalAmount: 60.00,
-          status: 'confirmed',
-          scheduledDate: '2024-02-15',
-          scheduledTime: '14:00',
-          notes: 'Customer prefers layers',
-          createdAt: '2024-02-10T10:00:00Z',
-          updatedAt: '2024-02-10T10:30:00Z',
-          history: [
-            {
-              id: '1a',
-              fromState: 'pending',
-              toState: 'confirmed',
-              notes: 'Payment confirmed',
-              timestamp: '2024-02-10T10:30:00Z',
-            }
-          ]
-        },
-        {
-          id: '2',
-          customerName: 'Mike Chen',
-          customerPhone: '+1-555-0124',
-          offeringId: '2',
-          offeringName: 'Color Treatment',
-          quantity: 1,
-          totalAmount: 120.00,
-          status: 'pending',
-          scheduledDate: '2024-02-20',
-          scheduledTime: '10:00',
-          createdAt: '2024-02-12T14:00:00Z',
-          updatedAt: '2024-02-12T14:00:00Z',
-          history: []
-        },
-        {
-          id: '3',
-          customerName: 'Emma Davis',
-          customerEmail: 'emma@example.com',
-          offeringId: '3',
-          offeringName: 'Manicure',
-          quantity: 1,
-          totalAmount: 25.00,
-          status: 'completed',
-          scheduledDate: '2024-02-08',
-          scheduledTime: '16:30',
-          notes: 'Regular customer',
-          createdAt: '2024-02-05T09:00:00Z',
-          updatedAt: '2024-02-08T17:15:00Z',
-          history: [
-            {
-              id: '3a',
-              fromState: 'pending',
-              toState: 'confirmed',
-              timestamp: '2024-02-05T09:15:00Z',
-            },
-            {
-              id: '3b',
-              fromState: 'confirmed',
-              toState: 'in_progress',
-              timestamp: '2024-02-08T16:30:00Z',
-            },
-            {
-              id: '3c',
-              fromState: 'in_progress',
-              toState: 'completed',
-              timestamp: '2024-02-08T17:15:00Z',
-            }
-          ]
-        },
-        {
-          id: '4',
-          customerName: 'John Smith',
-          customerPhone: '+1-555-0125',
-          offeringId: '1',
-          offeringName: 'Haircut & Style',
-          quantity: 1,
-          totalAmount: 45.00,
-          status: 'no_show',
-          scheduledDate: '2024-02-12',
-          scheduledTime: '11:00',
-          createdAt: '2024-02-08T16:00:00Z',
-          updatedAt: '2024-02-12T11:30:00Z',
-          history: [
-            {
-              id: '4a',
-              fromState: 'pending',
-              toState: 'confirmed',
-              timestamp: '2024-02-08T16:15:00Z',
-            },
-            {
-              id: '4b',
-              fromState: 'confirmed',
-              toState: 'no_show',
-              notes: 'Customer did not arrive',
-              timestamp: '2024-02-12T11:30:00Z',
-            }
-          ]
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  const transactions = (bookings || []).map((b) => ({
+    ...b,
+    customerName: b.customerName || b.phoneNumber,
+    offeringName: services?.find((s) => s.id === b.serviceId)?.name || b.serviceId,
+    totalAmount: b.amount,
+    scheduledDate: b.appointmentDate ? new Date(b.appointmentDate as unknown as string).toISOString() : undefined,
+    scheduledTime: b.appointmentTime || undefined,
+    createdAt: (b.createdAt as unknown as Date)?.toString() || new Date().toISOString(),
+  }));
 
   const statuses = ['all', ...Object.keys(statusConfig)];
 
   const filteredTransactions = transactions
     .filter(transaction => {
       const matchesSearch = transaction.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           transaction.offeringName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (transaction as any).offeringName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            transaction.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            transaction.customerPhone?.includes(searchTerm);
       const matchesStatus = selectedStatus === 'all' || transaction.status === selectedStatus;
@@ -221,8 +85,8 @@ export const TransactionsManagementPage: React.FC = () => {
           bValue = b.totalAmount;
           break;
         default:
-          aValue = new Date(a.createdAt);
-          bValue = new Date(b.createdAt);
+          aValue = new Date((a as any).createdAt);
+          bValue = new Date((b as any).createdAt);
       }
       
       if (sortOrder === 'asc') {
