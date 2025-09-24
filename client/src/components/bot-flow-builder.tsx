@@ -410,7 +410,7 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
         const midY = (transformedStartY + transformedEndY) / 2;
 
         connections.push(
-          <g key={connection.id} style={{ pointerEvents: 'auto', cursor: 'default' }}>
+          <g key={connection.id} style={{ pointerEvents: 'none' }}>
             <path
               d={`M ${transformedStartX} ${transformedStartY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${transformedEndX} ${transformedEndY}`}
               stroke="#6b7280"
@@ -454,13 +454,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 e.stopPropagation();
                 e.preventDefault();
                 console.log('Delete connection clicked:', connection.id);
+                console.log('Event target:', e.target);
+                console.log('Event currentTarget:', e.currentTarget);
                 deleteConnection(node.id, connection.id);
               }}
               onMouseEnter={(e) => {
+                console.log('Mouse enter delete button:', connection.id);
                 e.currentTarget.style.fill = '#fef2f2';
                 e.currentTarget.style.stroke = '#dc2626';
               }}
               onMouseLeave={(e) => {
+                console.log('Mouse leave delete button:', connection.id);
                 e.currentTarget.style.fill = 'white';
                 e.currentTarget.style.stroke = '#ef4444';
               }}
