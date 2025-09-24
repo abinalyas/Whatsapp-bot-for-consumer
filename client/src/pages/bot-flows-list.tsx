@@ -164,9 +164,9 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
     // Fallback to demo data if no saved flows
     const demoFlows = [
       {
-        id: 'current_salon_flow',
-        name: '🟢 Current Salon Flow (ACTIVE)',
-        description: 'This is the exact flow currently running on WhatsApp for salon bookings',
+        id: 'whatsapp_bot_flow',
+        name: '🟢 WhatsApp Bot Flow (EXACT REPLICA)',
+        description: 'Exact replica of current WhatsApp bot flow with emojis, layout, and all details',
         businessType: 'salon',
         isActive: true,
         isTemplate: false,

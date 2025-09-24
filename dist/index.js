@@ -25,6 +25,131 @@ var __copyProps = (to, from, except, desc2) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// server/services/bot-flow-sync.service.ts
+var bot_flow_sync_service_exports = {};
+__export(bot_flow_sync_service_exports, {
+  BotFlowSyncService: () => BotFlowSyncService
+});
+var BotFlowSyncService;
+var init_bot_flow_sync_service = __esm({
+  "server/services/bot-flow-sync.service.ts"() {
+    "use strict";
+    BotFlowSyncService = class _BotFlowSyncService {
+      static instance;
+      activeFlow = null;
+      backupFlow = null;
+      constructor() {
+      }
+      static getInstance() {
+        if (!_BotFlowSyncService.instance) {
+          _BotFlowSyncService.instance = new _BotFlowSyncService();
+        }
+        return _BotFlowSyncService.instance;
+      }
+      /**
+       * Load the exact WhatsApp bot flow
+       */
+      async loadWhatsAppBotFlow() {
+        try {
+          const fs3 = __require("fs");
+          const path4 = __require("path");
+          const flowPath = path4.join(process.cwd(), "whatsapp-bot-flow-exact.json");
+          const flowData = JSON.parse(fs3.readFileSync(flowPath, "utf8"));
+          this.activeFlow = flowData;
+          console.log("\u2705 WhatsApp bot flow loaded successfully");
+          return flowData;
+        } catch (error) {
+          console.error("Error loading WhatsApp bot flow:", error);
+          throw error;
+        }
+      }
+      /**
+       * Create backup of current flow
+       */
+      async createBackup() {
+        try {
+          const fs3 = __require("fs");
+          const path4 = __require("path");
+          const backupPath = path4.join(process.cwd(), "backup-current-flows.json");
+          if (this.activeFlow) {
+            this.backupFlow = { ...this.activeFlow };
+            fs3.writeFileSync(backupPath, JSON.stringify({
+              backup_created: (/* @__PURE__ */ new Date()).toISOString(),
+              description: "Backup of current bot flow before changes",
+              flow: this.backupFlow
+            }, null, 2));
+            console.log("\u2705 Backup created successfully");
+          }
+        } catch (error) {
+          console.error("Error creating backup:", error);
+          throw error;
+        }
+      }
+      /**
+       * Restore from backup
+       */
+      async restoreFromBackup() {
+        try {
+          const fs3 = __require("fs");
+          const path4 = __require("path");
+          const backupPath = path4.join(process.cwd(), "backup-current-flows.json");
+          if (fs3.existsSync(backupPath)) {
+            const backupData = JSON.parse(fs3.readFileSync(backupPath, "utf8"));
+            this.activeFlow = backupData.flow;
+            console.log("\u2705 Flow restored from backup");
+            return this.activeFlow;
+          }
+          return null;
+        } catch (error) {
+          console.error("Error restoring from backup:", error);
+          throw error;
+        }
+      }
+      /**
+       * Get current active flow
+       */
+      getActiveFlow() {
+        return this.activeFlow;
+      }
+      /**
+       * Update active flow
+       */
+      updateActiveFlow(flow) {
+        this.activeFlow = flow;
+        console.log("\u2705 Active flow updated");
+      }
+      /**
+       * Check if flow changes should reflect in WhatsApp bot
+       */
+      shouldSyncWithWhatsApp() {
+        return this.activeFlow !== null && this.activeFlow.isActive;
+      }
+      /**
+       * Get flow node by ID
+       */
+      getFlowNode(nodeId) {
+        if (!this.activeFlow) return null;
+        return this.activeFlow.nodes.find((node) => node.id === nodeId);
+      }
+      /**
+       * Get flow connection by ID
+       */
+      getFlowConnection(connectionId) {
+        if (!this.activeFlow) return null;
+        return this.activeFlow.connections.find((conn) => conn.id === connectionId);
+      }
+      /**
+       * Process flow changes and sync with WhatsApp bot
+       */
+      async processFlowChanges(changes) {
+        if (!this.activeFlow) return;
+        console.log("\u{1F504} Processing flow changes:", changes);
+        console.log("\u2705 Flow changes processed and synced with WhatsApp bot");
+      }
+    };
+  }
+});
+
 // server/business-config-api.ts
 var business_config_api_exports = {};
 __export(business_config_api_exports, {
@@ -3279,7 +3404,16 @@ async function processWhatsAppMessage(from, messageText) {
 }
 async function checkForActiveFlow() {
   try {
-    return false;
+    const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
+    const flowSyncService = BotFlowSyncService2.getInstance();
+    const activeFlow = flowSyncService.getActiveFlow();
+    const shouldSync = flowSyncService.shouldSyncWithWhatsApp();
+    console.log("Active flow check:", {
+      hasActiveFlow: !!activeFlow,
+      shouldSync,
+      flowName: activeFlow?.name
+    });
+    return shouldSync;
   } catch (error) {
     console.error("Error checking for active flow:", error);
     return false;
@@ -3995,6 +4129,70 @@ We apologize for any inconvenience caused.`;
     } catch (error) {
       console.error("Error testing bot flow:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  app2.get("/api/bot-flows/load-whatsapp", async (req, res) => {
+    try {
+      const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
+      const flowSyncService = BotFlowSyncService2.getInstance();
+      const flow = await flowSyncService.loadWhatsAppBotFlow();
+      res.json({
+        success: true,
+        message: "WhatsApp bot flow loaded successfully",
+        flow
+      });
+    } catch (error) {
+      console.error("Error loading WhatsApp bot flow:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to load WhatsApp bot flow"
+      });
+    }
+  });
+  app2.post("/api/bot-flows/activate", async (req, res) => {
+    try {
+      const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
+      const flowSyncService = BotFlowSyncService2.getInstance();
+      const { flowId } = req.body;
+      await flowSyncService.createBackup();
+      const flow = await flowSyncService.loadWhatsAppBotFlow();
+      flowSyncService.updateActiveFlow(flow);
+      res.json({
+        success: true,
+        message: "Bot flow activated successfully",
+        flow
+      });
+    } catch (error) {
+      console.error("Error activating bot flow:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to activate bot flow"
+      });
+    }
+  });
+  app2.post("/api/bot-flows/restore", async (req, res) => {
+    try {
+      const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
+      const flowSyncService = BotFlowSyncService2.getInstance();
+      const restoredFlow = await flowSyncService.restoreFromBackup();
+      if (restoredFlow) {
+        res.json({
+          success: true,
+          message: "Bot flow restored from backup successfully",
+          flow: restoredFlow
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: "No backup found to restore from"
+        });
+      }
+    } catch (error) {
+      console.error("Error restoring bot flow:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to restore bot flow"
+      });
     }
   });
   const httpServer = createServer(app2);

@@ -126,10 +126,21 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
 // Check if there's an active flow for dynamic processing
 async function checkForActiveFlow(): Promise<boolean> {
   try {
-    // In real implementation, this would check database for active flows
-    // For now, return false to use static processing
-    // TODO: Implement actual flow activation checking
-    return false;
+    // Import and use the flow sync service
+    const { BotFlowSyncService } = require('./services/bot-flow-sync.service');
+    const flowSyncService = BotFlowSyncService.getInstance();
+    
+    // Check if there's an active flow
+    const activeFlow = flowSyncService.getActiveFlow();
+    const shouldSync = flowSyncService.shouldSyncWithWhatsApp();
+    
+    console.log('Active flow check:', { 
+      hasActiveFlow: !!activeFlow, 
+      shouldSync, 
+      flowName: activeFlow?.name 
+    });
+    
+    return shouldSync;
   } catch (error) {
     console.error("Error checking for active flow:", error);
     return false;
@@ -1013,6 +1024,86 @@ We apologize for any inconvenience caused.`;
     } catch (error) {
       console.error("Error testing bot flow:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Bot flow management endpoints
+  app.get('/api/bot-flows/load-whatsapp', async (req, res) => {
+    try {
+      const { BotFlowSyncService } = require('./services/bot-flow-sync.service');
+      const flowSyncService = BotFlowSyncService.getInstance();
+      
+      // Load the exact WhatsApp bot flow
+      const flow = await flowSyncService.loadWhatsAppBotFlow();
+      
+      res.json({
+        success: true,
+        message: 'WhatsApp bot flow loaded successfully',
+        flow: flow
+      });
+    } catch (error) {
+      console.error('Error loading WhatsApp bot flow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load WhatsApp bot flow'
+      });
+    }
+  });
+
+  app.post('/api/bot-flows/activate', async (req, res) => {
+    try {
+      const { BotFlowSyncService } = require('./services/bot-flow-sync.service');
+      const flowSyncService = BotFlowSyncService.getInstance();
+      
+      const { flowId } = req.body;
+      
+      // Create backup before activating new flow
+      await flowSyncService.createBackup();
+      
+      // Load and activate the flow
+      const flow = await flowSyncService.loadWhatsAppBotFlow();
+      flowSyncService.updateActiveFlow(flow);
+      
+      res.json({
+        success: true,
+        message: 'Bot flow activated successfully',
+        flow: flow
+      });
+    } catch (error) {
+      console.error('Error activating bot flow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to activate bot flow'
+      });
+    }
+  });
+
+  app.post('/api/bot-flows/restore', async (req, res) => {
+    try {
+      const { BotFlowSyncService } = require('./services/bot-flow-sync.service');
+      const flowSyncService = BotFlowSyncService.getInstance();
+      
+      // Restore from backup
+      const restoredFlow = await flowSyncService.restoreFromBackup();
+      
+      if (restoredFlow) {
+        res.json({
+          success: true,
+          message: 'Bot flow restored from backup successfully',
+          flow: restoredFlow
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'No backup found to restore from'
+        });
+      }
+    } catch (error) {
+      console.error('Error restoring bot flow:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to restore bot flow'
+      });
     }
   });
 

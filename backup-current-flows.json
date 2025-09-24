@@ -1,0 +1,114 @@
+{
+  "backup_created": "2025-01-24T12:00:00Z",
+  "description": "Backup of current bot flows before implementing exact WhatsApp bot flow",
+  "flows": [
+    {
+      "id": "backup-salon-flow",
+      "name": "Salon Booking Flow (Backup)",
+      "description": "Original salon booking flow with service selection, date/time booking, and payment",
+      "isActive": true,
+      "nodes": [
+        {
+          "id": "start_1",
+          "type": "start",
+          "name": "Start",
+          "position": { "x": 100, "y": 100 },
+          "connections": ["welcome_msg"]
+        },
+        {
+          "id": "welcome_msg",
+          "type": "message",
+          "name": "Welcome Message",
+          "position": { "x": 300, "y": 100 },
+          "message": "👋 Welcome to our salon! I'm here to help you book an appointment. How can I assist you today?",
+          "connections": ["service_selection"]
+        },
+        {
+          "id": "service_selection",
+          "type": "question",
+          "name": "Service Selection",
+          "position": { "x": 500, "y": 100 },
+          "question": "Please select a service:",
+          "inputType": "choice",
+          "options": [
+            "Haircut - $25",
+            "Hair Color - $80",
+            "Hair Styling - $35",
+            "Manicure - $20",
+            "Pedicure - $30"
+          ],
+          "connections": ["date_selection"]
+        },
+        {
+          "id": "date_selection",
+          "type": "question",
+          "name": "Date Selection",
+          "position": { "x": 700, "y": 100 },
+          "question": "📅 Please select your preferred date (YYYY-MM-DD format, e.g., 2024-01-15):",
+          "inputType": "text",
+          "connections": ["time_selection"]
+        },
+        {
+          "id": "time_selection",
+          "type": "question",
+          "name": "Time Selection",
+          "position": { "x": 900, "y": 100 },
+          "question": "🕐 Please select your preferred time (HH:MM format, e.g., 14:30):",
+          "inputType": "text",
+          "connections": ["payment_selection"]
+        },
+        {
+          "id": "payment_selection",
+          "type": "question",
+          "name": "Payment Method",
+          "position": { "x": 1100, "y": 100 },
+          "question": "💳 Please select your payment method:",
+          "inputType": "choice",
+          "options": [
+            "Cash",
+            "Card",
+            "UPI"
+          ],
+          "connections": ["confirmation"]
+        },
+        {
+          "id": "confirmation",
+          "type": "action",
+          "name": "Send Confirmation",
+          "position": { "x": 1300, "y": 100 },
+          "action": "send_confirmation",
+          "message": "✅ Your appointment has been confirmed! We'll send you a reminder before your appointment.",
+          "connections": ["end_1"]
+        },
+        {
+          "id": "end_1",
+          "type": "end",
+          "name": "End",
+          "position": { "x": 1500, "y": 100 },
+          "connections": []
+        }
+      ],
+      "connections": [
+        { "id": "conn_1", "sourceNodeId": "start_1", "targetNodeId": "welcome_msg", "label": "" },
+        { "id": "conn_2", "sourceNodeId": "welcome_msg", "targetNodeId": "service_selection", "label": "" },
+        { "id": "conn_3", "sourceNodeId": "service_selection", "targetNodeId": "date_selection", "label": "" },
+        { "id": "conn_4", "sourceNodeId": "date_selection", "targetNodeId": "time_selection", "label": "" },
+        { "id": "conn_5", "sourceNodeId": "time_selection", "targetNodeId": "payment_selection", "label": "" },
+        { "id": "conn_6", "sourceNodeId": "payment_selection", "targetNodeId": "confirmation", "label": "" },
+        { "id": "conn_7", "sourceNodeId": "confirmation", "targetNodeId": "end_1", "label": "" }
+      ],
+      "variables": [
+        { "name": "selectedService", "type": "string", "description": "The service selected by customer" },
+        { "name": "appointmentDate", "type": "date", "description": "The date chosen for appointment" },
+        { "name": "appointmentTime", "type": "string", "description": "The time chosen for appointment" },
+        { "name": "paymentMethod", "type": "string", "description": "The payment method selected" },
+        { "name": "customerName", "type": "string", "description": "Customer name" }
+      ],
+      "metadata": {
+        "createdAt": "2025-01-24T12:00:00Z",
+        "version": "1.0.0",
+        "backup": true
+      }
+    }
+  ]
+}

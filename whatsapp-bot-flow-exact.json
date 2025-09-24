@@ -1,0 +1,160 @@
+{
+  "id": "whatsapp_bot_flow",
+  "name": "🟢 WhatsApp Bot Flow (EXACT REPLICA)",
+  "description": "Exact replica of current WhatsApp bot flow with emojis, layout, and all details",
+  "businessType": "salon",
+  "isActive": true,
+  "isTemplate": false,
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "start_node",
+      "type": "start",
+      "name": "Start",
+      "position": { "x": 100, "y": 100 },
+      "configuration": {},
+      "connections": [{ "id": "conn_1", "sourceNodeId": "start_node", "targetNodeId": "greeting", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "greeting",
+      "type": "message",
+      "name": "Greeting",
+      "position": { "x": 300, "y": 100 },
+      "configuration": {
+        "message": "👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut – ₹120\n💇‍♀️ Hair Color – ₹600\n💇‍♀️ Hair Styling – ₹300\n💅 Manicure – ₹200\n🦶 Pedicure – ₹65\n\nReply with the number or name of the service to book."
+      },
+      "connections": [{ "id": "conn_2", "sourceNodeId": "greeting", "targetNodeId": "awaiting_service", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "awaiting_service",
+      "type": "question",
+      "name": "Service Selection",
+      "position": { "x": 500, "y": 100 },
+      "configuration": {
+        "question": "Please select a service:",
+        "inputType": "text"
+      },
+      "connections": [{ "id": "conn_3", "sourceNodeId": "awaiting_service", "targetNodeId": "service_confirmed", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "service_confirmed",
+      "type": "message",
+      "name": "Service Confirmed",
+      "position": { "x": 700, "y": 100 },
+      "configuration": {
+        "message": "Perfect! You've selected {selectedService} (₹{price}).\n\n📅 Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date."
+      },
+      "connections": [{ "id": "conn_4", "sourceNodeId": "service_confirmed", "targetNodeId": "awaiting_date", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "awaiting_date",
+      "type": "question",
+      "name": "Date Selection",
+      "position": { "x": 900, "y": 100 },
+      "configuration": {
+        "question": "Please select your preferred date:",
+        "inputType": "choice",
+        "options": ["1", "2", "3", "4", "5", "6", "7"]
+      },
+      "connections": [{ "id": "conn_5", "sourceNodeId": "awaiting_date", "targetNodeId": "date_confirmed", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "date_confirmed",
+      "type": "message",
+      "name": "Date Confirmed",
+      "position": { "x": 1100, "y": 100 },
+      "configuration": {
+        "message": "Great! You've selected {selectedDate}.\n\n🕐 Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time."
+      },
+      "connections": [{ "id": "conn_6", "sourceNodeId": "date_confirmed", "targetNodeId": "awaiting_time", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "awaiting_time",
+      "type": "question",
+      "name": "Time Selection",
+      "position": { "x": 1300, "y": 100 },
+      "configuration": {
+        "question": "Please select your preferred time:",
+        "inputType": "choice",
+        "options": ["1", "2", "3", "4", "5"]
+      },
+      "connections": [{ "id": "conn_7", "sourceNodeId": "awaiting_time", "targetNodeId": "booking_summary", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "booking_summary",
+      "type": "message",
+      "name": "Booking Summary",
+      "position": { "x": 1500, "y": 100 },
+      "configuration": {
+        "message": "Perfect! Your appointment is scheduled for {selectedTime}.\n\n📋 Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: ₹{price}\n\n💳 Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking."
+      },
+      "connections": [{ "id": "conn_8", "sourceNodeId": "booking_summary", "targetNodeId": "awaiting_payment", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "awaiting_payment",
+      "type": "question",
+      "name": "Payment Confirmation",
+      "position": { "x": 1700, "y": 100 },
+      "configuration": {
+        "question": "Please confirm your payment:",
+        "inputType": "text"
+      },
+      "connections": [{ "id": "conn_9", "sourceNodeId": "awaiting_payment", "targetNodeId": "payment_confirmed", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "payment_confirmed",
+      "type": "message",
+      "name": "Payment Confirmed",
+      "position": { "x": 1900, "y": 100 },
+      "configuration": {
+        "message": "✅ Payment confirmed! Your booking is now complete.\n\n📱 You will receive a confirmation message shortly.\n\nThank you for choosing Spark Salon!"
+      },
+      "connections": [{ "id": "conn_10", "sourceNodeId": "payment_confirmed", "targetNodeId": "end_node", "label": "" }],
+      "metadata": {}
+    },
+    {
+      "id": "end_node",
+      "type": "end",
+      "name": "End",
+      "position": { "x": 2100, "y": 100 },
+      "configuration": {},
+      "connections": [],
+      "metadata": {}
+    }
+  ],
+  "connections": [
+    { "id": "conn_1", "sourceNodeId": "start_node", "targetNodeId": "greeting", "label": "" },
+    { "id": "conn_2", "sourceNodeId": "greeting", "targetNodeId": "awaiting_service", "label": "" },
+    { "id": "conn_3", "sourceNodeId": "awaiting_service", "targetNodeId": "service_confirmed", "label": "" },
+    { "id": "conn_4", "sourceNodeId": "service_confirmed", "targetNodeId": "awaiting_date", "label": "" },
+    { "id": "conn_5", "sourceNodeId": "awaiting_date", "targetNodeId": "date_confirmed", "label": "" },
+    { "id": "conn_6", "sourceNodeId": "date_confirmed", "targetNodeId": "awaiting_time", "label": "" },
+    { "id": "conn_7", "sourceNodeId": "awaiting_time", "targetNodeId": "booking_summary", "label": "" },
+    { "id": "conn_8", "sourceNodeId": "booking_summary", "targetNodeId": "awaiting_payment", "label": "" },
+    { "id": "conn_9", "sourceNodeId": "awaiting_payment", "targetNodeId": "payment_confirmed", "label": "" },
+    { "id": "conn_10", "sourceNodeId": "payment_confirmed", "targetNodeId": "end_node", "label": "" }
+  ],
+  "variables": [
+    { "name": "selectedService", "type": "string", "description": "The service selected by customer" },
+    { "name": "selectedDate", "type": "date", "description": "The date chosen for appointment" },
+    { "name": "selectedTime", "type": "string", "description": "The time chosen for appointment" },
+    { "name": "price", "type": "number", "description": "The price of the selected service" },
+    { "name": "upiLink", "type": "string", "description": "The UPI payment link" }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "whatsappReplica": true,
+    "createdAt": "2025-01-24T12:00:00Z",
+    "backupAvailable": true,
+    "restorePoint": "backup-current-flows.json"
+  }
+}
