@@ -21,27 +21,20 @@ import {
 } from 'lucide-react';
 import { BotFlow } from '../components/bot-flow-builder';
 
-// API functions
+// API functions - All local, no server calls
 const api = {
   async getBotFlows(tenantId: string, filters: any = {}): Promise<{ flows: BotFlow[]; total: number }> {
-    // For now, always return demo data to avoid timeout issues
-    // In the future, this can be connected to a real API
-    return {
-      flows: [], // Will be populated by the component
-      total: 1
-    };
+    // Always return empty for component to handle
+    return { flows: [], total: 0 };
   },
 
   async toggleBotFlowStatus(tenantId: string, flowId: string): Promise<boolean> {
-    // For demo purposes, just return true
-    // In a real implementation, this would call the API
-    console.log(`Toggling flow ${flowId} status`);
+    console.log(`Toggling flow ${flowId} status (demo mode)`);
     return true;
   },
 
   async saveBotFlow(tenantId: string, flow: BotFlow): Promise<boolean> {
     try {
-      // Save to localStorage for demo purposes
       const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
       const existingIndex = savedFlows.findIndex((f: BotFlow) => f.id === flow.id);
       
@@ -62,7 +55,6 @@ const api = {
 
   async loadBotFlows(tenantId: string): Promise<BotFlow[]> {
     try {
-      // Load from localStorage for demo purposes
       const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
       console.log('Loaded bot flows from localStorage:', savedFlows.length);
       return savedFlows;
@@ -74,108 +66,53 @@ const api = {
 
   async deleteBotFlow(tenantId: string, flowId: string): Promise<boolean> {
     try {
-      const response = await fetch(`/api/bot-flows/${flowId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete flow');
-      }
-      
+      const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
+      const filteredFlows = savedFlows.filter((f: BotFlow) => f.id !== flowId);
+      localStorage.setItem('botFlows', JSON.stringify(filteredFlows));
+      console.log('Bot flow deleted from localStorage:', flowId);
       return true;
     } catch (error) {
-      console.error('Error deleting flow:', error);
-      throw error;
+      console.error('Error deleting bot flow:', error);
+      return false;
     }
   },
 
   async duplicateBotFlow(tenantId: string, flowId: string): Promise<BotFlow> {
     try {
-      const response = await fetch(`/api/bot-flows/${flowId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
+      const originalFlow = savedFlows.find((f: BotFlow) => f.id === flowId);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch flow for duplication');
+      if (!originalFlow) {
+        throw new Error('Flow not found');
       }
       
-      const flow = await response.json();
-      
-      // Create a new flow with duplicated data
-      const duplicatedFlowData = {
-        ...flow,
-        id: undefined, // Remove ID to create a new flow
-        name: `${flow.name} Copy`,
-        isActive: false
+      const duplicatedFlow = {
+        ...originalFlow,
+        id: `flow_${Date.now()}`,
+        name: `${originalFlow.name} Copy`,
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
-      const createResponse = await fetch(`/api/bot-flows`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(duplicatedFlowData),
-      });
-      
-      if (!createResponse.ok) {
-        throw new Error('Failed to create duplicated flow');
-      }
-      
-      return await createResponse.json();
+      savedFlows.push(duplicatedFlow);
+      localStorage.setItem('botFlows', JSON.stringify(savedFlows));
+      console.log('Bot flow duplicated in localStorage:', duplicatedFlow.name);
+      return duplicatedFlow;
     } catch (error) {
-      console.error('Error duplicating flow:', error);
+      console.error('Error duplicating bot flow:', error);
       throw error;
     }
   },
 
   async activateFlow(tenantId: string, flowId: string): Promise<boolean> {
-    try {
-      const response = await fetch(`/api/bot-flows/${flowId}/activate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to activate flow');
-      }
-      
-      const result = await response.json();
-      console.log('Flow activated:', result.message);
-      return true;
-    } catch (error) {
-      console.error('Error activating flow:', error);
-      throw error;
-    }
+    console.log(`Activating flow ${flowId} (demo mode)`);
+    return true;
   },
 
   async deactivateFlow(tenantId: string, flowId: string): Promise<boolean> {
-    try {
-      const response = await fetch(`/api/bot-flows/${flowId}/deactivate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to deactivate flow');
-      }
-      
-      const result = await response.json();
-      console.log('Flow deactivated:', result.message);
-      return true;
-    } catch (error) {
-      console.error('Error deactivating flow:', error);
-      throw error;
-    }
+    console.log(`Deactivating flow ${flowId} (demo mode)`);
+    return true;
   }
 };
 
@@ -335,6 +272,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
     console.log('Setting demo flows:', demoFlows);
     setFlows(demoFlows);
     setLoading(false);
+    console.log('✅ Bot flows loaded successfully - no API calls made');
   };
 
   const handleToggleStatus = async (flowId: string) => {

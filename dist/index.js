@@ -880,55 +880,9 @@ var compatibleBookings = pgTable2("bookings", {
 });
 var CompatibleDatabaseStorage = class {
   constructor() {
-    this.initializeDefaultServices();
   }
   async initializeDefaultServices() {
-    try {
-      if (!db) {
-        console.log("Database not configured, skipping default service initialization");
-        return;
-      }
-      const existingServices = await this.getServices();
-      if (existingServices.length > 0) return;
-      const defaultServices = [
-        {
-          name: "Haircut & Style",
-          description: "Professional haircut with styling",
-          price: 45,
-          // USD equivalent of ₹200
-          durationMinutes: 60,
-          isActive: true,
-          icon: "fas fa-cut",
-          category: "Hair Services"
-        },
-        {
-          name: "Facial Treatment",
-          description: "Deep cleansing facial treatment",
-          price: 65,
-          // USD equivalent of ₹500
-          durationMinutes: 75,
-          isActive: true,
-          icon: "fas fa-sparkles",
-          category: "Skin Care"
-        },
-        {
-          name: "Hair Color",
-          description: "Full hair coloring service",
-          price: 120,
-          // USD equivalent of ₹1000
-          durationMinutes: 120,
-          isActive: true,
-          icon: "fas fa-palette",
-          category: "Hair Services"
-        }
-      ];
-      for (const serviceData of defaultServices) {
-        await this.createService(serviceData);
-      }
-      console.log("\u2705 Default services initialized");
-    } catch (error) {
-      console.error("\u274C Error initializing default services:", error);
-    }
+    return;
   }
   async getServices() {
     try {
