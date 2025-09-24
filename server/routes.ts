@@ -762,7 +762,6 @@ We apologize for any inconvenience caused.`;
       const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
       const utcStart = new Date(istStart.getTime() - offsetMs);
       const utcEnd = new Date(istEnd.getTime() - offsetMs);
-      const allBookings = await storage.getBookings();
       const conversationIds = Array.from(new Set(allBookings.map(b => b.conversationId)));
       for (const cid of conversationIds) {
         const messages = await storage.getMessages(cid);

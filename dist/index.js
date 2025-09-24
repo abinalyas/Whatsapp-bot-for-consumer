@@ -282,6 +282,7 @@ var init_business_config_api = __esm({
 });
 
 // server/index.ts
+import "dotenv/config";
 import express3 from "express";
 
 // server/routes.ts
@@ -856,7 +857,8 @@ var compatibleMessages = pgTable2("messages", {
   messageType: varchar2("message_type", { length: 50 }).notNull().default("text"),
   isFromBot: boolean2("is_from_bot").notNull(),
   metadata: jsonb2("metadata").default(sql2`'{}'::jsonb`),
-  timestamp: timestamp2("timestamp").notNull().defaultNow()
+  // Production DB uses created_at, not timestamp
+  createdAt: timestamp2("created_at").notNull().defaultNow()
 });
 var compatibleBookings = pgTable2("bookings", {
   id: varchar2("id").primaryKey().default(sql2`gen_random_uuid()`),
@@ -1107,7 +1109,15 @@ var CompatibleDatabaseStorage = class {
       if (!db) {
         throw new Error("Database not available");
       }
-      const [newMessage] = await db.insert(compatibleMessages).values(message).returning();
+      const safeMessageData = {
+        conversationId: message.conversationId,
+        content: message.content,
+        messageType: message.messageType || "text",
+        isFromBot: message.isFromBot,
+        metadata: message.metadata || {}
+        // timestamp will default to now if not provided
+      };
+      const [newMessage] = await db.insert(compatibleMessages).values(safeMessageData).returning();
       return newMessage;
     } catch (error) {
       console.error("Error creating message:", error);
@@ -1178,14 +1188,17 @@ var CompatibleDatabaseStorage = class {
       if (!db) {
         return [];
       }
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const offsetMs = 5.5 * 60 * 60 * 1e3;
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
       return await db.select().from(compatibleBookings).where(
         and(
-          gte(compatibleBookings.appointmentDate, today),
-          lt(compatibleBookings.appointmentDate, tomorrow)
+          gte(compatibleBookings.createdAt, utcStart),
+          lt(compatibleBookings.createdAt, utcEnd)
         )
       );
     } catch (error) {
@@ -1198,15 +1211,18 @@ var CompatibleDatabaseStorage = class {
       if (!db) {
         return 0;
       }
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const offsetMs = 5.5 * 60 * 60 * 1e3;
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
       const result = await db.select({ total: sql2`SUM(${compatibleBookings.amount})` }).from(compatibleBookings).where(
         and(
           eq(compatibleBookings.status, "confirmed"),
-          gte(compatibleBookings.appointmentDate, today),
-          lt(compatibleBookings.appointmentDate, tomorrow)
+          gte(compatibleBookings.createdAt, utcStart),
+          lt(compatibleBookings.createdAt, utcEnd)
         )
       );
       return result[0]?.total || 0;
@@ -1367,6 +1383,13 @@ var HybridStorage = class {
     this.dbStorage = new CompatibleDatabaseStorage();
     this.memoryStorage = new InMemoryStorage();
   }
+  // Expose which backend is in use
+  isUsingDatabase() {
+    return this.useDatabase;
+  }
+  getBackendName() {
+    return this.useDatabase ? "database" : "memory";
+  }
   async tryDatabase(operation) {
     if (!this.useDatabase) {
       throw new Error("Database disabled");
@@ -1486,6 +1509,14 @@ var HybridStorage = class {
   }
 };
 var storage = new HybridStorage();
+function getStorageBackendName() {
+  try {
+    const hybrid = storage;
+    return hybrid.getBackendName ? hybrid.getBackendName() : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 // server/routes.ts
 import { z } from "zod";
@@ -3475,7 +3506,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
 `;
               response += `Service: ${selectedService.name}
 `;
-              response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              response += `Date: ${new Date(latestConversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Kolkata" })}
 `;
               response += `Time: ${selectedTime}
 `;
@@ -3487,7 +3518,13 @@ ${upiLink}
 
 `;
               response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
-              const appointmentDateTime = /* @__PURE__ */ new Date(`${latestConversation.selectedDate}T${timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00"}:00`);
+              const time24 = timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00";
+              const [hourStr, minuteStr] = time24.split(":");
+              const istOffsetMs = 5.5 * 60 * 60 * 1e3;
+              const [y, m, d] = latestConversation.selectedDate.split("-").map((v) => parseInt(v, 10));
+              const istMidnight = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+              const istDateTimeMs = istMidnight.getTime() + (parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10)) * 60 * 1e3;
+              const utcDateTime = new Date(istDateTimeMs - istOffsetMs);
               await withTimeout(storage.createBooking({
                 conversationId: conversation.id,
                 serviceId: selectedService.id,
@@ -3495,7 +3532,7 @@ ${upiLink}
                 amount: selectedService.price,
                 // Already in INR
                 status: "pending",
-                appointmentDate: appointmentDateTime,
+                appointmentDate: utcDateTime,
                 appointmentTime: selectedTime
               }), 5e3);
             }
@@ -3514,7 +3551,7 @@ ${upiLink}
         response += `Service: ${conversation.selectedService}
 `;
         if (conversation.selectedDate) {
-          response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          response += `Date: ${new Date(conversation.selectedDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Kolkata" })}
 `;
         }
         if (conversation.selectedTime) {
@@ -3779,6 +3816,18 @@ We apologize for any inconvenience caused.`;
   });
   app2.get("/api/stats", async (req, res) => {
     try {
+      const backend = getStorageBackendName();
+      const parseDbTimestamp = (value) => {
+        if (value instanceof Date) return value;
+        if (typeof value === "string") {
+          const isoLike = value.includes("T") ? value : value.replace(" ", "T");
+          const withZ = /Z$/i.test(isoLike) ? isoLike : `${isoLike}Z`;
+          const d = new Date(withZ);
+          if (!isNaN(d.getTime())) return d;
+          return new Date(value);
+        }
+        return new Date(value);
+      };
       const todayBookings = await storage.getTodayBookings();
       console.log("Today's bookings count:", todayBookings.length);
       console.log("Today's bookings:", todayBookings);
@@ -3787,16 +3836,36 @@ We apologize for any inconvenience caused.`;
       const allBookings = await storage.getBookings();
       console.log("All bookings count:", allBookings.length);
       let todayMessages = 0;
-      for (const booking of todayBookings) {
-        const messages2 = await storage.getMessages(booking.conversationId);
-        console.log(`Messages for booking ${booking.id}:`, messages2.length);
-        todayMessages += messages2.length;
+      const offsetMs = 5.5 * 60 * 60 * 1e3;
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
+      const conversationIds = Array.from(new Set(allBookings.map((b) => b.conversationId)));
+      for (const cid of conversationIds) {
+        const messages2 = await storage.getMessages(cid);
+        const countToday = messages2.filter((m) => {
+          const raw = m.timestamp ?? m.createdAt;
+          const ts = parseDbTimestamp(raw);
+          return ts >= utcStart && ts < utcEnd;
+        }).length;
+        todayMessages += countToday;
       }
       console.log("Today's messages count:", todayMessages);
-      let responseRate = 98;
+      let responseRate = 0;
       if (todayMessages > 0) {
-        const botMessages = Math.floor(todayMessages / 2);
-        responseRate = Math.min(100, Math.round(botMessages / todayMessages * 100));
+        let botToday = 0;
+        for (const cid of conversationIds) {
+          const messages2 = await storage.getMessages(cid);
+          botToday += messages2.filter((m) => {
+            const raw = m.timestamp ?? m.createdAt;
+            const ts = parseDbTimestamp(raw);
+            return m.isFromBot && ts >= utcStart && ts < utcEnd;
+          }).length;
+        }
+        responseRate = Math.min(100, Math.round(botToday / todayMessages * 100));
       }
       const stats = {
         todayMessages,
@@ -3804,7 +3873,8 @@ We apologize for any inconvenience caused.`;
         todayRevenue: todayRevenueINR,
         // Already in INR
         responseRate,
-        totalBookings: allBookings.length
+        totalBookings: allBookings.length,
+        backend
       };
       console.log("Stats response:", stats);
       res.json(stats);
