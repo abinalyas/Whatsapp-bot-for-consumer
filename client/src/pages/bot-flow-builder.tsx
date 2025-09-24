@@ -21,11 +21,11 @@ const api = {
       }
       
       // If it's the specific salon flow, return demo data
-      if (flowId === 'current_salon_flow') {
+      if (flowId === 'current_salon_flow' || flowId === 'whatsapp_bot_flow') {
         return {
-          id: 'current_salon_flow',
-          name: '🟢 Current Salon Flow (ACTIVE)',
-          description: 'This is the exact flow currently running on WhatsApp for salon bookings',
+          id: flowId,
+          name: '🟢 WhatsApp Bot Flow (EXACT REPLICA)',
+          description: 'Exact replica of current WhatsApp bot flow with emojis, layout, and all details',
           businessType: 'salon',
           isActive: true,
           isTemplate: false,
@@ -248,11 +248,11 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
     } catch (error) {
       console.error('Error loading flow:', error);
       // Even in case of error, if it's the salon flow, provide mock data
-      if (flowId === 'current_salon_flow') {
+      if (flowId === 'current_salon_flow' || flowId === 'whatsapp_bot_flow') {
         setFlow({
-          id: 'current_salon_flow',
-          name: '🟢 Current Salon Flow (ACTIVE)',
-          description: 'This is the exact flow currently running on WhatsApp',
+          id: flowId,
+          name: '🟢 WhatsApp Bot Flow (EXACT REPLICA)',
+          description: 'Exact replica of current WhatsApp bot flow with emojis, layout, and all details',
           businessType: 'salon',
           isActive: true,
           isTemplate: false,
