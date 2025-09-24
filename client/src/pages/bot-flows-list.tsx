@@ -168,7 +168,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
             name: 'Start', 
             position: { x: 100, y: 100 }, 
             configuration: { message: 'Welcome! I can help you book an appointment.' }, 
-            connections: ['welcome_msg'], 
+            connections: [{ id: 'conn_1', sourceNodeId: 'start_1', targetNodeId: 'welcome_msg', label: '' }], 
             metadata: {} 
           },
           { 
@@ -179,7 +179,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
             configuration: { 
               message: 'Hello! Welcome to our salon. I can help you book an appointment. What service would you like?' 
             }, 
-            connections: ['service_question'], 
+            connections: [{ id: 'conn_2', sourceNodeId: 'welcome_msg', targetNodeId: 'service_question', label: '' }], 
             metadata: {} 
           },
           { 
@@ -191,7 +191,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               question: 'Which service would you like?',
               options: ['Haircut', 'Hair Color', 'Manicure', 'Pedicure', 'Facial']
             }, 
-            connections: ['date_question'], 
+            connections: [{ id: 'conn_3', sourceNodeId: 'service_question', targetNodeId: 'date_question', label: '' }], 
             metadata: {} 
           },
           { 
@@ -203,7 +203,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               question: 'What date would you prefer?',
               inputType: 'date'
             }, 
-            connections: ['time_question'], 
+            connections: [{ id: 'conn_4', sourceNodeId: 'date_question', targetNodeId: 'time_question', label: '' }], 
             metadata: {} 
           },
           { 
@@ -215,7 +215,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               question: 'What time works best for you?',
               options: ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
             }, 
-            connections: ['customer_details'], 
+            connections: [{ id: 'conn_5', sourceNodeId: 'time_question', targetNodeId: 'customer_details', label: '' }], 
             metadata: {} 
           },
           { 
@@ -227,7 +227,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               question: 'What is your name?',
               inputType: 'text'
             }, 
-            connections: ['payment_action'], 
+            connections: [{ id: 'conn_6', sourceNodeId: 'customer_details', targetNodeId: 'payment_action', label: '' }], 
             metadata: {} 
           },
           { 
@@ -239,7 +239,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               action: 'request_payment',
               message: 'Please confirm your booking details and make payment to secure your appointment.'
             }, 
-            connections: ['confirmation_end'], 
+            connections: [{ id: 'conn_7', sourceNodeId: 'payment_action', targetNodeId: 'confirmation_end', label: '' }], 
             metadata: {} 
           },
           { 
@@ -352,13 +352,13 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
   };
 
   const getFlowStats = (flow: BotFlow) => {
-    const nodeTypes = flow.nodes.reduce((acc, node) => {
+    const nodeTypes = (flow.nodes || []).reduce((acc, node) => {
       acc[node.type] = (acc[node.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     return {
-      totalNodes: flow.nodes.length,
+      totalNodes: flow.nodes?.length || 0,
       messages: nodeTypes.message || 0,
       questions: nodeTypes.question || 0,
       conditions: nodeTypes.condition || 0
@@ -594,7 +594,7 @@ export const BotFlowsListPage: React.FC<BotFlowsListPageProps> = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {flows.reduce((sum, f) => sum + f.nodes.length, 0)}
+                  {flows.reduce((sum, f) => sum + (f.nodes?.length || 0), 0)}
                 </div>
                 <div className="text-sm text-gray-600">Total Nodes</div>
               </div>

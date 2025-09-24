@@ -37,91 +37,91 @@ const api = {
               name: 'Start', 
               position: { x: 100, y: 100 }, 
               configuration: { message: 'Welcome! I can help you book an appointment.' }, 
-              connections: ['welcome_msg'], 
-              metadata: {} 
-            },
-            { 
-              id: 'welcome_msg', 
-              type: 'message', 
-              name: 'Welcome Message', 
-              position: { x: 400, y: 100 }, 
-              configuration: { 
-                message: 'Hello! Welcome to our salon. I can help you book an appointment. What service would you like?' 
-              }, 
-              connections: ['service_question'], 
-              metadata: {} 
-            },
-            { 
-              id: 'service_question', 
-              type: 'question', 
-              name: 'Service Selection', 
-              position: { x: 700, y: 100 }, 
-              configuration: { 
-                question: 'Which service would you like?',
-                options: ['Haircut', 'Hair Color', 'Manicure', 'Pedicure', 'Facial']
-              }, 
-              connections: ['date_question'], 
-              metadata: {} 
-            },
-            { 
-              id: 'date_question', 
-              type: 'question', 
-              name: 'Date Selection', 
-              position: { x: 1000, y: 100 }, 
-              configuration: { 
-                question: 'What date would you prefer?',
-                inputType: 'date'
-              }, 
-              connections: ['time_question'], 
-              metadata: {} 
-            },
-            { 
-              id: 'time_question', 
-              type: 'question', 
-              name: 'Time Selection', 
-              position: { x: 1300, y: 100 }, 
-              configuration: { 
-                question: 'What time works best for you?',
-                options: ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
-              }, 
-              connections: ['customer_details'], 
-              metadata: {} 
-            },
-            { 
-              id: 'customer_details', 
-              type: 'question', 
-              name: 'Customer Name', 
-              position: { x: 1600, y: 100 }, 
-              configuration: { 
-                question: 'What is your name?',
-                inputType: 'text'
-              }, 
-              connections: ['payment_action'], 
-              metadata: {} 
-            },
-            { 
-              id: 'payment_action', 
-              type: 'action', 
-              name: 'Payment Request', 
-              position: { x: 1900, y: 100 }, 
-              configuration: { 
-                action: 'request_payment',
-                message: 'Please confirm your booking details and make payment to secure your appointment.'
-              }, 
-              connections: ['confirmation_end'], 
-              metadata: {} 
-            },
-            { 
-              id: 'confirmation_end', 
-              type: 'end', 
-              name: 'Booking Confirmed', 
-              position: { x: 2200, y: 100 }, 
-              configuration: { 
-                message: 'Thank you! Your appointment has been confirmed. We will send you a reminder before your appointment.'
-              }, 
-              connections: [], 
-              metadata: {} 
-            }
+            connections: [{ id: 'conn_1', sourceNodeId: 'start_1', targetNodeId: 'welcome_msg', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'welcome_msg', 
+            type: 'message', 
+            name: 'Welcome Message', 
+            position: { x: 400, y: 100 }, 
+            configuration: { 
+              message: 'Hello! Welcome to our salon. I can help you book an appointment. What service would you like?' 
+            }, 
+            connections: [{ id: 'conn_2', sourceNodeId: 'welcome_msg', targetNodeId: 'service_question', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'service_question', 
+            type: 'question', 
+            name: 'Service Selection', 
+            position: { x: 700, y: 100 }, 
+            configuration: { 
+              question: 'Which service would you like?',
+              options: ['Haircut', 'Hair Color', 'Manicure', 'Pedicure', 'Facial']
+            }, 
+            connections: [{ id: 'conn_3', sourceNodeId: 'service_question', targetNodeId: 'date_question', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'date_question', 
+            type: 'question', 
+            name: 'Date Selection', 
+            position: { x: 1000, y: 100 }, 
+            configuration: { 
+              question: 'What date would you prefer?',
+              inputType: 'date'
+            }, 
+            connections: [{ id: 'conn_4', sourceNodeId: 'date_question', targetNodeId: 'time_question', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'time_question', 
+            type: 'question', 
+            name: 'Time Selection', 
+            position: { x: 1300, y: 100 }, 
+            configuration: { 
+              question: 'What time works best for you?',
+              options: ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
+            }, 
+            connections: [{ id: 'conn_5', sourceNodeId: 'time_question', targetNodeId: 'customer_details', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'customer_details', 
+            type: 'question', 
+            name: 'Customer Name', 
+            position: { x: 1600, y: 100 }, 
+            configuration: { 
+              question: 'What is your name?',
+              inputType: 'text'
+            }, 
+            connections: [{ id: 'conn_6', sourceNodeId: 'customer_details', targetNodeId: 'payment_action', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'payment_action', 
+            type: 'action', 
+            name: 'Payment Request', 
+            position: { x: 1900, y: 100 }, 
+            configuration: { 
+              action: 'request_payment',
+              message: 'Please confirm your booking details and make payment to secure your appointment.'
+            }, 
+            connections: [{ id: 'conn_7', sourceNodeId: 'payment_action', targetNodeId: 'confirmation_end', label: '' }], 
+            metadata: {} 
+          },
+          { 
+            id: 'confirmation_end', 
+            type: 'end', 
+            name: 'Booking Confirmed', 
+            position: { x: 2200, y: 100 }, 
+            configuration: { 
+              message: 'Thank you! Your appointment has been confirmed. We will send you a reminder before your appointment.'
+            }, 
+            connections: [], 
+            metadata: {} 
+          }
           ],
           variables: [
             { name: 'selectedService', type: 'string', description: 'The service selected by customer' },
