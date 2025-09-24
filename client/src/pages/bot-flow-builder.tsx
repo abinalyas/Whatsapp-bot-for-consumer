@@ -227,22 +227,33 @@ const api = {
 
   async syncFlowWithWhatsApp(flow: BotFlow): Promise<boolean> {
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch('/api/bot-flows/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ flowData: flow }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to sync flow with WhatsApp bot');
+        throw new Error(`Failed to sync flow with WhatsApp bot: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
       console.log('Flow synced with WhatsApp bot:', result.message);
       return result.success;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error('Sync request timed out');
+        throw new Error('Sync request timed out. Please try again.');
+      }
       console.error('Error syncing flow with WhatsApp bot:', error);
       throw error;
     }
@@ -338,16 +349,31 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
   const handleSave = async (updatedFlow: BotFlow) => {
     setSaving(true);
     try {
+      console.log('💾 Saving flow...', updatedFlow.name);
+      
+      // Save the flow first
       const savedFlow = await api.saveBotFlow(updatedFlow);
       setFlow(savedFlow);
+      console.log('✅ Flow saved successfully');
       
-      // Sync with WhatsApp bot
-      try {
-        await api.syncFlowWithWhatsApp(updatedFlow);
-        console.log('✅ Flow synced with WhatsApp bot');
-      } catch (syncError) {
-        console.warn('Flow saved but sync failed:', syncError);
-        // Don't fail the save if sync fails
+      // Try to sync with WhatsApp bot (optional, don't fail if this fails)
+      let syncSuccess = false;
+      
+      // For now, disable sync to prevent hanging - can be enabled later
+      const ENABLE_SYNC = false;
+      
+      if (ENABLE_SYNC) {
+        try {
+          console.log('🔄 Syncing with WhatsApp bot...');
+          await api.syncFlowWithWhatsApp(updatedFlow);
+          syncSuccess = true;
+          console.log('✅ Flow synced with WhatsApp bot');
+        } catch (syncError) {
+          console.warn('⚠️ Flow saved but sync failed (this is optional):', syncError);
+          // Don't fail the save if sync fails - this is optional
+        }
+      } else {
+        console.log('ℹ️ Sync disabled for now - flow saved locally');
       }
       
       // If this was a new flow, redirect to the saved flow
@@ -356,11 +382,17 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       }
       
       // Show success message
-      alert('Bot flow saved and synced with WhatsApp bot successfully!');
+      if (syncSuccess) {
+        alert('Bot flow saved and synced with WhatsApp bot successfully!');
+      } else {
+        alert('Bot flow saved successfully! (Changes saved to localStorage)');
+      }
+      
     } catch (error) {
-      console.error('Error saving flow:', error);
+      console.error('❌ Error saving flow:', error);
       alert('Error saving bot flow. Please try again.');
     } finally {
+      console.log('🔄 Setting saving to false');
       setSaving(false);
     }
   };
