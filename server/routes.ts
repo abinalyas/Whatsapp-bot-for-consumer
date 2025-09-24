@@ -753,7 +753,10 @@ We apologize for any inconvenience caused.`;
       const conversationIds = Array.from(new Set(allBookings.map(b => b.conversationId)));
       for (const cid of conversationIds) {
         const messages = await storage.getMessages(cid);
-        const countToday = messages.filter(m => m.timestamp >= utcStart && m.timestamp < utcEnd).length;
+        const countToday = messages.filter(m => {
+          const ts = m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp as unknown as string);
+          return ts >= utcStart && ts < utcEnd;
+        }).length;
         todayMessages += countToday;
       }
       console.log("Today's messages count:", todayMessages);
@@ -767,7 +770,10 @@ We apologize for any inconvenience caused.`;
         let botToday = 0;
         for (const cid of conversationIds) {
           const messages = await storage.getMessages(cid);
-          botToday += messages.filter(m => m.isFromBot && m.timestamp >= utcStart && m.timestamp < utcEnd).length;
+          botToday += messages.filter(m => {
+            const ts = m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp as unknown as string);
+            return m.isFromBot && ts >= utcStart && ts < utcEnd;
+          }).length;
         }
         responseRate = Math.min(100, Math.round((botToday / todayMessages) * 100));
       }
