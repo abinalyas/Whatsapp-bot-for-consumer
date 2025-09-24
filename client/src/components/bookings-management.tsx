@@ -72,6 +72,7 @@ export function BookingsManagement() {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+      timeZone: 'Asia/Kolkata',
     });
   };
 
@@ -85,6 +86,7 @@ export function BookingsManagement() {
       weekday: 'short',
       day: '2-digit',
       month: 'short',
+      timeZone: 'Asia/Kolkata',
     });
   };
 
