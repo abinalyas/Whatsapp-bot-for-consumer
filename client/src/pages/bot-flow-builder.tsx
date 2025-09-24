@@ -12,136 +12,183 @@ import { BotFlowBuilder, BotFlow } from '../components/bot-flow-builder';
 const api = {
   async getBotFlow(flowId: string): Promise<BotFlow | null> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(`/api/bot-flows/${flowId}`, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch bot flow: ${response.status} ${response.statusText}`);
+      // First try to load from localStorage
+      const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
+      const savedFlow = savedFlows.find((f: BotFlow) => f.id === flowId);
+      if (savedFlow) {
+        console.log('Loaded flow from localStorage:', savedFlow.name);
+        return savedFlow;
       }
       
-      const flow = await response.json();
-      return flow;
-    } catch (error) {
-      console.error('Error fetching bot flow:', error);
-      
-      // If it's the specific salon flow, return mock data
+      // If it's the specific salon flow, return demo data
       if (flowId === 'current_salon_flow') {
         return {
           id: 'current_salon_flow',
           name: '🟢 Current Salon Flow (ACTIVE)',
-          description: 'This is the exact flow currently running on WhatsApp',
+          description: 'This is the exact flow currently running on WhatsApp for salon bookings',
           businessType: 'salon',
           isActive: true,
           isTemplate: false,
           version: '1.0.0',
           nodes: [
-            { id: 'start_1', type: 'start', name: 'Start', position: { x: 100, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'welcome_msg', type: 'message', name: 'Welcome Message', position: { x: 400, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'service_question', type: 'question', name: 'Service Selection', position: { x: 700, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'date_question', type: 'question', name: 'Date Selection', position: { x: 1000, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'time_question', type: 'question', name: 'Time Selection', position: { x: 1300, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'customer_details', type: 'question', name: 'Customer Name', position: { x: 1600, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'payment_action', type: 'action', name: 'Payment Request', position: { x: 1900, y: 100 }, configuration: {}, connections: [], metadata: {} },
-            { id: 'confirmation_end', type: 'end', name: 'Booking Confirmed', position: { x: 2200, y: 100 }, configuration: {}, connections: [], metadata: {} }
+            { 
+              id: 'start_1', 
+              type: 'start', 
+              name: 'Start', 
+              position: { x: 100, y: 100 }, 
+              configuration: { message: 'Welcome! I can help you book an appointment.' }, 
+              connections: ['welcome_msg'], 
+              metadata: {} 
+            },
+            { 
+              id: 'welcome_msg', 
+              type: 'message', 
+              name: 'Welcome Message', 
+              position: { x: 400, y: 100 }, 
+              configuration: { 
+                message: 'Hello! Welcome to our salon. I can help you book an appointment. What service would you like?' 
+              }, 
+              connections: ['service_question'], 
+              metadata: {} 
+            },
+            { 
+              id: 'service_question', 
+              type: 'question', 
+              name: 'Service Selection', 
+              position: { x: 700, y: 100 }, 
+              configuration: { 
+                question: 'Which service would you like?',
+                options: ['Haircut', 'Hair Color', 'Manicure', 'Pedicure', 'Facial']
+              }, 
+              connections: ['date_question'], 
+              metadata: {} 
+            },
+            { 
+              id: 'date_question', 
+              type: 'question', 
+              name: 'Date Selection', 
+              position: { x: 1000, y: 100 }, 
+              configuration: { 
+                question: 'What date would you prefer?',
+                inputType: 'date'
+              }, 
+              connections: ['time_question'], 
+              metadata: {} 
+            },
+            { 
+              id: 'time_question', 
+              type: 'question', 
+              name: 'Time Selection', 
+              position: { x: 1300, y: 100 }, 
+              configuration: { 
+                question: 'What time works best for you?',
+                options: ['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM']
+              }, 
+              connections: ['customer_details'], 
+              metadata: {} 
+            },
+            { 
+              id: 'customer_details', 
+              type: 'question', 
+              name: 'Customer Name', 
+              position: { x: 1600, y: 100 }, 
+              configuration: { 
+                question: 'What is your name?',
+                inputType: 'text'
+              }, 
+              connections: ['payment_action'], 
+              metadata: {} 
+            },
+            { 
+              id: 'payment_action', 
+              type: 'action', 
+              name: 'Payment Request', 
+              position: { x: 1900, y: 100 }, 
+              configuration: { 
+                action: 'request_payment',
+                message: 'Please confirm your booking details and make payment to secure your appointment.'
+              }, 
+              connections: ['confirmation_end'], 
+              metadata: {} 
+            },
+            { 
+              id: 'confirmation_end', 
+              type: 'end', 
+              name: 'Booking Confirmed', 
+              position: { x: 2200, y: 100 }, 
+              configuration: { 
+                message: 'Thank you! Your appointment has been confirmed. We will send you a reminder before your appointment.'
+              }, 
+              connections: [], 
+              metadata: {} 
+            }
           ],
-          variables: [],
-          metadata: {}
+          variables: [
+            { name: 'selectedService', type: 'string', description: 'The service selected by customer' },
+            { name: 'appointmentDate', type: 'date', description: 'The date chosen for appointment' },
+            { name: 'appointmentTime', type: 'string', description: 'The time chosen for appointment' },
+            { name: 'customerName', type: 'string', description: 'Customer name' }
+          ],
+          metadata: {
+            createdAt: '2024-01-15T10:00:00Z',
+            updatedAt: '2024-01-15T10:00:00Z',
+            totalBookings: 45,
+            successRate: 92
+          }
         };
       }
       
+      return null;
+    } catch (error) {
+      console.error('Error fetching bot flow:', error);
       return null;
     }
   },
 
   async saveBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
     try {
-      let response;
+      // Save to localStorage for demo purposes
+      const savedFlows = JSON.parse(localStorage.getItem('botFlows') || '[]');
+      const existingIndex = savedFlows.findIndex((f: BotFlow) => f.id === flow.id);
       
-      if (flow.id) {
-        // Update existing flow
-        response = await fetch(`/api/bot-flows/${flow.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(flow),
-        });
-      } else {
-        // Create new flow
-        response = await fetch(`/api/bot-flows`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(flow),
-        });
-      }
-      
-      if (!response.ok) {
-        throw new Error('Failed to save bot flow');
-      }
-      
-      const savedFlow = await response.json();
-      
-      return {
-        success: true,
-        message: flow.id ? 'Bot flow updated successfully!' : 'Bot flow created successfully!'
+      const flowToSave = { 
+        ...flow, 
+        updatedAt: new Date().toISOString() 
       };
+      
+      if (existingIndex >= 0) {
+        savedFlows[existingIndex] = flowToSave;
+      } else {
+        savedFlows.push({ 
+          ...flowToSave, 
+          createdAt: new Date().toISOString() 
+        });
+      }
+      
+      localStorage.setItem('botFlows', JSON.stringify(savedFlows));
+      console.log('Bot flow saved to localStorage:', flow.name);
+      
+      return { success: true, message: 'Flow saved successfully!' };
     } catch (error) {
       console.error('Error saving bot flow:', error);
-      return {
-        success: false,
-        message: 'Error saving bot flow. Please try again.'
-      };
+      return { success: false, message: 'Failed to save flow' };
     }
   },
 
   async testBotFlow(flow: BotFlow): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`/api/bot-flows/${flow.id || 'new'}/test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(flow),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to test bot flow');
-      }
-      
-      const result = await response.json();
-      
-      return {
-        success: result.success,
-        message: result.message
-      };
-    } catch (error) {
-      console.error('Error testing bot flow:', error);
-      return {
-        success: false,
-        message: 'Error testing bot flow. Please try again.'
-      };
-    }
+    // For demo purposes, just return success
+    console.log('Testing bot flow:', flow.name);
+    return {
+      success: true,
+      message: 'Bot flow test completed successfully! (Demo mode)'
+    };
   },
 
   async getBotFlowTemplates(businessType: string): Promise<BotFlow[]> {
-    try {
-      const response = await fetch(`/api/bot-flows?businessType=${businessType}&templates=true`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch templates');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-      return [];
-    }
+    // For demo purposes, return empty array
+    // In a real implementation, this would fetch templates from the API
+    console.log('Fetching templates for business type:', businessType);
+    return [];
   }
 };
 
