@@ -388,9 +388,19 @@ export class CompatibleDatabaseStorage implements IStorage {
         throw new Error("Database not available");
       }
       
+      // Only insert columns that exist in the compatible schema
+      const safeMessageData = {
+        conversationId: message.conversationId,
+        content: message.content,
+        messageType: message.messageType || 'text',
+        isFromBot: message.isFromBot,
+        metadata: message.metadata || {},
+        // timestamp will default to now if not provided
+      };
+
       const [newMessage] = await database
         .insert(compatibleMessages)
-        .values(message)
+        .values(safeMessageData)
         .returning();
       return newMessage;
     } catch (error) {
@@ -483,19 +493,22 @@ export class CompatibleDatabaseStorage implements IStorage {
         return [];
       }
       
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Compute IST day window and convert to UTC for comparison
+      const offsetMs = 5.5 * 60 * 60 * 1000; // IST UTC+5:30
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
       
       return await database
         .select()
         .from(compatibleBookings)
         .where(
           and(
-            gte(compatibleBookings.createdAt, today),
-            lt(compatibleBookings.createdAt, tomorrow)
+            gte(compatibleBookings.createdAt, utcStart),
+            lt(compatibleBookings.createdAt, utcEnd)
           )
         );
     } catch (error) {
@@ -511,11 +524,14 @@ export class CompatibleDatabaseStorage implements IStorage {
         return 0;
       }
       
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Compute IST day window and convert to UTC for comparison
+      const offsetMs = 5.5 * 60 * 60 * 1000; // IST UTC+5:30
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
       
       const result = await database
         .select({ total: sql<number>`SUM(${compatibleBookings.amount})` })
@@ -523,8 +539,8 @@ export class CompatibleDatabaseStorage implements IStorage {
         .where(
           and(
             eq(compatibleBookings.status, 'confirmed'),
-            gte(compatibleBookings.createdAt, today),
-            lt(compatibleBookings.createdAt, tomorrow)
+            gte(compatibleBookings.createdAt, utcStart),
+            lt(compatibleBookings.createdAt, utcEnd)
           )
         );
       

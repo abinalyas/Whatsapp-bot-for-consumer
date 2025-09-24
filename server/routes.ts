@@ -733,10 +733,15 @@ We apologize for any inconvenience caused.`;
       const allBookings = await storage.getBookings();
       console.log("All bookings count:", allBookings.length);
       
-      // Calculate today's messages by counting only messages from today across all conversations
+      // Calculate today's messages by counting only messages from today (IST window) across all conversations
       let todayMessages = 0;
-      const utcStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 0, 0, 0, 0));
-      const utcEnd = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 0, 0, 0, 0));
+      const offsetMs = 5.5 * 60 * 60 * 1000; // IST UTC+5:30
+      const nowUtcMs = Date.now();
+      const istNow = new Date(nowUtcMs + offsetMs);
+      const istStart = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0, 0));
+      const istEnd = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate() + 1, 0, 0, 0, 0));
+      const utcStart = new Date(istStart.getTime() - offsetMs);
+      const utcEnd = new Date(istEnd.getTime() - offsetMs);
       const allBookings = await storage.getBookings();
       const conversationIds = Array.from(new Set(allBookings.map(b => b.conversationId)));
       for (const cid of conversationIds) {
