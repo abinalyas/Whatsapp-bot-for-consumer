@@ -436,16 +436,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 {connection.label}
               </text>
             )}
-            {/* Invisible larger clickable area */}
-            <circle
-              cx={midX}
-              cy={midY}
-              r="16"
-              fill="transparent"
-              stroke="none"
+            {/* Simple clickable delete text */}
+            <text
+              x={midX + 20}
+              y={midY - 10}
+              textAnchor="middle"
+              className="text-xs fill-red-500 font-bold cursor-pointer hover:fill-red-700"
               style={{ 
-                cursor: 'pointer',
-                pointerEvents: 'auto'
+                pointerEvents: 'auto',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -453,48 +454,8 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
                 console.log('Delete connection clicked:', connection.id);
                 deleteConnection(node.id, connection.id);
               }}
-              onMouseEnter={(e) => {
-                // Find the visible circle and update its appearance
-                const visibleCircle = document.getElementById(`delete-btn-${connection.id}`) as SVGElement;
-                if (visibleCircle) {
-                  visibleCircle.style.fill = '#fef2f2';
-                  visibleCircle.style.stroke = '#dc2626';
-                }
-              }}
-              onMouseLeave={(e) => {
-                // Reset the visible circle appearance
-                const visibleCircle = document.getElementById(`delete-btn-${connection.id}`) as SVGElement;
-                if (visibleCircle) {
-                  visibleCircle.style.fill = 'white';
-                  visibleCircle.style.stroke = '#ef4444';
-                }
-              }}
-            />
-            {/* Visible delete button */}
-            <circle
-              id={`delete-btn-${connection.id}`}
-              cx={midX}
-              cy={midY}
-              r="12"
-              fill="white"
-              stroke="#ef4444"
-              strokeWidth="2"
-              style={{ 
-                pointerEvents: 'none'
-              }}
-            />
-            <text
-              x={midX}
-              y={midY + 1}
-              textAnchor="middle"
-              className="text-xs fill-red-500 font-bold"
-              style={{ 
-                pointerEvents: 'none',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
             >
-              ×
+              Delete
             </text>
           </g>
         );
