@@ -1546,44 +1546,6 @@ We apologize for any inconvenience caused.`;
     }
   });
 
-  // Test sync endpoint
-  app.get('/api/bot-flows/test-sync', async (req, res) => {
-    try {
-      console.log('🧪 Test sync endpoint called');
-      console.log('Current global flow:', global.whatsappBotFlow ? global.whatsappBotFlow.name : 'None');
-      
-      // Also try to set a test flow
-      if (!global.whatsappBotFlow) {
-        global.whatsappBotFlow = {
-          id: 'test_flow',
-          name: 'Test Flow',
-          nodes: [
-            {
-              id: 'welcome_msg',
-              type: 'message',
-              configuration: {
-                message: 'This is a test message from the server!'
-              }
-            }
-          ]
-        };
-        console.log('✅ Set test flow in global.whatsappBotFlow');
-      }
-      
-      res.json({
-        success: true,
-        message: 'Sync test successful',
-        hasFlow: !!global.whatsappBotFlow,
-        flowName: global.whatsappBotFlow?.name || 'No flow'
-      });
-    } catch (error) {
-      console.error('❌ Test sync error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Test sync failed'
-      });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;
