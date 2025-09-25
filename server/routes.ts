@@ -1464,8 +1464,8 @@ We apologize for any inconvenience caused.`;
     });
   });
 
-  // Test sync endpoint to verify flow is stored
-  app.get('/api/bot-flows/test-sync', (req, res) => {
+  // Test sync endpoint to verify flow is stored (MOVED OUTSIDE bot-flows router to bypass tenant middleware)
+  app.get('/api/test-sync', (req, res) => {
     console.log('🧪 Test sync endpoint called - START');
     
     // Send immediate response to test if endpoint works
@@ -1483,8 +1483,8 @@ We apologize for any inconvenience caused.`;
     console.log('🧪 Test sync endpoint called - RESPONSE SENT');
   });
 
-  // Simple sync endpoint that stores flow in memory
-  app.post('/api/bot-flows/sync-simple', (req, res) => {
+  // Simple sync endpoint that stores flow in memory (MOVED OUTSIDE bot-flows router to bypass tenant middleware)
+  app.post('/api/sync-simple', (req, res) => {
     try {
       console.log('🔄 Simple sync endpoint called');
       console.log('Request body keys:', Object.keys(req.body || {}));

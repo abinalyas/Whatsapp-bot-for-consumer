@@ -269,8 +269,8 @@ const api = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
-      console.log('📤 Sending sync request to /api/bot-flows/sync-simple');
-      const response = await fetch('/api/bot-flows/sync-simple', {
+      console.log('📤 Sending sync request to /api/sync-simple');
+      const response = await fetch('/api/sync-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

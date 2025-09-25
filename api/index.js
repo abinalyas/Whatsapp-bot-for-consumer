@@ -4724,7 +4724,7 @@ We apologize for any inconvenience caused.`;
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
-  app2.get("/api/bot-flows/test-sync", (req, res) => {
+  app2.get("/api/test-sync", (req, res) => {
     console.log("\u{1F9EA} Test sync endpoint called - START");
     const response = {
       success: true,
@@ -4738,7 +4738,7 @@ We apologize for any inconvenience caused.`;
     res.json(response);
     console.log("\u{1F9EA} Test sync endpoint called - RESPONSE SENT");
   });
-  app2.post("/api/bot-flows/sync-simple", (req, res) => {
+  app2.post("/api/sync-simple", (req, res) => {
     try {
       console.log("\u{1F504} Simple sync endpoint called");
       console.log("Request body keys:", Object.keys(req.body || {}));
