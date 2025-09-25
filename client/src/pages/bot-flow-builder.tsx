@@ -435,6 +435,14 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
             }).then(response => {
               if (response.ok) {
                 console.log('✅ API sync also successful');
+                // Test if sync worked
+                fetch('/api/bot-flows/test-sync').then(testResponse => {
+                  if (testResponse.ok) {
+                    testResponse.json().then(data => {
+                      console.log('🧪 Sync verification:', data);
+                    });
+                  }
+                });
               } else {
                 console.log('⚠️ API sync failed with status:', response.status);
               }

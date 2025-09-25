@@ -147,14 +147,12 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
     
-    // Get the synced flow from bot flow builder or use demo flow
+    // Get the synced flow from bot flow builder
     let syncedFlow = global.whatsappBotFlow;
     
-    // Try to get the flow from localStorage (this would be set by the bot flow builder)
-    // For now, we'll simulate getting the flow from localStorage
-    if (!syncedFlow) {
-      // In a real implementation, this would read from localStorage
-      // For demo, we'll use the demo flow but make it clear it's not synced
+    if (syncedFlow) {
+      console.log("✅ Using synced flow from bot flow builder:", syncedFlow.name);
+    } else {
       console.log("⚠️ No synced flow found, using demo flow");
     }
     
@@ -1495,6 +1493,27 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: 'Failed to get current flow'
+      });
+    }
+  });
+
+  // Test sync endpoint
+  app.get('/api/bot-flows/test-sync', async (req, res) => {
+    try {
+      console.log('🧪 Test sync endpoint called');
+      console.log('Current global flow:', global.whatsappBotFlow ? global.whatsappBotFlow.name : 'None');
+      
+      res.json({
+        success: true,
+        message: 'Sync test successful',
+        hasFlow: !!global.whatsappBotFlow,
+        flowName: global.whatsappBotFlow?.name || 'No flow'
+      });
+    } catch (error) {
+      console.error('❌ Test sync error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Test sync failed'
       });
     }
   });

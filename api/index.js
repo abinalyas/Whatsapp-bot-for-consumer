@@ -3658,7 +3658,9 @@ async function processDynamicWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
     let syncedFlow = global.whatsappBotFlow;
-    if (!syncedFlow) {
+    if (syncedFlow) {
+      console.log("\u2705 Using synced flow from bot flow builder:", syncedFlow.name);
+    } else {
       console.log("\u26A0\uFE0F No synced flow found, using demo flow");
     }
     if (!syncedFlow) {
@@ -4747,6 +4749,24 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: "Failed to get current flow"
+      });
+    }
+  });
+  app2.get("/api/bot-flows/test-sync", async (req, res) => {
+    try {
+      console.log("\u{1F9EA} Test sync endpoint called");
+      console.log("Current global flow:", global.whatsappBotFlow ? global.whatsappBotFlow.name : "None");
+      res.json({
+        success: true,
+        message: "Sync test successful",
+        hasFlow: !!global.whatsappBotFlow,
+        flowName: global.whatsappBotFlow?.name || "No flow"
+      });
+    } catch (error) {
+      console.error("\u274C Test sync error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Test sync failed"
       });
     }
   });
