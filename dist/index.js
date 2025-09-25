@@ -4709,10 +4709,33 @@ We apologize for any inconvenience caused.`;
       });
     }
   });
+  app2.get("/api/bot-flows/test-sync", async (req, res) => {
+    try {
+      console.log("\u{1F9EA} Test sync endpoint called");
+      const hasFlow = !!global.whatsappBotFlow;
+      const flowName = global.whatsappBotFlow?.name || "No flow";
+      const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
+      console.log("\u2705 Global flow status:", { hasFlow, flowName, nodeCount });
+      res.json({
+        success: true,
+        message: "Sync test completed",
+        hasFlow,
+        flowName,
+        nodeCount,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch (error) {
+      console.error("\u274C Test sync error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Test sync failed"
+      });
+    }
+  });
   app2.post("/api/bot-flows/sync-simple", async (req, res) => {
     try {
       console.log("\u{1F504} Simple sync endpoint called");
-      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      console.log("Request body keys:", Object.keys(req.body || {}));
       const { flowData } = req.body;
       if (!flowData) {
         console.log("\u274C No flow data provided");
@@ -4725,11 +4748,14 @@ We apologize for any inconvenience caused.`;
       console.log("\u2705 Flow synced to WhatsApp bot:", flowData.name);
       console.log("\u2705 Flow nodes count:", flowData.nodes?.length || 0);
       console.log("\u2705 Flow stored in global.whatsappBotFlow");
-      res.json({
-        success: true,
-        message: "Flow synced successfully with WhatsApp bot",
-        flow: flowData
-      });
+      console.log("\u2705 First node message preview:", flowData.nodes?.[0]?.configuration?.message?.substring(0, 100) || "No message");
+      setTimeout(() => {
+        res.json({
+          success: true,
+          message: "Flow synced successfully with WhatsApp bot",
+          flow: flowData
+        });
+      }, 100);
     } catch (error) {
       console.error("\u274C Simple sync error:", error);
       res.status(500).json({

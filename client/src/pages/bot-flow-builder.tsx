@@ -265,12 +265,9 @@ const api = {
     try {
       console.log('🔄 Starting sync with WhatsApp bot for flow:', flow.name);
       
-      // Skip API test to prevent hanging
-      console.log('ℹ️ Skipping API test to prevent timeouts');
-      
       // Add timeout to prevent hanging
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
       
       console.log('📤 Sending sync request to /api/bot-flows/sync-simple');
       const response = await fetch('/api/bot-flows/sync-simple', {

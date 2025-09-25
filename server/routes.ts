@@ -1444,11 +1444,38 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Test sync endpoint to verify flow is stored
+  app.get('/api/bot-flows/test-sync', async (req, res) => {
+    try {
+      console.log('🧪 Test sync endpoint called');
+      const hasFlow = !!global.whatsappBotFlow;
+      const flowName = global.whatsappBotFlow?.name || 'No flow';
+      const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
+      
+      console.log('✅ Global flow status:', { hasFlow, flowName, nodeCount });
+      
+      res.json({
+        success: true,
+        message: 'Sync test completed',
+        hasFlow,
+        flowName,
+        nodeCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Test sync error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Test sync failed'
+      });
+    }
+  });
+
   // Simple sync endpoint that stores flow in memory
   app.post('/api/bot-flows/sync-simple', async (req, res) => {
     try {
       console.log('🔄 Simple sync endpoint called');
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      console.log('Request body keys:', Object.keys(req.body || {}));
       
       const { flowData } = req.body;
       
@@ -1466,12 +1493,17 @@ We apologize for any inconvenience caused.`;
       console.log('✅ Flow synced to WhatsApp bot:', flowData.name);
       console.log('✅ Flow nodes count:', flowData.nodes?.length || 0);
       console.log('✅ Flow stored in global.whatsappBotFlow');
+      console.log('✅ First node message preview:', flowData.nodes?.[0]?.configuration?.message?.substring(0, 100) || 'No message');
       
-      res.json({
-        success: true,
-        message: 'Flow synced successfully with WhatsApp bot',
-        flow: flowData
-      });
+      // Set a timeout to ensure response is sent quickly
+      setTimeout(() => {
+        res.json({
+          success: true,
+          message: 'Flow synced successfully with WhatsApp bot',
+          flow: flowData
+        });
+      }, 100);
+      
     } catch (error) {
       console.error('❌ Simple sync error:', error);
       res.status(500).json({
