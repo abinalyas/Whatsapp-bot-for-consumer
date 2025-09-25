@@ -152,6 +152,8 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
     
     if (syncedFlow) {
       console.log("✅ Using synced flow from bot flow builder:", syncedFlow.name);
+      console.log("✅ Synced flow nodes:", syncedFlow.nodes?.length || 0);
+      console.log("✅ Synced flow first node message:", syncedFlow.nodes?.[0]?.configuration?.message?.substring(0, 50) || 'No message');
     } else {
       console.log("⚠️ No synced flow found, using demo flow");
     }

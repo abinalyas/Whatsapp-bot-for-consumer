@@ -333,8 +333,11 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
     setLoading(true);
     try {
       if (flowId && flowId !== 'new') {
-        // Handle special case for "current" flow ID
-        const actualFlowId = flowId === 'current' ? 'whatsapp_bot_flow' : flowId;
+        // Handle special cases for flow IDs
+        let actualFlowId = flowId;
+        if (flowId === 'current' || flowId === 'sync-test' || flowId === 'test') {
+          actualFlowId = 'whatsapp_bot_flow';
+        }
         console.log('Loading flow with actual ID:', actualFlowId);
         
         const loadedFlow = await api.getBotFlow(actualFlowId);
