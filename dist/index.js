@@ -3659,6 +3659,9 @@ async function processDynamicWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
     let syncedFlow = global.whatsappBotFlow;
+    console.log("\u{1F50D} Checking global.whatsappBotFlow:", global.whatsappBotFlow ? "EXISTS" : "NULL");
+    console.log("\u{1F50D} Global flow name:", global.whatsappBotFlow?.name || "NO NAME");
+    console.log("\u{1F50D} Global flow nodes:", global.whatsappBotFlow?.nodes?.length || 0);
     if (syncedFlow) {
       console.log("\u2705 Using synced flow from bot flow builder:", syncedFlow.name);
       console.log("\u2705 Synced flow nodes:", syncedFlow.nodes?.length || 0);
@@ -4727,12 +4730,16 @@ We apologize for any inconvenience caused.`;
   });
   app2.get("/api/test-sync", (req, res) => {
     console.log("\u{1F9EA} Test sync endpoint called - START");
+    const hasFlow = !!global.whatsappBotFlow;
+    const flowName = global.whatsappBotFlow?.name || "No flow";
+    const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
+    console.log("\u{1F50D} Global flow status:", { hasFlow, flowName, nodeCount });
     const response = {
       success: true,
       message: "Sync test completed",
-      hasFlow: false,
-      flowName: "No flow",
-      nodeCount: 0,
+      hasFlow,
+      flowName,
+      nodeCount,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
     console.log("\u{1F9EA} Test sync endpoint called - SENDING RESPONSE");
@@ -4759,6 +4766,8 @@ We apologize for any inconvenience caused.`;
       console.log("\u2705 Flow nodes count:", flowData.nodes?.length || 0);
       console.log("\u2705 Flow stored in global.whatsappBotFlow");
       console.log("\u2705 First node message preview:", flowData.nodes?.[0]?.configuration?.message?.substring(0, 100) || "No message");
+      console.log("\u2705 Global flow verification:", global.whatsappBotFlow ? "STORED" : "NOT STORED");
+      console.log("\u2705 Global flow name:", global.whatsappBotFlow?.name || "NO NAME");
       res.json({
         success: true,
         message: "Flow synced successfully with WhatsApp bot",

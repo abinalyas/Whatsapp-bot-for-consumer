@@ -150,6 +150,10 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
     // Get the synced flow from bot flow builder
     let syncedFlow = global.whatsappBotFlow;
     
+    console.log("🔍 Checking global.whatsappBotFlow:", global.whatsappBotFlow ? 'EXISTS' : 'NULL');
+    console.log("🔍 Global flow name:", global.whatsappBotFlow?.name || 'NO NAME');
+    console.log("🔍 Global flow nodes:", global.whatsappBotFlow?.nodes?.length || 0);
+    
     if (syncedFlow) {
       console.log("✅ Using synced flow from bot flow builder:", syncedFlow.name);
       console.log("✅ Synced flow nodes:", syncedFlow.nodes?.length || 0);
@@ -1468,13 +1472,20 @@ We apologize for any inconvenience caused.`;
   app.get('/api/test-sync', (req, res) => {
     console.log('🧪 Test sync endpoint called - START');
     
+    // Check if global flow is stored
+    const hasFlow = !!global.whatsappBotFlow;
+    const flowName = global.whatsappBotFlow?.name || 'No flow';
+    const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
+    
+    console.log('🔍 Global flow status:', { hasFlow, flowName, nodeCount });
+    
     // Send immediate response to test if endpoint works
     const response = {
       success: true,
       message: 'Sync test completed',
-      hasFlow: false,
-      flowName: 'No flow',
-      nodeCount: 0,
+      hasFlow,
+      flowName,
+      nodeCount,
       timestamp: new Date().toISOString()
     };
     
@@ -1510,6 +1521,8 @@ We apologize for any inconvenience caused.`;
       console.log('✅ Flow nodes count:', flowData.nodes?.length || 0);
       console.log('✅ Flow stored in global.whatsappBotFlow');
       console.log('✅ First node message preview:', flowData.nodes?.[0]?.configuration?.message?.substring(0, 100) || 'No message');
+      console.log('✅ Global flow verification:', global.whatsappBotFlow ? 'STORED' : 'NOT STORED');
+      console.log('✅ Global flow name:', global.whatsappBotFlow?.name || 'NO NAME');
       
       // Send response immediately
       res.json({
