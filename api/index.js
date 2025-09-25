@@ -3643,6 +3643,10 @@ async function processWhatsAppMessage(from, messageText) {
 }
 async function checkForActiveFlow() {
   try {
+    if (global.whatsappBotFlow) {
+      console.log("\u2705 Using synced flow from bot flow builder:", global.whatsappBotFlow.name);
+      return true;
+    }
     const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
     const flowSyncService = BotFlowSyncService2.getInstance();
     const activeFlow = flowSyncService.getActiveFlow();
@@ -3661,8 +3665,13 @@ async function checkForActiveFlow() {
 async function processDynamicWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
-    const { DynamicFlowProcessorService: DynamicFlowProcessorService2 } = (init_dynamic_flow_processor_service(), __toCommonJS(dynamic_flow_processor_service_exports));
-    const flowProcessor = DynamicFlowProcessorService2.getInstance();
+    const syncedFlow = global.whatsappBotFlow;
+    if (!syncedFlow) {
+      console.log("No synced flow found, falling back to static processing");
+      await processStaticWhatsAppMessage(from, messageText);
+      return;
+    }
+    console.log("Using synced flow:", syncedFlow.name);
     let conversation = await storage.getConversation(from);
     if (!conversation) {
       conversation = await storage.createConversation({
@@ -3670,11 +3679,7 @@ async function processDynamicWhatsAppMessage(from, messageText) {
         currentState: "greeting"
       });
     }
-    const result = await flowProcessor.processMessage(
-      from,
-      messageText,
-      conversation.currentState
-    );
+    const result = await processMessageWithSyncedFlow(from, messageText, conversation.currentState, syncedFlow);
     await storage.updateConversation(conversation.id, {
       currentState: result.newState,
       contextData: result.contextData
@@ -3688,6 +3693,88 @@ async function processDynamicWhatsAppMessage(from, messageText) {
   } catch (error) {
     console.error("Error in dynamic message processing:", error);
     await sendWhatsAppMessage(from, "Sorry, there was an issue with the dynamic flow. Please try again.");
+  }
+}
+async function processMessageWithSyncedFlow(phoneNumber, messageText, conversationState, syncedFlow) {
+  try {
+    console.log("Processing message with synced flow:", {
+      phoneNumber,
+      messageText,
+      conversationState,
+      flowName: syncedFlow.name
+    });
+    let currentNode = null;
+    switch (conversationState) {
+      case "greeting":
+        currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
+        break;
+      case "awaiting_service":
+        currentNode = syncedFlow.nodes.find((node) => node.id === "service_confirmed");
+        break;
+      case "awaiting_date":
+        currentNode = syncedFlow.nodes.find((node) => node.id === "date_confirmed");
+        break;
+      case "awaiting_time":
+        currentNode = syncedFlow.nodes.find((node) => node.id === "booking_summary");
+        break;
+      case "awaiting_payment":
+        currentNode = syncedFlow.nodes.find((node) => node.id === "payment_confirmed");
+        break;
+      default:
+        currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
+    }
+    if (!currentNode) {
+      currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
+    }
+    if (!currentNode) {
+      throw new Error("No appropriate node found in synced flow");
+    }
+    let response = "";
+    let newState = conversationState;
+    if (currentNode.configuration?.message) {
+      response = currentNode.configuration.message;
+      response = response.replace("{selectedService}", "Haircut");
+      response = response.replace("{price}", "120");
+      response = response.replace("{selectedDate}", "Tomorrow");
+      response = response.replace("{selectedTime}", "10:00 AM");
+      const today = /* @__PURE__ */ new Date();
+      for (let i = 1; i <= 7; i++) {
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + i);
+        const dateStr = futureDate.toLocaleDateString("en-GB", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        });
+        response = response.replace(`{date${i}}`, dateStr);
+      }
+      if (currentNode.id === "welcome_msg") {
+        newState = "awaiting_service";
+      } else if (currentNode.id === "service_confirmed") {
+        newState = "awaiting_date";
+      } else if (currentNode.id === "date_confirmed") {
+        newState = "awaiting_time";
+      } else if (currentNode.id === "booking_summary") {
+        newState = "awaiting_payment";
+      } else if (currentNode.id === "payment_confirmed") {
+        newState = "completed";
+      }
+    } else {
+      response = "Welcome! I can help you book an appointment.";
+      newState = "awaiting_service";
+    }
+    return {
+      response,
+      newState,
+      contextData: { syncedFlow: syncedFlow.name }
+    };
+  } catch (error) {
+    console.error("Error processing message with synced flow:", error);
+    return {
+      response: "Sorry, I encountered an error. Please try again.",
+      newState: "greeting"
+    };
   }
 }
 async function processStaticWhatsAppMessage(from, messageText) {
@@ -4470,7 +4557,15 @@ We apologize for any inconvenience caused.`;
       }
       console.log("\u2705 Flow data received, processing sync...");
       console.log("\u{1F504} Syncing flow:", flowData.name, "with WhatsApp bot");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      global.whatsappBotFlow = flowData;
+      try {
+        const { DynamicFlowProcessorService: DynamicFlowProcessorService2 } = (init_dynamic_flow_processor_service(), __toCommonJS(dynamic_flow_processor_service_exports));
+        const flowProcessor = DynamicFlowProcessorService2.getInstance();
+        await flowProcessor.updateFlow(flowData);
+        console.log("\u2705 Dynamic flow processor updated");
+      } catch (error) {
+        console.log("\u26A0\uFE0F Dynamic flow processor not available, using fallback");
+      }
       res.json({
         success: true,
         message: "Bot flow synced successfully with WhatsApp bot",

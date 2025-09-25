@@ -397,7 +397,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // Enable sync to apply changes immediately to WhatsApp bot
       const ENABLE_SYNC = true;
-      const USE_MOCK_SYNC = true; // For demo purposes, use mock sync
+      const USE_MOCK_SYNC = false; // Use real API sync to update WhatsApp bot
       
       if (ENABLE_SYNC) {
         try {
