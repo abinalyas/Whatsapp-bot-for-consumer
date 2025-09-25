@@ -290,210 +290,326 @@ var DynamicFlowProcessorService;
 var init_dynamic_flow_processor_service = __esm({
   "server/services/dynamic-flow-processor.service.ts"() {
     "use strict";
-    DynamicFlowProcessorService = class _DynamicFlowProcessorService {
-      static instance;
-      activeFlow = null;
-      constructor() {
-      }
-      static getInstance() {
-        if (!_DynamicFlowProcessorService.instance) {
-          _DynamicFlowProcessorService.instance = new _DynamicFlowProcessorService();
-        }
-        return _DynamicFlowProcessorService.instance;
+    DynamicFlowProcessorService = class {
+      constructor(storage2) {
+        this.storage = storage2;
       }
       /**
-       * Load active flow from localStorage (simulated)
+       * Process a bot flow node with dynamic data from database
        */
-      async loadActiveFlow() {
+      async processNode(node, context) {
         try {
-          const fs3 = __require("fs");
-          const path4 = __require("path");
-          const flowPath = path4.join(process.cwd(), "whatsapp-bot-flow-exact.json");
-          if (fs3.existsSync(flowPath)) {
-            const flowData = JSON.parse(fs3.readFileSync(flowPath, "utf8"));
-            this.activeFlow = flowData;
-            console.log("\u2705 Active flow loaded:", flowData.name);
-            return flowData;
-          }
-          return null;
-        } catch (error) {
-          console.error("Error loading active flow:", error);
-          return null;
-        }
-      }
-      /**
-       * Process message using dynamic flow
-       */
-      async processMessage(phoneNumber, messageText, conversationState) {
-        try {
-          if (!this.activeFlow) {
-            await this.loadActiveFlow();
-          }
-          if (!this.activeFlow) {
-            throw new Error("No active flow found");
-          }
-          console.log("Processing message with dynamic flow:", {
-            phoneNumber,
-            messageText,
-            conversationState,
-            flowName: this.activeFlow.name
-          });
-          switch (conversationState) {
-            case "greeting":
-              return this.handleGreetingState();
-            case "awaiting_service":
-              return this.handleServiceSelectionState(messageText);
-            case "awaiting_date":
-              return this.handleDateSelectionState(messageText);
-            case "awaiting_time":
-              return this.handleTimeSelectionState(messageText);
-            case "awaiting_payment":
-              return this.handlePaymentState(messageText);
+          switch (node.type) {
+            case "message":
+              return await this.processMessageNode(node, context);
+            case "service_message":
+              return await this.processServiceMessageNode(node, context);
+            case "question":
+              return await this.processQuestionNode(node, context);
+            case "service_list":
+              return await this.processServiceListNode(node, context);
+            case "date_picker":
+              return await this.processDatePickerNode(node, context);
+            case "time_slots":
+              return await this.processTimeSlotsNode(node, context);
+            case "booking_summary":
+              return await this.processBookingSummaryNode(node, context);
             default:
-              return this.handleGreetingState();
+              return {
+                content: node.configuration?.message || "Hello!",
+                messageType: "text"
+              };
           }
         } catch (error) {
-          console.error("Error processing dynamic flow message:", error);
+          console.error("Error processing dynamic node:", error);
           return {
-            response: "Sorry, I encountered an error. Please try again.",
-            newState: "greeting"
+            content: node.configuration?.message || "Sorry, I encountered an error.",
+            messageType: "text"
           };
         }
       }
       /**
-       * Handle greeting state using dynamic flow
+       * Process service message node - shows services with real data
        */
-      handleGreetingState() {
-        const greetingNode = this.activeFlow?.nodes.find(
-          (node) => node.id === "welcome_msg" || node.type === "message"
-        );
-        if (greetingNode?.configuration?.message) {
-          return {
-            response: greetingNode.configuration.message,
-            newState: "awaiting_service"
-          };
-        }
-        return {
-          response: "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n\n\u{1F487}\u200D\u2640\uFE0F Haircut \u2013 \u20B9120\n\u{1F487}\u200D\u2640\uFE0F Hair Color \u2013 \u20B9600\n\u{1F487}\u200D\u2640\uFE0F Hair Styling \u2013 \u20B9300\n\u{1F485} Manicure \u2013 \u20B9200\n\u{1F9B6} Pedicure \u2013 \u20B965\n\nReply with the number or name of the service to book.",
-          newState: "awaiting_service"
-        };
-      }
-      /**
-       * Handle service selection state using dynamic flow
-       */
-      handleServiceSelectionState(messageText) {
-        const serviceConfirmedNode = this.activeFlow?.nodes.find(
-          (node) => node.id === "service_confirmed"
-        );
-        if (serviceConfirmedNode?.configuration?.message) {
-          let response = serviceConfirmedNode.configuration.message;
-          response = response.replace("{selectedService}", "Haircut");
-          response = response.replace("{price}", "120");
-          const today = /* @__PURE__ */ new Date();
-          for (let i = 1; i <= 7; i++) {
-            const futureDate = new Date(today);
-            futureDate.setDate(today.getDate() + i);
-            const dateStr = futureDate.toLocaleDateString("en-GB", {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric"
-            });
-            response = response.replace(`{date${i}}`, dateStr);
+      async processServiceMessageNode(node, context) {
+        try {
+          const services2 = await this.storage.getServices();
+          if (!services2 || services2.length === 0) {
+            return {
+              content: "Sorry, no services are currently available.",
+              messageType: "text"
+            };
           }
+          const serviceList = services2.filter((service) => service.isActive).map((service, index) => {
+            const emoji = this.getServiceEmoji(service.category);
+            return `${index + 1}. ${emoji} ${service.name} \u2013 \u20B9${service.price}`;
+          }).join("\n");
+          const welcomeText = node.configuration?.welcomeText || "Welcome to our salon!";
+          const serviceIntro = node.configuration?.serviceIntro || "Here are our services:";
+          const instruction = node.configuration?.instruction || "Reply with the number or name of the service to book.";
+          const content = `${welcomeText}
+
+${serviceIntro}
+${serviceList}
+
+${instruction}`;
           return {
-            response,
-            newState: "awaiting_date"
+            content,
+            messageType: "text",
+            metadata: {
+              services: services2.map((s) => ({
+                id: s.id,
+                name: s.name,
+                price: s.price,
+                category: s.category
+              }))
+            }
+          };
+        } catch (error) {
+          console.error("Error processing service message node:", error);
+          return {
+            content: node.configuration?.message || "Welcome! Please contact us for services.",
+            messageType: "text"
           };
         }
+      }
+      /**
+       * Process service list node - interactive service selection
+       */
+      async processServiceListNode(node, context) {
+        try {
+          const services2 = await this.storage.getServices();
+          const activeServices = services2.filter((service) => service.isActive);
+          if (activeServices.length === 0) {
+            return {
+              content: "No services are currently available.",
+              messageType: "text"
+            };
+          }
+          const serviceOptions = activeServices.map((service, index) => ({
+            id: `service_${service.id}`,
+            title: service.name,
+            description: `\u20B9${service.price} \u2022 ${service.durationMinutes || 60} min`,
+            emoji: this.getServiceEmoji(service.category)
+          }));
+          return {
+            content: "Please select a service:",
+            messageType: "interactive",
+            metadata: {
+              type: "service_selection",
+              options: serviceOptions,
+              maxSelections: 1
+            }
+          };
+        } catch (error) {
+          console.error("Error processing service list node:", error);
+          return {
+            content: "Please contact us for service information.",
+            messageType: "text"
+          };
+        }
+      }
+      /**
+       * Process date picker node - shows available dates
+       */
+      async processDatePickerNode(node, context) {
+        try {
+          const availableDates = this.generateAvailableDates(7);
+          const dateOptions = availableDates.map((date, index) => ({
+            id: `date_${date}`,
+            title: this.formatDate(date),
+            description: this.getDayOfWeek(date)
+          }));
+          return {
+            content: "Please select your preferred date:",
+            messageType: "interactive",
+            metadata: {
+              type: "date_selection",
+              options: dateOptions,
+              maxSelections: 1
+            }
+          };
+        } catch (error) {
+          console.error("Error processing date picker node:", error);
+          return {
+            content: "Please contact us to schedule your appointment.",
+            messageType: "text"
+          };
+        }
+      }
+      /**
+       * Process time slots node - shows available times for selected date
+       */
+      async processTimeSlotsNode(node, context) {
+        try {
+          if (!context.selectedDate) {
+            return {
+              content: "Please select a date first.",
+              messageType: "text"
+            };
+          }
+          const timeSlots = this.generateTimeSlots(context.selectedDate);
+          const timeOptions = timeSlots.map((time, index) => ({
+            id: `time_${time}`,
+            title: time,
+            description: this.getTimeDescription(time)
+          }));
+          return {
+            content: `Please select your preferred time for ${this.formatDate(context.selectedDate)}:`,
+            messageType: "interactive",
+            metadata: {
+              type: "time_selection",
+              options: timeOptions,
+              maxSelections: 1
+            }
+          };
+        } catch (error) {
+          console.error("Error processing time slots node:", error);
+          return {
+            content: "Please contact us to schedule your appointment.",
+            messageType: "text"
+          };
+        }
+      }
+      /**
+       * Process booking summary node - shows final booking details
+       */
+      async processBookingSummaryNode(node, context) {
+        try {
+          if (!context.selectedService || !context.selectedDate || !context.selectedTime) {
+            return {
+              content: "Please complete your service, date, and time selection.",
+              messageType: "text"
+            };
+          }
+          const service = await this.storage.getService(context.selectedService);
+          if (!service) {
+            return {
+              content: "Service not found. Please start over.",
+              messageType: "text"
+            };
+          }
+          const summary = `\u{1F4CB} **Booking Summary**
+
+\u{1F3AF} **Service:** ${service.name}
+\u{1F4B0} **Price:** \u20B9${service.price}
+\u23F1\uFE0F **Duration:** ${service.durationMinutes || 60} minutes
+\u{1F4C5} **Date:** ${this.formatDate(context.selectedDate)}
+\u{1F550} **Time:** ${context.selectedTime}
+
+Please confirm your booking by replying "CONFIRM" or "YES".`;
+          return {
+            content: summary,
+            messageType: "text",
+            metadata: {
+              type: "booking_summary",
+              service,
+              date: context.selectedDate,
+              time: context.selectedTime
+            }
+          };
+        } catch (error) {
+          console.error("Error processing booking summary node:", error);
+          return {
+            content: "Please contact us to complete your booking.",
+            messageType: "text"
+          };
+        }
+      }
+      /**
+       * Process regular message node with placeholder replacement
+       */
+      async processMessageNode(node, context) {
+        let content = node.configuration?.message || "Hello!";
+        content = this.replacePlaceholders(content, context);
         return {
-          response: "Perfect! You've selected Haircut (\u20B9120).\n\n\u{1F4C5} Now, please select your preferred appointment date.",
-          newState: "awaiting_date"
+          content,
+          messageType: "text"
         };
       }
       /**
-       * Handle date selection state using dynamic flow
+       * Process question node with dynamic options
        */
-      handleDateSelectionState(messageText) {
-        const dateConfirmedNode = this.activeFlow?.nodes.find(
-          (node) => node.id === "date_confirmed"
-        );
-        if (dateConfirmedNode?.configuration?.message) {
-          let response = dateConfirmedNode.configuration.message;
-          const today = /* @__PURE__ */ new Date();
-          const selectedDate = new Date(today);
-          selectedDate.setDate(today.getDate() + parseInt(messageText));
-          const readableDateStr = selectedDate.toLocaleDateString("en-GB", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric"
-          });
-          response = response.replace("{selectedDate}", readableDateStr);
-          return {
-            response,
-            newState: "awaiting_time"
-          };
-        }
+      async processQuestionNode(node, context) {
+        let content = node.configuration?.question || "Please provide your answer.";
+        content = this.replacePlaceholders(content, context);
         return {
-          response: "Great! You've selected the date.\n\n\u{1F550} Now, please choose your preferred time slot.",
-          newState: "awaiting_time"
+          content,
+          messageType: "text"
         };
       }
-      /**
-       * Handle time selection state using dynamic flow
-       */
-      handleTimeSelectionState(messageText) {
-        const bookingSummaryNode = this.activeFlow?.nodes.find(
-          (node) => node.id === "booking_summary"
-        );
-        if (bookingSummaryNode?.configuration?.message) {
-          let response = bookingSummaryNode.configuration.message;
-          const timeSlots = ["10:00 AM", "11:30 AM", "02:00 PM", "03:30 PM", "05:00 PM"];
-          const selectedTime = timeSlots[parseInt(messageText) - 1] || "10:00 AM";
-          response = response.replace("{selectedTime}", selectedTime);
-          response = response.replace("{selectedService}", "Haircut");
-          response = response.replace("{selectedDate}", "Tomorrow");
-          response = response.replace("{price}", "120");
-          response = response.replace("{upiLink}", "https://paytm.me/example-link");
-          return {
-            response,
-            newState: "awaiting_payment"
-          };
-        }
-        return {
-          response: "Perfect! Your appointment is scheduled.\n\n\u{1F4CB} Booking Summary:\nService: Haircut\nDate: Tomorrow\nTime: 10:00 AM\nAmount: \u20B9120",
-          newState: "awaiting_payment"
+      // Helper methods
+      getServiceEmoji(category) {
+        const emojiMap = {
+          "hair": "\u{1F487}\u200D\u2640\uFE0F",
+          "nails": "\u{1F485}",
+          "spa": "\u{1F9D6}\u200D\u2640\uFE0F",
+          "massage": "\u{1F486}\u200D\u2640\uFE0F",
+          "facial": "\u2728",
+          "default": "\u{1F484}"
         };
+        return emojiMap[category?.toLowerCase() || "default"];
       }
-      /**
-       * Handle payment state using dynamic flow
-       */
-      handlePaymentState(messageText) {
-        const paymentConfirmedNode = this.activeFlow?.nodes.find(
-          (node) => node.id === "payment_confirmed"
-        );
-        if (paymentConfirmedNode?.configuration?.message) {
-          let response = paymentConfirmedNode.configuration.message;
-          response = response.replace("{selectedService}", "Haircut");
-          response = response.replace("{selectedDate}", "Tomorrow");
-          response = response.replace("{selectedTime}", "10:00 AM");
-          return {
-            response,
-            newState: "completed"
-          };
+      generateAvailableDates(days) {
+        const dates = [];
+        const today = /* @__PURE__ */ new Date();
+        for (let i = 1; i <= days; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + i);
+          dates.push(date.toISOString().split("T")[0]);
         }
-        return {
-          response: "\u2705 Payment received! Your appointment is now confirmed.\n\n\u{1F389} Thank you for choosing Spark Salon!",
-          newState: "completed"
-        };
+        return dates;
       }
-      /**
-       * Update flow with new data
-       */
-      async updateFlow(flowData) {
-        this.activeFlow = flowData;
-        console.log("\u2705 Flow updated:", flowData.name);
+      generateTimeSlots(selectedDate) {
+        const slots = [
+          "09:00",
+          "09:30",
+          "10:00",
+          "10:30",
+          "11:00",
+          "11:30",
+          "12:00",
+          "12:30",
+          "13:00",
+          "13:30",
+          "14:00",
+          "14:30",
+          "15:00",
+          "15:30",
+          "16:00",
+          "16:30",
+          "17:00",
+          "17:30",
+          "18:00"
+        ];
+        return slots;
+      }
+      formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-IN", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        });
+      }
+      getDayOfWeek(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-IN", { weekday: "long" });
+      }
+      getTimeDescription(time) {
+        const [hours, minutes] = time.split(":");
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        return `${displayHour}:${minutes} ${ampm}`;
+      }
+      replacePlaceholders(content, context) {
+        content = content.replace(/\{selectedService\}/g, context.selectedService || "");
+        content = content.replace(/\{selectedDate\}/g, context.selectedDate || "");
+        content = content.replace(/\{selectedTime\}/g, context.selectedTime || "");
+        content = content.replace(/\{phoneNumber\}/g, context.phoneNumber || "");
+        return content;
       }
     };
   }

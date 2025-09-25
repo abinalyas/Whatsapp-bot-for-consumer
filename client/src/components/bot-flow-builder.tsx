@@ -22,7 +22,7 @@ import {
 
 export interface BotFlowNode {
   id: string;
-  type: 'start' | 'message' | 'question' | 'condition' | 'action' | 'integration' | 'end' | 'service_message';
+  type: 'start' | 'message' | 'question' | 'condition' | 'action' | 'integration' | 'end' | 'service_message' | 'service_list' | 'date_picker' | 'time_slots' | 'booking_summary';
   name: string;
   description?: string;
   position: { x: number; y: number };
@@ -1213,6 +1213,181 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               </div>
             </div>
           </>
+        )}
+
+        {/* Service List Node */}
+        {node.type === 'service_list' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service List Configuration
+            </label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="loadFromDatabase"
+                  checked={node.configuration.loadFromDatabase || false}
+                  onChange={(e) => updateConfiguration({ loadFromDatabase: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="loadFromDatabase" className="text-sm text-gray-700">
+                  Load services from database
+                </label>
+              </div>
+              
+              {node.configuration.loadFromDatabase && (
+                <button
+                  onClick={loadServicesFromDatabase}
+                  disabled={loadingServices}
+                  className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingServices ? '⏳ Loading...' : '🔄 Load Services from Dashboard'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Date Picker Node */}
+        {node.type === 'date_picker' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date Picker Configuration
+            </label>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Min Date</label>
+                <input
+                  type="date"
+                  value={node.configuration.minDate || ''}
+                  onChange={(e) => updateConfiguration({ minDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Max Date</label>
+                <input
+                  type="date"
+                  value={node.configuration.maxDate || ''}
+                  onChange={(e) => updateConfiguration({ maxDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Available Days</label>
+                <div className="flex flex-wrap gap-1">
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => (
+                    <label key={day} className="flex items-center space-x-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={(node.configuration.availableDays || []).includes(index)}
+                        onChange={(e) => {
+                          const currentDays = node.configuration.availableDays || [];
+                          const newDays = e.target.checked 
+                            ? [...currentDays, index]
+                            : currentDays.filter(d => d !== index);
+                          updateConfiguration({ availableDays: newDays });
+                        }}
+                        className="rounded"
+                      />
+                      <span>{day.slice(0, 3)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Time Slots Node */}
+        {node.type === 'time_slots' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Time Slots Configuration
+            </label>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Available Time Slots</label>
+                <div className="space-y-1">
+                  {(node.configuration.timeSlots || []).map((slot, index) => (
+                    <div key={index} className="flex space-x-2">
+                      <input
+                        type="time"
+                        value={slot.start}
+                        onChange={(e) => {
+                          const newSlots = [...(node.configuration.timeSlots || [])];
+                          newSlots[index] = { ...slot, start: e.target.value };
+                          updateConfiguration({ timeSlots: newSlots });
+                        }}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="text-sm text-gray-500">to</span>
+                      <input
+                        type="time"
+                        value={slot.end}
+                        onChange={(e) => {
+                          const newSlots = [...(node.configuration.timeSlots || [])];
+                          newSlots[index] = { ...slot, end: e.target.value };
+                          updateConfiguration({ timeSlots: newSlots });
+                        }}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          const newSlots = (node.configuration.timeSlots || []).filter((_, i) => i !== index);
+                          updateConfiguration({ timeSlots: newSlots });
+                        }}
+                        className="px-2 py-1 text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const newSlots = [...(node.configuration.timeSlots || []), { start: '09:00', end: '10:00' }];
+                      updateConfiguration({ timeSlots: newSlots });
+                    }}
+                    className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800 text-sm"
+                  >
+                    <Plus size={14} className="inline mr-1" />
+                    Add Time Slot
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Booking Summary Node */}
+        {node.type === 'booking_summary' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Booking Summary Configuration
+            </label>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Summary Template</label>
+                <textarea
+                  value={node.configuration.template || ''}
+                  onChange={(e) => updateConfiguration({ template: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={4}
+                  placeholder="📋 **Booking Summary**\n\n🎯 **Service:** {selectedService}\n💰 **Price:** ₹{price}\n📅 **Date:** {selectedDate}\n🕐 **Time:** {selectedTime}\n\nPlease confirm your booking by replying 'CONFIRM' or 'YES'."
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Fallback Message</label>
+                <textarea
+                  value={node.configuration.fallbackMessage || ''}
+                  onChange={(e) => updateConfiguration({ fallbackMessage: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={2}
+                  placeholder="Please contact us to complete your booking."
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {node.type === 'question' && (

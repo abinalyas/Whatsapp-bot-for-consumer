@@ -1,279 +1,395 @@
-/**
- * Dynamic Flow Processor Service
- * Processes WhatsApp messages using dynamic bot flows
- */
+import { IStorage } from '../storage';
+import { BotFlow, BotFlowNode } from '../../shared/types/bot-flow.types';
 
-import { BotFlow } from '../../shared/types/bot-flow.types';
+export interface DynamicFlowContext {
+  tenantId: string;
+  phoneNumber: string;
+  conversationId: string;
+  currentState: string;
+  selectedService?: string;
+  selectedDate?: string;
+  selectedTime?: string;
+}
+
+export interface ProcessedMessage {
+  content: string;
+  messageType: 'text' | 'interactive' | 'template';
+  metadata?: Record<string, any>;
+}
 
 export class DynamicFlowProcessorService {
-  private static instance: DynamicFlowProcessorService;
-  private activeFlow: BotFlow | null = null;
-
-  private constructor() {}
-
-  static getInstance(): DynamicFlowProcessorService {
-    if (!DynamicFlowProcessorService.instance) {
-      DynamicFlowProcessorService.instance = new DynamicFlowProcessorService();
-    }
-    return DynamicFlowProcessorService.instance;
-  }
+  constructor(private storage: IStorage) {}
 
   /**
-   * Load active flow from localStorage (simulated)
+   * Process a bot flow node with dynamic data from database
    */
-  async loadActiveFlow(): Promise<BotFlow | null> {
+  async processNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
     try {
-      // In a real implementation, this would load from database
-      // For now, we'll simulate loading from localStorage
-      const fs = require('fs');
-      const path = require('path');
-      
-      // Try to load from the exact WhatsApp flow file
-      const flowPath = path.join(process.cwd(), 'whatsapp-bot-flow-exact.json');
-      if (fs.existsSync(flowPath)) {
-        const flowData = JSON.parse(fs.readFileSync(flowPath, 'utf8'));
-        this.activeFlow = flowData;
-        console.log('✅ Active flow loaded:', flowData.name);
-        return flowData;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error loading active flow:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Process message using dynamic flow
-   */
-  async processMessage(
-    phoneNumber: string,
-    messageText: string,
-    conversationState: string
-  ): Promise<{
-    response: string;
-    newState: string;
-    contextData?: any;
-  }> {
-    try {
-      // Load active flow if not already loaded
-      if (!this.activeFlow) {
-        await this.loadActiveFlow();
-      }
-
-      if (!this.activeFlow) {
-        throw new Error('No active flow found');
-      }
-
-      console.log('Processing message with dynamic flow:', {
-        phoneNumber,
-        messageText,
-        conversationState,
-        flowName: this.activeFlow.name
-      });
-
-      // Process based on conversation state
-      switch (conversationState) {
-        case 'greeting':
-          return this.handleGreetingState();
-        
-        case 'awaiting_service':
-          return this.handleServiceSelectionState(messageText);
-        
-        case 'awaiting_date':
-          return this.handleDateSelectionState(messageText);
-        
-        case 'awaiting_time':
-          return this.handleTimeSelectionState(messageText);
-        
-        case 'awaiting_payment':
-          return this.handlePaymentState(messageText);
-        
+      switch (node.type) {
+        case 'message':
+          return await this.processMessageNode(node, context);
+        case 'service_message':
+          return await this.processServiceMessageNode(node, context);
+        case 'question':
+          return await this.processQuestionNode(node, context);
+        case 'service_list':
+          return await this.processServiceListNode(node, context);
+        case 'date_picker':
+          return await this.processDatePickerNode(node, context);
+        case 'time_slots':
+          return await this.processTimeSlotsNode(node, context);
+        case 'booking_summary':
+          return await this.processBookingSummaryNode(node, context);
         default:
-          return this.handleGreetingState();
+          return {
+            content: node.configuration?.message || 'Hello!',
+            messageType: 'text'
+          };
       }
     } catch (error) {
-      console.error('Error processing dynamic flow message:', error);
+      console.error('Error processing dynamic node:', error);
       return {
-        response: 'Sorry, I encountered an error. Please try again.',
-        newState: 'greeting'
+        content: node.configuration?.message || 'Sorry, I encountered an error.',
+        messageType: 'text'
       };
     }
   }
 
   /**
-   * Handle greeting state using dynamic flow
+   * Process service message node - shows services with real data
    */
-  private handleGreetingState(): { response: string; newState: string } {
-    // Find the greeting message node
-    const greetingNode = this.activeFlow?.nodes.find(node => 
-      node.id === 'welcome_msg' || node.type === 'message'
-    );
-
-    if (greetingNode?.configuration?.message) {
-      return {
-        response: greetingNode.configuration.message,
-        newState: 'awaiting_service'
-      };
-    }
-
-    // Fallback to default greeting
-    return {
-      response: '👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut – ₹120\n💇‍♀️ Hair Color – ₹600\n💇‍♀️ Hair Styling – ₹300\n💅 Manicure – ₹200\n🦶 Pedicure – ₹65\n\nReply with the number or name of the service to book.',
-      newState: 'awaiting_service'
-    };
-  }
-
-  /**
-   * Handle service selection state using dynamic flow
-   */
-  private handleServiceSelectionState(messageText: string): { response: string; newState: string } {
-    // Find the service confirmed message node
-    const serviceConfirmedNode = this.activeFlow?.nodes.find(node => 
-      node.id === 'service_confirmed'
-    );
-
-    if (serviceConfirmedNode?.configuration?.message) {
-      // Replace placeholders with actual values
-      let response = serviceConfirmedNode.configuration.message;
+  private async processServiceMessageNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    try {
+      // Load services from database
+      const services = await this.storage.getServices();
       
-      // For now, use a default service selection
-      response = response.replace('{selectedService}', 'Haircut');
-      response = response.replace('{price}', '120');
-      
-      // Generate dynamic dates
-      const today = new Date();
-      for (let i = 1; i <= 7; i++) {
-        const futureDate = new Date(today);
-        futureDate.setDate(today.getDate() + i);
-        const dateStr = futureDate.toLocaleDateString('en-GB', {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-        response = response.replace(`{date${i}}`, dateStr);
+      if (!services || services.length === 0) {
+        return {
+          content: 'Sorry, no services are currently available.',
+          messageType: 'text'
+        };
       }
-      
+
+      // Build dynamic service list
+      const serviceList = services
+        .filter(service => service.isActive)
+        .map((service, index) => {
+          const emoji = this.getServiceEmoji(service.category);
+          return `${index + 1}. ${emoji} ${service.name} – ₹${service.price}`;
+        })
+        .join('\n');
+
+      // Get welcome message from node configuration
+      const welcomeText = node.configuration?.welcomeText || 'Welcome to our salon!';
+      const serviceIntro = node.configuration?.serviceIntro || 'Here are our services:';
+      const instruction = node.configuration?.instruction || 'Reply with the number or name of the service to book.';
+
+      const content = `${welcomeText}\n\n${serviceIntro}\n${serviceList}\n\n${instruction}`;
+
       return {
-        response,
-        newState: 'awaiting_date'
+        content,
+        messageType: 'text',
+        metadata: {
+          services: services.map(s => ({
+            id: s.id,
+            name: s.name,
+            price: s.price,
+            category: s.category
+          }))
+        }
+      };
+    } catch (error) {
+      console.error('Error processing service message node:', error);
+      return {
+        content: node.configuration?.message || 'Welcome! Please contact us for services.',
+        messageType: 'text'
       };
     }
+  }
 
-    // Fallback
+  /**
+   * Process service list node - interactive service selection
+   */
+  private async processServiceListNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    try {
+      const services = await this.storage.getServices();
+      const activeServices = services.filter(service => service.isActive);
+
+      if (activeServices.length === 0) {
+        return {
+          content: 'No services are currently available.',
+          messageType: 'text'
+        };
+      }
+
+      // Create interactive service list
+      const serviceOptions = activeServices.map((service, index) => ({
+        id: `service_${service.id}`,
+        title: service.name,
+        description: `₹${service.price} • ${service.durationMinutes || 60} min`,
+        emoji: this.getServiceEmoji(service.category)
+      }));
+
+      return {
+        content: 'Please select a service:',
+        messageType: 'interactive',
+        metadata: {
+          type: 'service_selection',
+          options: serviceOptions,
+          maxSelections: 1
+        }
+      };
+    } catch (error) {
+      console.error('Error processing service list node:', error);
+      return {
+        content: 'Please contact us for service information.',
+        messageType: 'text'
+      };
+    }
+  }
+
+  /**
+   * Process date picker node - shows available dates
+   */
+  private async processDatePickerNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    try {
+      // Generate available dates (next 7-14 days)
+      const availableDates = this.generateAvailableDates(7);
+      
+      const dateOptions = availableDates.map((date, index) => ({
+        id: `date_${date}`,
+        title: this.formatDate(date),
+        description: this.getDayOfWeek(date)
+      }));
+
+      return {
+        content: 'Please select your preferred date:',
+        messageType: 'interactive',
+        metadata: {
+          type: 'date_selection',
+          options: dateOptions,
+          maxSelections: 1
+        }
+      };
+    } catch (error) {
+      console.error('Error processing date picker node:', error);
+      return {
+        content: 'Please contact us to schedule your appointment.',
+        messageType: 'text'
+      };
+    }
+  }
+
+  /**
+   * Process time slots node - shows available times for selected date
+   */
+  private async processTimeSlotsNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    try {
+      if (!context.selectedDate) {
+        return {
+          content: 'Please select a date first.',
+          messageType: 'text'
+        };
+      }
+
+      // Generate available time slots for the selected date
+      const timeSlots = this.generateTimeSlots(context.selectedDate);
+      
+      const timeOptions = timeSlots.map((time, index) => ({
+        id: `time_${time}`,
+        title: time,
+        description: this.getTimeDescription(time)
+      }));
+
+      return {
+        content: `Please select your preferred time for ${this.formatDate(context.selectedDate)}:`,
+        messageType: 'interactive',
+        metadata: {
+          type: 'time_selection',
+          options: timeOptions,
+          maxSelections: 1
+        }
+      };
+    } catch (error) {
+      console.error('Error processing time slots node:', error);
+      return {
+        content: 'Please contact us to schedule your appointment.',
+        messageType: 'text'
+      };
+    }
+  }
+
+  /**
+   * Process booking summary node - shows final booking details
+   */
+  private async processBookingSummaryNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    try {
+      if (!context.selectedService || !context.selectedDate || !context.selectedTime) {
+        return {
+          content: 'Please complete your service, date, and time selection.',
+          messageType: 'text'
+        };
+      }
+
+      // Get service details
+      const service = await this.storage.getService(context.selectedService);
+      if (!service) {
+        return {
+          content: 'Service not found. Please start over.',
+          messageType: 'text'
+        };
+      }
+
+      const summary = `📋 **Booking Summary**
+
+🎯 **Service:** ${service.name}
+💰 **Price:** ₹${service.price}
+⏱️ **Duration:** ${service.durationMinutes || 60} minutes
+📅 **Date:** ${this.formatDate(context.selectedDate)}
+🕐 **Time:** ${context.selectedTime}
+
+Please confirm your booking by replying "CONFIRM" or "YES".`;
+
+      return {
+        content: summary,
+        messageType: 'text',
+        metadata: {
+          type: 'booking_summary',
+          service: service,
+          date: context.selectedDate,
+          time: context.selectedTime
+        }
+      };
+    } catch (error) {
+      console.error('Error processing booking summary node:', error);
+      return {
+        content: 'Please contact us to complete your booking.',
+        messageType: 'text'
+      };
+    }
+  }
+
+  /**
+   * Process regular message node with placeholder replacement
+   */
+  private async processMessageNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    let content = node.configuration?.message || 'Hello!';
+    
+    // Replace placeholders with dynamic data
+    content = this.replacePlaceholders(content, context);
+    
     return {
-      response: 'Perfect! You\'ve selected Haircut (₹120).\n\n📅 Now, please select your preferred appointment date.',
-      newState: 'awaiting_date'
+      content,
+      messageType: 'text'
     };
   }
 
   /**
-   * Handle date selection state using dynamic flow
+   * Process question node with dynamic options
    */
-  private handleDateSelectionState(messageText: string): { response: string; newState: string } {
-    const dateConfirmedNode = this.activeFlow?.nodes.find(node => 
-      node.id === 'date_confirmed'
-    );
-
-    if (dateConfirmedNode?.configuration?.message) {
-      let response = dateConfirmedNode.configuration.message;
-      
-      // Replace date placeholder
-      const today = new Date();
-      const selectedDate = new Date(today);
-      selectedDate.setDate(today.getDate() + parseInt(messageText));
-      const readableDateStr = selectedDate.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      
-      response = response.replace('{selectedDate}', readableDateStr);
-      
-      return {
-        response,
-        newState: 'awaiting_time'
-      };
-    }
-
-    // Fallback
+  private async processQuestionNode(
+    node: BotFlowNode,
+    context: DynamicFlowContext
+  ): Promise<ProcessedMessage> {
+    let content = node.configuration?.question || 'Please provide your answer.';
+    
+    // Replace placeholders
+    content = this.replacePlaceholders(content, context);
+    
     return {
-      response: 'Great! You\'ve selected the date.\n\n🕐 Now, please choose your preferred time slot.',
-      newState: 'awaiting_time'
+      content,
+      messageType: 'text'
     };
   }
 
-  /**
-   * Handle time selection state using dynamic flow
-   */
-  private handleTimeSelectionState(messageText: string): { response: string; newState: string } {
-    const bookingSummaryNode = this.activeFlow?.nodes.find(node => 
-      node.id === 'booking_summary'
-    );
-
-    if (bookingSummaryNode?.configuration?.message) {
-      let response = bookingSummaryNode.configuration.message;
-      
-      // Replace placeholders
-      const timeSlots = ['10:00 AM', '11:30 AM', '02:00 PM', '03:30 PM', '05:00 PM'];
-      const selectedTime = timeSlots[parseInt(messageText) - 1] || '10:00 AM';
-      
-      response = response.replace('{selectedTime}', selectedTime);
-      response = response.replace('{selectedService}', 'Haircut');
-      response = response.replace('{selectedDate}', 'Tomorrow');
-      response = response.replace('{price}', '120');
-      response = response.replace('{upiLink}', 'https://paytm.me/example-link');
-      
-      return {
-        response,
-        newState: 'awaiting_payment'
-      };
-    }
-
-    // Fallback
-    return {
-      response: 'Perfect! Your appointment is scheduled.\n\n📋 Booking Summary:\nService: Haircut\nDate: Tomorrow\nTime: 10:00 AM\nAmount: ₹120',
-      newState: 'awaiting_payment'
+  // Helper methods
+  private getServiceEmoji(category?: string): string {
+    const emojiMap: Record<string, string> = {
+      'hair': '💇‍♀️',
+      'nails': '💅',
+      'spa': '🧖‍♀️',
+      'massage': '💆‍♀️',
+      'facial': '✨',
+      'default': '💄'
     };
+    return emojiMap[category?.toLowerCase() || 'default'];
   }
 
-  /**
-   * Handle payment state using dynamic flow
-   */
-  private handlePaymentState(messageText: string): { response: string; newState: string } {
-    const paymentConfirmedNode = this.activeFlow?.nodes.find(node => 
-      node.id === 'payment_confirmed'
-    );
-
-    if (paymentConfirmedNode?.configuration?.message) {
-      let response = paymentConfirmedNode.configuration.message;
-      
-      // Replace placeholders
-      response = response.replace('{selectedService}', 'Haircut');
-      response = response.replace('{selectedDate}', 'Tomorrow');
-      response = response.replace('{selectedTime}', '10:00 AM');
-      
-      return {
-        response,
-        newState: 'completed'
-      };
+  private generateAvailableDates(days: number): string[] {
+    const dates: string[] = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= days; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date.toISOString().split('T')[0]);
     }
-
-    // Fallback
-    return {
-      response: '✅ Payment received! Your appointment is now confirmed.\n\n🎉 Thank you for choosing Spark Salon!',
-      newState: 'completed'
-    };
+    
+    return dates;
   }
 
-  /**
-   * Update flow with new data
-   */
-  async updateFlow(flowData: BotFlow): Promise<void> {
-    this.activeFlow = flowData;
-    console.log('✅ Flow updated:', flowData.name);
+  private generateTimeSlots(selectedDate: string): string[] {
+    // Generate time slots (9 AM to 6 PM, every 30 minutes)
+    const slots = [
+      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+      '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+      '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'
+    ];
+    
+    return slots;
+  }
+
+  private formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  private getDayOfWeek(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { weekday: 'long' });
+  }
+
+  private getTimeDescription(time: string): string {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  }
+
+  private replacePlaceholders(content: string, context: DynamicFlowContext): string {
+    // Replace common placeholders
+    content = content.replace(/\{selectedService\}/g, context.selectedService || '');
+    content = content.replace(/\{selectedDate\}/g, context.selectedDate || '');
+    content = content.replace(/\{selectedTime\}/g, context.selectedTime || '');
+    content = content.replace(/\{phoneNumber\}/g, context.phoneNumber || '');
+    
+    return content;
   }
 }
