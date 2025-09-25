@@ -105,13 +105,18 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
     
     // Check if we should use dynamic flow processing
     const shouldUseDynamicFlow = await checkForActiveFlow();
+    console.log("🔍 Should use dynamic flow:", shouldUseDynamicFlow);
+    console.log("🔍 Global flow exists:", !!global.whatsappBotFlow);
+    console.log("🔍 Global flow name:", global.whatsappBotFlow?.name || 'NO NAME');
     
     if (shouldUseDynamicFlow) {
+      console.log("WhatsApp: Using dynamic flow processing");
       // Use dynamic conversation engine
       await processDynamicWhatsAppMessage(from, messageText);
       return;
     }
     
+    console.log("WhatsApp: Using static flow processing");
     // Fall back to static processing
     const response = await processStaticWhatsAppMessage(from, messageText);
     // Send the response to WhatsApp
@@ -1581,6 +1586,39 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: 'Failed to load services'
+      });
+    }
+  });
+
+  // Test WhatsApp bot processing
+  app.post('/api/test-whatsapp-bot', async (req, res) => {
+    try {
+      console.log('🧪 Testing WhatsApp bot processing');
+      const { message, phoneNumber } = req.body;
+      
+      if (!message || !phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Message and phoneNumber are required'
+        });
+      }
+      
+      console.log('🔍 Testing with message:', message);
+      console.log('🔍 Testing with phone:', phoneNumber);
+      
+      // Test the message processing
+      await processWhatsAppMessage(phoneNumber, message);
+      
+      res.json({
+        success: true,
+        message: 'WhatsApp bot processing test completed',
+        flowUsed: global.whatsappBotFlow ? global.whatsappBotFlow.name : 'Static flow'
+      });
+    } catch (error) {
+      console.error('❌ Error testing WhatsApp bot:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to test WhatsApp bot'
       });
     }
   });

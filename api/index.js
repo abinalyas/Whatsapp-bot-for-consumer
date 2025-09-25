@@ -3630,10 +3630,15 @@ async function processWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Processing message from", from, ":", messageText);
     const shouldUseDynamicFlow = await checkForActiveFlow();
+    console.log("\u{1F50D} Should use dynamic flow:", shouldUseDynamicFlow);
+    console.log("\u{1F50D} Global flow exists:", !!global.whatsappBotFlow);
+    console.log("\u{1F50D} Global flow name:", global.whatsappBotFlow?.name || "NO NAME");
     if (shouldUseDynamicFlow) {
+      console.log("WhatsApp: Using dynamic flow processing");
       await processDynamicWhatsAppMessage(from, messageText);
       return;
     }
+    console.log("WhatsApp: Using static flow processing");
     const response = await processStaticWhatsAppMessage(from, messageText);
     await sendWhatsAppMessage(from, response);
   } catch (error) {
@@ -4813,6 +4818,32 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: "Failed to load services"
+      });
+    }
+  });
+  app2.post("/api/test-whatsapp-bot", async (req, res) => {
+    try {
+      console.log("\u{1F9EA} Testing WhatsApp bot processing");
+      const { message, phoneNumber } = req.body;
+      if (!message || !phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          error: "Message and phoneNumber are required"
+        });
+      }
+      console.log("\u{1F50D} Testing with message:", message);
+      console.log("\u{1F50D} Testing with phone:", phoneNumber);
+      await processWhatsAppMessage(phoneNumber, message);
+      res.json({
+        success: true,
+        message: "WhatsApp bot processing test completed",
+        flowUsed: global.whatsappBotFlow ? global.whatsappBotFlow.name : "Static flow"
+      });
+    } catch (error) {
+      console.error("\u274C Error testing WhatsApp bot:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to test WhatsApp bot"
       });
     }
   });
