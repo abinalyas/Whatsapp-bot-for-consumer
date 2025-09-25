@@ -22,7 +22,7 @@ import {
 
 export interface BotFlowNode {
   id: string;
-  type: 'start' | 'message' | 'question' | 'condition' | 'action' | 'integration' | 'end';
+  type: 'start' | 'message' | 'question' | 'condition' | 'action' | 'integration' | 'end' | 'service_message';
   name: string;
   description?: string;
   position: { x: number; y: number };
@@ -53,6 +53,11 @@ export interface BotFlowNodeConfiguration {
   timeSlots?: Array<{ start: string; end: string }>;
   // Service configuration
   services?: Array<{ name: string; price: number }>;
+  // Service Message configuration
+  welcomeText?: string;
+  serviceMessage?: string;
+  showEmojis?: boolean;
+  emojiMapping?: Record<string, string>; // service name -> emoji
   // Legacy support
   message?: string;
   question?: string;
@@ -125,6 +130,12 @@ const NODE_TYPES = {
     color: 'bg-red-500',
     label: 'End',
     description: 'End the conversation'
+  },
+  service_message: {
+    icon: MessageSquare,
+    color: 'bg-pink-500',
+    label: 'Service Message',
+    description: 'Welcome message with services and prices'
   }
 };
 
@@ -758,6 +769,37 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
             </button>
             
             <button
+              onClick={() => {
+                // Quick action: Add a service message node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'service_message',
+                  name: 'Welcome + Services',
+                  position: { x: 400, y: 100 },
+                  configuration: {
+                    welcomeText: '👋 Welcome to Spark Salon!',
+                    serviceMessage: 'Here are our services:',
+                    showEmojis: true,
+                    services: [
+                      { name: 'Haircut', price: 120 },
+                      { name: 'Hair Color', price: 600 },
+                      { name: 'Hair Styling', price: 300 },
+                      { name: 'Manicure', price: 200 },
+                      { name: 'Pedicure', price: 65 }
+                    ]
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-pink-100 text-pink-700 hover:bg-pink-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Welcome
+            </button>
+            
+            <button
               onClick={handleTest}
               className="px-3 py-2 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
             >
@@ -1053,6 +1095,124 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               placeholder="Enter the message to send..."
             />
           </div>
+        )}
+
+        {node.type === 'service_message' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Welcome Message
+              </label>
+              <textarea
+                value={node.configuration.welcomeText || ''}
+                onChange={(e) => updateConfiguration({ welcomeText: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+                placeholder="👋 Welcome to Spark Salon!"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Service Introduction
+              </label>
+              <textarea
+                value={node.configuration.serviceMessage || ''}
+                onChange={(e) => updateConfiguration({ serviceMessage: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={2}
+                placeholder="Here are our services:"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="showEmojis"
+                checked={node.configuration.showEmojis || false}
+                onChange={(e) => updateConfiguration({ showEmojis: e.target.checked })}
+                className="rounded"
+              />
+              <label htmlFor="showEmojis" className="text-sm text-gray-700">
+                Show emojis with services
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Services
+              </label>
+              <div className="space-y-2">
+                {(node.configuration.services || []).map((service, index) => (
+                  <div key={index} className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={service.name}
+                      onChange={(e) => {
+                        const newServices = [...(node.configuration.services || [])];
+                        newServices[index] = { ...service, name: e.target.value };
+                        updateConfiguration({ services: newServices });
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Service name"
+                    />
+                    <input
+                      type="number"
+                      value={service.price}
+                      onChange={(e) => {
+                        const newServices = [...(node.configuration.services || [])];
+                        newServices[index] = { ...service, price: parseFloat(e.target.value) || 0 };
+                        updateConfiguration({ services: newServices });
+                      }}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Price"
+                    />
+                    <button
+                      onClick={() => {
+                        const newServices = (node.configuration.services || []).filter((_, i) => i !== index);
+                        updateConfiguration({ services: newServices });
+                      }}
+                      className="px-2 py-2 text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const newServices = [...(node.configuration.services || []), { name: '', price: 0 }];
+                    updateConfiguration({ services: newServices });
+                  }}
+                  className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800"
+                >
+                  <Plus size={16} className="inline mr-1" />
+                  Add Service
+                </button>
+              </div>
+            </div>
+
+            {/* Service Message Preview */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preview
+              </label>
+              <div className="text-sm text-gray-600 bg-white p-3 rounded border">
+                <div className="font-medium mb-2">🤖 Bot:</div>
+                <div className="mb-2">{node.configuration.welcomeText || '👋 Welcome to Spark Salon!'}</div>
+                <div className="mb-2">{node.configuration.serviceMessage || 'Here are our services:'}</div>
+                <div className="mb-2">
+                  {(node.configuration.services || []).map((service, index) => (
+                    <div key={index} className="text-xs text-gray-500 ml-2">
+                      {node.configuration.showEmojis ? '💇‍♀️' : '•'} {service.name} – ₹{service.price}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Reply with the number or name of the service to book.
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {node.type === 'question' && (
