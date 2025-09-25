@@ -1592,11 +1592,13 @@ We apologize for any inconvenience caused.`;
 
   // Test WhatsApp bot processing
   app.post('/api/test-whatsapp-bot', async (req, res) => {
+    console.log('🧪 Test WhatsApp bot endpoint called - START');
     try {
       console.log('🧪 Testing WhatsApp bot processing');
       const { message, phoneNumber } = req.body;
       
       if (!message || !phoneNumber) {
+        console.log('❌ Missing required fields');
         return res.status(400).json({
           success: false,
           error: 'Message and phoneNumber are required'
@@ -1609,6 +1611,7 @@ We apologize for any inconvenience caused.`;
       // Test the message processing
       await processWhatsAppMessage(phoneNumber, message);
       
+      console.log('✅ WhatsApp bot processing test completed');
       res.json({
         success: true,
         message: 'WhatsApp bot processing test completed',
@@ -1621,6 +1624,19 @@ We apologize for any inconvenience caused.`;
         error: 'Failed to test WhatsApp bot'
       });
     }
+  });
+  
+  console.log('✅ Route /api/test-whatsapp-bot registered');
+  
+  // Simple GET test for the endpoint
+  app.get('/api/test-whatsapp-bot', (req, res) => {
+    console.log('🧪 GET /api/test-whatsapp-bot called');
+    res.json({
+      success: true,
+      message: 'WhatsApp bot test endpoint is working',
+      method: 'GET',
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Get current flow data
