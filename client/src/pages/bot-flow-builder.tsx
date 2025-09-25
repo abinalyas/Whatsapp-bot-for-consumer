@@ -202,7 +202,8 @@ const api = {
       localStorage.setItem('botFlows', JSON.stringify(savedFlows));
       console.log('Bot flow saved to localStorage:', flow.name);
       
-      return { success: true, message: 'Flow saved successfully!' };
+      // Return the actual flow object, not just a success message
+      return flow;
     } catch (error) {
       console.error('Error saving bot flow:', error);
       return { success: false, message: 'Failed to save flow' };
@@ -401,7 +402,16 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       console.log('💾 Saving flow...', updatedFlow.name);
       
       // Save the flow first
-      const savedFlow = await api.saveBotFlow(updatedFlow);
+      const saveResult = await api.saveBotFlow(updatedFlow);
+      
+      // Handle both success and error responses
+      if (saveResult.success === false) {
+        throw new Error(saveResult.message || 'Failed to save flow');
+      }
+      
+      // If it's a success response, use the original flow
+      // If it's the flow object directly, use it
+      const savedFlow = saveResult.success === true ? updatedFlow : saveResult;
       setFlow(savedFlow);
       console.log('✅ Flow saved successfully');
       
