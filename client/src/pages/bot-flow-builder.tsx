@@ -228,12 +228,20 @@ const api = {
   async testBotFlowsAPI(): Promise<boolean> {
     try {
       console.log('🧪 Testing bot flows API...');
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
       const response = await fetch('/api/bot-flows/test', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         console.error('❌ API test failed:', response.status, response.statusText);
@@ -244,6 +252,10 @@ const api = {
       console.log('✅ API test successful:', result.message);
       return result.success;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error('⏰ API test timed out');
+        return false;
+      }
       console.error('❌ API test error:', error);
       return false;
     }
@@ -253,10 +265,14 @@ const api = {
     try {
       console.log('🔄 Starting sync with WhatsApp bot for flow:', flow.name);
       
-      // First test if API is reachable
-      const apiTest = await this.testBotFlowsAPI();
-      if (!apiTest) {
-        throw new Error('Bot flows API is not reachable');
+      // Test if API is reachable (optional - don't fail if it doesn't work)
+      try {
+        const apiTest = await this.testBotFlowsAPI();
+        if (!apiTest) {
+          console.log('⚠️ API test failed, but continuing with sync attempt');
+        }
+      } catch (error) {
+        console.log('⚠️ API test error, but continuing with sync attempt:', error);
       }
       
       // Add timeout to prevent hanging
@@ -398,6 +414,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       // Enable sync to apply changes immediately to WhatsApp bot
       const ENABLE_SYNC = true;
       const USE_MOCK_SYNC = false; // Use real API sync to update WhatsApp bot
+      const SKIP_SYNC_ON_ERROR = true; // Skip sync if it fails to prevent hanging
       
       if (ENABLE_SYNC) {
         try {
@@ -423,7 +440,11 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
         } catch (syncError) {
           console.warn('⚠️ Flow saved but sync failed (this is optional):', syncError);
           console.log('ℹ️ Flow is saved locally and will work in the bot flow builder');
-          // Don't fail the save if sync fails - this is optional
+          
+          if (SKIP_SYNC_ON_ERROR) {
+            console.log('🔄 Skipping sync due to error to prevent hanging');
+            // Don't fail the save if sync fails - this is optional
+          }
         }
       } else {
         console.log('ℹ️ Sync disabled for now - flow saved locally');
