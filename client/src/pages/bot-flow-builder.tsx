@@ -417,15 +417,15 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
         try {
           console.log('🔄 Syncing with WhatsApp bot...');
           console.log('📋 Flow data being synced:', {
-            id: updatedFlow.id,
-            name: updatedFlow.name,
-            nodesCount: updatedFlow.nodes?.length || 0,
-            connectionsCount: updatedFlow.connections?.length || 0
+            id: savedFlow.id,
+            name: savedFlow.name,
+            nodesCount: savedFlow.nodes?.length || 0,
+            connectionsCount: savedFlow.connections?.length || 0
           });
           
           // Validate flow data before syncing
-          if (!updatedFlow || !updatedFlow.id || !updatedFlow.name) {
-            console.error('❌ Invalid flow data:', updatedFlow);
+          if (!savedFlow || !savedFlow.id || !savedFlow.name) {
+            console.error('❌ Invalid flow data:', savedFlow);
             throw new Error('Invalid flow data - missing required fields');
           }
           
@@ -434,14 +434,14 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
             console.log('🎭 Using mock sync for demo purposes');
             
             // Store the flow data in localStorage for WhatsApp bot to use
-            localStorage.setItem('whatsappBotFlow', JSON.stringify(updatedFlow));
+            localStorage.setItem('whatsappBotFlow', JSON.stringify(savedFlow));
             console.log('💾 Flow data stored in localStorage for WhatsApp bot');
             
             // Try API sync as a background task (non-blocking, no await)
             fetch('/api/sync-simple', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ flowData: updatedFlow })
+              body: JSON.stringify({ flowData: savedFlow })
             }).then(response => {
               if (response.ok) {
                 console.log('✅ API sync also successful');
@@ -464,7 +464,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
             syncSuccess = true;
             console.log('✅ Flow synced with WhatsApp bot (mock)');
           } else {
-            await api.syncFlowWithWhatsApp(updatedFlow);
+            await api.syncFlowWithWhatsApp(savedFlow);
             syncSuccess = true;
             console.log('✅ Flow synced with WhatsApp bot');
           }
