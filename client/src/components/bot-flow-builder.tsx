@@ -43,9 +43,20 @@ export interface BotFlowNodeConfiguration {
   messageText?: string;
   messageType?: 'text' | 'image' | 'document' | 'template';
   questionText?: string;
-  inputType?: 'text' | 'number' | 'choice' | 'date' | 'phone' | 'email';
+  inputType?: 'text' | 'number' | 'choice' | 'date' | 'time' | 'datetime' | 'service' | 'phone' | 'email';
   choices?: Array<{ value: string; label: string }>;
   variableName?: string;
+  // Date/Time configuration
+  minDate?: string;
+  maxDate?: string;
+  availableDays?: number[]; // 0 = Monday, 6 = Sunday
+  timeSlots?: Array<{ start: string; end: string }>;
+  // Service configuration
+  services?: Array<{ name: string; price: number }>;
+  // Legacy support
+  message?: string;
+  question?: string;
+  options?: string[];
   conditions?: Array<{
     variable: string;
     operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
@@ -992,12 +1003,200 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               >
                 <option value="text">Text</option>
                 <option value="date">Date</option>
+                <option value="time">Time</option>
+                <option value="datetime">Date & Time</option>
                 <option value="choice">Multiple Choice</option>
+                <option value="service">Service Selection</option>
                 <option value="phone">Phone</option>
                 <option value="email">Email</option>
               </select>
             </div>
 
+            {/* Date/Time Configuration */}
+            {(node.configuration.inputType === 'date' || node.configuration.inputType === 'datetime') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date Configuration
+                </label>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Min Date</label>
+                    <input
+                      type="date"
+                      value={node.configuration.minDate || ''}
+                      onChange={(e) => updateConfiguration({ minDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Max Date</label>
+                    <input
+                      type="date"
+                      value={node.configuration.maxDate || ''}
+                      onChange={(e) => updateConfiguration({ maxDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Available Days</label>
+                    <div className="flex flex-wrap gap-1">
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => (
+                        <label key={day} className="flex items-center space-x-1 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={(node.configuration.availableDays || []).includes(index)}
+                            onChange={(e) => {
+                              const currentDays = node.configuration.availableDays || [];
+                              const newDays = e.target.checked 
+                                ? [...currentDays, index]
+                                : currentDays.filter(d => d !== index);
+                              updateConfiguration({ availableDays: newDays });
+                            }}
+                            className="rounded"
+                          />
+                          <span>{day.slice(0, 3)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Time Configuration */}
+            {(node.configuration.inputType === 'time' || node.configuration.inputType === 'datetime') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Time Configuration
+                </label>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Available Time Slots</label>
+                    <div className="space-y-1">
+                      {(node.configuration.timeSlots || []).map((slot, index) => (
+                        <div key={index} className="flex space-x-2">
+                          <input
+                            type="time"
+                            value={slot.start}
+                            onChange={(e) => {
+                              const newSlots = [...(node.configuration.timeSlots || [])];
+                              newSlots[index] = { ...slot, start: e.target.value };
+                              updateConfiguration({ timeSlots: newSlots });
+                            }}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                          <span className="text-sm text-gray-500">to</span>
+                          <input
+                            type="time"
+                            value={slot.end}
+                            onChange={(e) => {
+                              const newSlots = [...(node.configuration.timeSlots || [])];
+                              newSlots[index] = { ...slot, end: e.target.value };
+                              updateConfiguration({ timeSlots: newSlots });
+                            }}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                          <button
+                            onClick={() => {
+                              const newSlots = (node.configuration.timeSlots || []).filter((_, i) => i !== index);
+                              updateConfiguration({ timeSlots: newSlots });
+                            }}
+                            className="px-2 py-1 text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const newSlots = [...(node.configuration.timeSlots || []), { start: '09:00', end: '10:00' }];
+                          updateConfiguration({ timeSlots: newSlots });
+                        }}
+                        className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800 text-sm"
+                      >
+                        <Plus size={14} className="inline mr-1" />
+                        Add Time Slot
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Service Selection Configuration */}
+            {node.configuration.inputType === 'service' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Service Configuration
+                </label>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Load Services From Database</label>
+                    <button
+                      onClick={() => {
+                        // TODO: Load services from API
+                        console.log('Loading services from database...');
+                      }}
+                      className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 text-sm"
+                    >
+                      🔄 Load Services from Dashboard
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Custom Services</label>
+                    <div className="space-y-2">
+                      {(node.configuration.services || []).map((service, index) => (
+                        <div key={index} className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={service.name}
+                            onChange={(e) => {
+                              const newServices = [...(node.configuration.services || [])];
+                              newServices[index] = { ...service, name: e.target.value };
+                              updateConfiguration({ services: newServices });
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Service name"
+                          />
+                          <input
+                            type="number"
+                            value={service.price}
+                            onChange={(e) => {
+                              const newServices = [...(node.configuration.services || [])];
+                              newServices[index] = { ...service, price: parseFloat(e.target.value) || 0 };
+                              updateConfiguration({ services: newServices });
+                            }}
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Price"
+                          />
+                          <button
+                            onClick={() => {
+                              const newServices = (node.configuration.services || []).filter((_, i) => i !== index);
+                              updateConfiguration({ services: newServices });
+                            }}
+                            className="px-2 py-2 text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const newServices = [...(node.configuration.services || []), { name: '', price: 0 }];
+                          updateConfiguration({ services: newServices });
+                        }}
+                        className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800"
+                      >
+                        <Plus size={16} className="inline mr-1" />
+                        Add Service
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Multiple Choice Configuration */}
             {(node.configuration.inputType === 'choice' || node.configuration.options) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
