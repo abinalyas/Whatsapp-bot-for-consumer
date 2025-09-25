@@ -710,6 +710,54 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
             </button>
             
             <button
+              onClick={() => {
+                // Quick action: Add a service selection node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'question',
+                  name: 'Service Selection',
+                  position: { x: 400, y: 200 },
+                  configuration: {
+                    question: 'Please select a service:',
+                    inputType: 'service',
+                    services: []
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Service
+            </button>
+            
+            <button
+              onClick={() => {
+                // Quick action: Add a date selection node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'question',
+                  name: 'Date Selection',
+                  position: { x: 400, y: 300 },
+                  configuration: {
+                    question: 'Please select a date:',
+                    inputType: 'date',
+                    minDate: new Date().toISOString().split('T')[0]
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Date
+            </button>
+            
+            <button
               onClick={handleTest}
               className="px-3 py-2 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
             >
@@ -914,6 +962,8 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   onUpdate,
   onClose
 }) => {
+  const [loadingServices, setLoadingServices] = useState(false);
+  
   const updateConfiguration = (updates: Partial<BotFlowNodeConfiguration>) => {
     onUpdate({
       configuration: {
@@ -921,6 +971,34 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
         ...updates
       }
     });
+  };
+
+  const loadServicesFromDatabase = async () => {
+    setLoadingServices(true);
+    try {
+      console.log('🔄 Loading services from database...');
+      const response = await fetch('/api/services-for-bot');
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Loaded services:', data.services.length);
+        // Convert services to the format expected by the configuration
+        const services = data.services.map((service: any) => ({
+          name: service.name,
+          price: service.price
+        }));
+        updateConfiguration({ services });
+        alert(`✅ Loaded ${services.length} services from dashboard!`);
+      } else {
+        console.error('❌ Failed to load services:', data.error);
+        alert('❌ Failed to load services from dashboard');
+      }
+    } catch (error) {
+      console.error('❌ Error loading services:', error);
+      alert('❌ Error loading services from dashboard');
+    } finally {
+      setLoadingServices(false);
+    }
   };
 
   return (
@@ -1133,13 +1211,11 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">Load Services From Database</label>
                     <button
-                      onClick={() => {
-                        // TODO: Load services from API
-                        console.log('Loading services from database...');
-                      }}
-                      className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 text-sm"
+                      onClick={loadServicesFromDatabase}
+                      disabled={loadingServices}
+                      className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      🔄 Load Services from Dashboard
+                      {loadingServices ? '⏳ Loading...' : '🔄 Load Services from Dashboard'}
                     </button>
                   </div>
                   <div>
@@ -1237,6 +1313,60 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                     <Plus size={16} className="inline mr-1" />
                     Add Option
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Question Preview */}
+            {node.type === 'question' && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preview
+                </label>
+                <div className="text-sm text-gray-600 bg-white p-3 rounded border">
+                  <div className="font-medium mb-2">🤖 Bot:</div>
+                  <div className="mb-3">{node.configuration.question || 'Enter your question...'}</div>
+                  
+                  {node.configuration.inputType === 'service' && node.configuration.services && (
+                    <div>
+                      <div className="font-medium mb-1">📋 Available Services:</div>
+                      {node.configuration.services.map((service, index) => (
+                        <div key={index} className="text-xs text-gray-500 ml-2">
+                          • {service.name} - ₹{service.price}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {node.configuration.inputType === 'choice' && node.configuration.options && (
+                    <div>
+                      <div className="font-medium mb-1">📋 Options:</div>
+                      {node.configuration.options.map((option, index) => (
+                        <div key={index} className="text-xs text-gray-500 ml-2">
+                          {index + 1}. {option}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {node.configuration.inputType === 'date' && (
+                    <div className="text-xs text-gray-500">
+                      📅 Date picker will appear
+                      {node.configuration.minDate && ` (from ${node.configuration.minDate})`}
+                      {node.configuration.maxDate && ` (to ${node.configuration.maxDate})`}
+                    </div>
+                  )}
+                  
+                  {node.configuration.inputType === 'time' && node.configuration.timeSlots && (
+                    <div>
+                      <div className="font-medium mb-1">⏰ Available Times:</div>
+                      {node.configuration.timeSlots.map((slot, index) => (
+                        <div key={index} className="text-xs text-gray-500 ml-2">
+                          • {slot.start} - {slot.end}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -4781,6 +4781,32 @@ We apologize for any inconvenience caused.`;
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
+  app2.get("/api/services-for-bot", async (req, res) => {
+    try {
+      console.log("\u{1F504} Loading services for bot flow builder");
+      const services2 = await storage.getServices();
+      console.log("\u2705 Loaded services:", services2.length);
+      const formattedServices = services2.map((service) => ({
+        id: service.id,
+        name: service.name,
+        price: service.price,
+        description: service.description,
+        duration: service.duration,
+        category: service.category
+      }));
+      res.json({
+        success: true,
+        services: formattedServices,
+        count: formattedServices.length
+      });
+    } catch (error) {
+      console.error("\u274C Error loading services for bot:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to load services"
+      });
+    }
+  });
   app2.get("/api/bot-flows/current", async (req, res) => {
     try {
       if (global.whatsappBotFlow) {

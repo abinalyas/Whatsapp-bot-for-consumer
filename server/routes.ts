@@ -1540,6 +1540,38 @@ We apologize for any inconvenience caused.`;
     });
   });
 
+  // Load services for bot flow builder
+  app.get('/api/services-for-bot', async (req, res) => {
+    try {
+      console.log('🔄 Loading services for bot flow builder');
+      
+      const services = await storage.getServices();
+      console.log('✅ Loaded services:', services.length);
+      
+      // Format services for bot flow builder
+      const formattedServices = services.map(service => ({
+        id: service.id,
+        name: service.name,
+        price: service.price,
+        description: service.description,
+        duration: service.duration,
+        category: service.category
+      }));
+      
+      res.json({
+        success: true,
+        services: formattedServices,
+        count: formattedServices.length
+      });
+    } catch (error) {
+      console.error('❌ Error loading services for bot:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load services'
+      });
+    }
+  });
+
   // Get current flow data
   app.get('/api/bot-flows/current', async (req, res) => {
     try {
