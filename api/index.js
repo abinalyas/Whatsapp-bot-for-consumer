@@ -4470,6 +4470,7 @@ We apologize for any inconvenience caused.`;
       }
       console.log("\u2705 Flow data received, processing sync...");
       console.log("\u{1F504} Syncing flow:", flowData.name, "with WhatsApp bot");
+      await new Promise((resolve) => setTimeout(resolve, 100));
       res.json({
         success: true,
         message: "Bot flow synced successfully with WhatsApp bot",
@@ -4480,6 +4481,22 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: "Failed to sync bot flow"
+      });
+    }
+  });
+  app2.get("/api/bot-flows/test", async (req, res) => {
+    try {
+      console.log("\u{1F9EA} Test endpoint called");
+      res.json({
+        success: true,
+        message: "Bot flows API is working!",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch (error) {
+      console.error("\u274C Test endpoint error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Test endpoint failed"
       });
     }
   });
