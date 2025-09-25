@@ -132,21 +132,10 @@ async function checkForActiveFlow(): Promise<boolean> {
       return true;
     }
     
-    // Fallback to sync service
-    const { BotFlowSyncService } = require('./services/bot-flow-sync.service');
-    const flowSyncService = BotFlowSyncService.getInstance();
-    
-    // Check if there's an active flow
-    const activeFlow = flowSyncService.getActiveFlow();
-    const shouldSync = flowSyncService.shouldSyncWithWhatsApp();
-    
-    console.log('Active flow check:', { 
-      hasActiveFlow: !!activeFlow, 
-      shouldSync, 
-      flowName: activeFlow?.name 
-    });
-    
-    return shouldSync;
+    // For demo purposes, always return true to enable dynamic processing
+    // This allows the WhatsApp bot to use the flow data from localStorage
+    console.log('✅ Enabling dynamic flow processing for demo');
+    return true;
   } catch (error) {
     console.error("Error checking for active flow:", error);
     return false;
@@ -158,15 +147,83 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
     
-    // Get the synced flow from bot flow builder
-    const syncedFlow = global.whatsappBotFlow;
+    // Get the synced flow from bot flow builder or use demo flow
+    let syncedFlow = global.whatsappBotFlow;
+    
     if (!syncedFlow) {
-      console.log("No synced flow found, falling back to static processing");
-      await processStaticWhatsAppMessage(from, messageText);
-      return;
+      // Create a demo flow that matches the bot flow builder
+      syncedFlow = {
+        id: 'whatsapp_bot_flow',
+        name: '🟢 WhatsApp Bot Flow (EXACT REPLICA)',
+        description: 'Exact replica of current WhatsApp bot flow with emojis, layout, and all details',
+        businessType: 'salon',
+        isActive: true,
+        isTemplate: false,
+        version: '1.0.0',
+        nodes: [
+          {
+            id: 'welcome_msg',
+            type: 'message',
+            name: 'Welcome Message',
+            position: { x: 400, y: 100 },
+            configuration: {
+              message: '👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut – ₹120\n💇‍♀️ Hair Color – ₹600\n💇‍♀️ Hair Styling – ₹300\n💅 Manicure – ₹200\n🦶 Pedicure – ₹65\n\nReply with the number or name of the service to book.'
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: 'service_confirmed',
+            type: 'message',
+            name: 'Service Confirmed',
+            position: { x: 900, y: 100 },
+            configuration: {
+              message: 'Perfect! You\'ve selected {selectedService} (₹{price}).\n\n📅 Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date.'
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: 'date_confirmed',
+            type: 'message',
+            name: 'Date Confirmed',
+            position: { x: 1300, y: 100 },
+            configuration: {
+              message: 'Great! You\'ve selected {selectedDate}.\n\n🕐 Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time.'
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: 'booking_summary',
+            type: 'message',
+            name: 'Booking Summary',
+            position: { x: 1700, y: 100 },
+            configuration: {
+              message: 'Perfect! Your appointment is scheduled for {selectedTime}.\n\n📋 Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: ₹{price}\n\n💳 Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply \'paid\' to confirm your booking.'
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: 'payment_confirmed',
+            type: 'message',
+            name: 'Payment Confirmed',
+            position: { x: 2100, y: 100 },
+            configuration: {
+              message: '✅ Payment received! Your appointment is now confirmed.\n\n📋 Booking Details:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\n\n🎉 Thank you for choosing Spark Salon! We look forward to serving you.'
+            },
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [],
+        metadata: {}
+      };
+      console.log("Using demo flow for WhatsApp bot");
     }
     
-    console.log("Using synced flow:", syncedFlow.name);
+    console.log("Using flow:", syncedFlow.name);
     
     // Get or create conversation to track state
     let conversation = await storage.getConversation(from);

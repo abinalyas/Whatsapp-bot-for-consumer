@@ -25,6 +25,262 @@ var __copyProps = (to, from, except, desc2) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// server/business-config-api.ts
+var business_config_api_exports = {};
+__export(business_config_api_exports, {
+  getAllBusinessTypes: () => getAllBusinessTypes,
+  getBusinessConfig: () => getBusinessConfig
+});
+function getBusinessConfig(businessType) {
+  const type = businessType || "salon";
+  return businessConfigs[type] || businessConfigs["salon"];
+}
+function getAllBusinessTypes() {
+  return Object.keys(businessConfigs);
+}
+var businessConfigs;
+var init_business_config_api = __esm({
+  "server/business-config-api.ts"() {
+    "use strict";
+    businessConfigs = {
+      "restaurant": {
+        id: "demo-restaurant-001",
+        businessName: "Spark Restaurant",
+        businessType: {
+          id: "1",
+          name: "Restaurant",
+          category: "Food & Beverage",
+          terminology: {
+            offering: "Menu Item",
+            transaction: "Order",
+            customer: "Diner",
+            booking: "Reservation"
+          }
+        },
+        branding: {
+          primaryColor: "#f97316",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkrestaurant.com",
+          address: "123 Food Street, Restaurant City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Grilled Chicken",
+            description: "Perfectly grilled chicken with herbs and spices",
+            basePrice: 18,
+            category: "Main Course",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Regular", priceModifier: 0 },
+              { id: "1b", name: "Large", priceModifier: 5 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Caesar Salad",
+            description: "Fresh romaine lettuce with caesar dressing",
+            basePrice: 12,
+            category: "Salads",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Pasta Carbonara",
+            description: "Creamy pasta with bacon and parmesan",
+            basePrice: 16,
+            category: "Pasta",
+            isActive: true
+          }
+        ]
+      },
+      "clinic": {
+        id: "demo-clinic-001",
+        businessName: "Spark Medical Clinic",
+        businessType: {
+          id: "3",
+          name: "Medical Clinic",
+          category: "Healthcare",
+          terminology: {
+            offering: "Treatment",
+            transaction: "Appointment",
+            customer: "Patient",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#10b981",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "appointments@sparkclinic.com",
+          address: "123 Health Street, Medical City, MC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "General Consultation",
+            description: "Comprehensive health checkup with our doctors",
+            basePrice: 85,
+            duration: 30,
+            category: "Consultation",
+            isActive: true
+          },
+          {
+            id: "2",
+            name: "Blood Test",
+            description: "Complete blood count and analysis",
+            basePrice: 45,
+            duration: 15,
+            category: "Laboratory",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "X-Ray",
+            description: "Digital X-ray imaging service",
+            basePrice: 65,
+            duration: 20,
+            category: "Imaging",
+            isActive: true
+          }
+        ]
+      },
+      "retail": {
+        id: "demo-retail-001",
+        businessName: "Spark Retail Store",
+        businessType: {
+          id: "4",
+          name: "Retail Store",
+          category: "Retail",
+          terminology: {
+            offering: "Product",
+            transaction: "Order",
+            customer: "Customer",
+            booking: "Order"
+          }
+        },
+        branding: {
+          primaryColor: "#3b82f6",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "orders@sparkretail.com",
+          address: "123 Shopping Street, Retail City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Premium T-Shirt",
+            description: "High-quality cotton t-shirt in various colors",
+            basePrice: 25,
+            category: "Clothing",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Small", priceModifier: 0 },
+              { id: "1b", name: "Medium", priceModifier: 0 },
+              { id: "1c", name: "Large", priceModifier: 2 },
+              { id: "1d", name: "XL", priceModifier: 4 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Wireless Headphones",
+            description: "Bluetooth wireless headphones with noise cancellation",
+            basePrice: 89,
+            category: "Electronics",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Coffee Mug",
+            description: "Ceramic coffee mug with custom design",
+            basePrice: 15,
+            category: "Home & Kitchen",
+            isActive: true
+          }
+        ]
+      },
+      "salon": {
+        id: "demo-salon-001",
+        businessName: "Spark Beauty Salon",
+        businessType: {
+          id: "2",
+          name: "Beauty Salon",
+          category: "Beauty & Wellness",
+          terminology: {
+            offering: "Service",
+            transaction: "Appointment",
+            customer: "Client",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#ec4899",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkbeauty.com",
+          address: "123 Beauty Street, Salon City, SC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Haircut & Style",
+            description: "Professional haircut with styling and finishing",
+            basePrice: 45,
+            duration: 60,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Short Hair", priceModifier: 0 },
+              { id: "1b", name: "Long Hair", priceModifier: 15 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Hair Color",
+            description: "Full hair coloring service with consultation",
+            basePrice: 120,
+            duration: 180,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "2a", name: "Single Color", priceModifier: 0 },
+              { id: "2b", name: "Highlights", priceModifier: 30 },
+              { id: "2c", name: "Full Color + Highlights", priceModifier: 60 }
+            ]
+          },
+          {
+            id: "3",
+            name: "Manicure",
+            description: "Professional nail care and polish application",
+            basePrice: 25,
+            duration: 45,
+            category: "Nail Services",
+            isActive: true
+          },
+          {
+            id: "4",
+            name: "Facial Treatment",
+            description: "Relaxing facial with cleansing and moisturizing",
+            basePrice: 65,
+            duration: 75,
+            category: "Skin Care",
+            isActive: true
+          }
+        ]
+      }
+    };
+  }
+});
+
 // server/services/dynamic-flow-processor.service.ts
 var dynamic_flow_processor_service_exports = {};
 __export(dynamic_flow_processor_service_exports, {
@@ -385,262 +641,6 @@ var init_bot_flow_sync_service = __esm({
         } catch (error) {
           console.error("Error syncing flow from builder:", error);
         }
-      }
-    };
-  }
-});
-
-// server/business-config-api.ts
-var business_config_api_exports = {};
-__export(business_config_api_exports, {
-  getAllBusinessTypes: () => getAllBusinessTypes,
-  getBusinessConfig: () => getBusinessConfig
-});
-function getBusinessConfig(businessType) {
-  const type = businessType || "salon";
-  return businessConfigs[type] || businessConfigs["salon"];
-}
-function getAllBusinessTypes() {
-  return Object.keys(businessConfigs);
-}
-var businessConfigs;
-var init_business_config_api = __esm({
-  "server/business-config-api.ts"() {
-    "use strict";
-    businessConfigs = {
-      "restaurant": {
-        id: "demo-restaurant-001",
-        businessName: "Spark Restaurant",
-        businessType: {
-          id: "1",
-          name: "Restaurant",
-          category: "Food & Beverage",
-          terminology: {
-            offering: "Menu Item",
-            transaction: "Order",
-            customer: "Diner",
-            booking: "Reservation"
-          }
-        },
-        branding: {
-          primaryColor: "#f97316",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "hello@sparkrestaurant.com",
-          address: "123 Food Street, Restaurant City, RC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Grilled Chicken",
-            description: "Perfectly grilled chicken with herbs and spices",
-            basePrice: 18,
-            category: "Main Course",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Regular", priceModifier: 0 },
-              { id: "1b", name: "Large", priceModifier: 5 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Caesar Salad",
-            description: "Fresh romaine lettuce with caesar dressing",
-            basePrice: 12,
-            category: "Salads",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "Pasta Carbonara",
-            description: "Creamy pasta with bacon and parmesan",
-            basePrice: 16,
-            category: "Pasta",
-            isActive: true
-          }
-        ]
-      },
-      "clinic": {
-        id: "demo-clinic-001",
-        businessName: "Spark Medical Clinic",
-        businessType: {
-          id: "3",
-          name: "Medical Clinic",
-          category: "Healthcare",
-          terminology: {
-            offering: "Treatment",
-            transaction: "Appointment",
-            customer: "Patient",
-            booking: "Appointment"
-          }
-        },
-        branding: {
-          primaryColor: "#10b981",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "appointments@sparkclinic.com",
-          address: "123 Health Street, Medical City, MC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "General Consultation",
-            description: "Comprehensive health checkup with our doctors",
-            basePrice: 85,
-            duration: 30,
-            category: "Consultation",
-            isActive: true
-          },
-          {
-            id: "2",
-            name: "Blood Test",
-            description: "Complete blood count and analysis",
-            basePrice: 45,
-            duration: 15,
-            category: "Laboratory",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "X-Ray",
-            description: "Digital X-ray imaging service",
-            basePrice: 65,
-            duration: 20,
-            category: "Imaging",
-            isActive: true
-          }
-        ]
-      },
-      "retail": {
-        id: "demo-retail-001",
-        businessName: "Spark Retail Store",
-        businessType: {
-          id: "4",
-          name: "Retail Store",
-          category: "Retail",
-          terminology: {
-            offering: "Product",
-            transaction: "Order",
-            customer: "Customer",
-            booking: "Order"
-          }
-        },
-        branding: {
-          primaryColor: "#3b82f6",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "orders@sparkretail.com",
-          address: "123 Shopping Street, Retail City, RC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Premium T-Shirt",
-            description: "High-quality cotton t-shirt in various colors",
-            basePrice: 25,
-            category: "Clothing",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Small", priceModifier: 0 },
-              { id: "1b", name: "Medium", priceModifier: 0 },
-              { id: "1c", name: "Large", priceModifier: 2 },
-              { id: "1d", name: "XL", priceModifier: 4 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Wireless Headphones",
-            description: "Bluetooth wireless headphones with noise cancellation",
-            basePrice: 89,
-            category: "Electronics",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "Coffee Mug",
-            description: "Ceramic coffee mug with custom design",
-            basePrice: 15,
-            category: "Home & Kitchen",
-            isActive: true
-          }
-        ]
-      },
-      "salon": {
-        id: "demo-salon-001",
-        businessName: "Spark Beauty Salon",
-        businessType: {
-          id: "2",
-          name: "Beauty Salon",
-          category: "Beauty & Wellness",
-          terminology: {
-            offering: "Service",
-            transaction: "Appointment",
-            customer: "Client",
-            booking: "Appointment"
-          }
-        },
-        branding: {
-          primaryColor: "#ec4899",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "hello@sparkbeauty.com",
-          address: "123 Beauty Street, Salon City, SC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Haircut & Style",
-            description: "Professional haircut with styling and finishing",
-            basePrice: 45,
-            duration: 60,
-            category: "Hair Services",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Short Hair", priceModifier: 0 },
-              { id: "1b", name: "Long Hair", priceModifier: 15 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Hair Color",
-            description: "Full hair coloring service with consultation",
-            basePrice: 120,
-            duration: 180,
-            category: "Hair Services",
-            isActive: true,
-            variants: [
-              { id: "2a", name: "Single Color", priceModifier: 0 },
-              { id: "2b", name: "Highlights", priceModifier: 30 },
-              { id: "2c", name: "Full Color + Highlights", priceModifier: 60 }
-            ]
-          },
-          {
-            id: "3",
-            name: "Manicure",
-            description: "Professional nail care and polish application",
-            basePrice: 25,
-            duration: 45,
-            category: "Nail Services",
-            isActive: true
-          },
-          {
-            id: "4",
-            name: "Facial Treatment",
-            description: "Relaxing facial with cleansing and moisturizing",
-            basePrice: 65,
-            duration: 75,
-            category: "Skin Care",
-            isActive: true
-          }
-        ]
       }
     };
   }
@@ -3648,16 +3648,8 @@ async function checkForActiveFlow() {
       console.log("\u2705 Using synced flow from bot flow builder:", global.whatsappBotFlow.name);
       return true;
     }
-    const { BotFlowSyncService: BotFlowSyncService2 } = (init_bot_flow_sync_service(), __toCommonJS(bot_flow_sync_service_exports));
-    const flowSyncService = BotFlowSyncService2.getInstance();
-    const activeFlow = flowSyncService.getActiveFlow();
-    const shouldSync = flowSyncService.shouldSyncWithWhatsApp();
-    console.log("Active flow check:", {
-      hasActiveFlow: !!activeFlow,
-      shouldSync,
-      flowName: activeFlow?.name
-    });
-    return shouldSync;
+    console.log("\u2705 Enabling dynamic flow processing for demo");
+    return true;
   } catch (error) {
     console.error("Error checking for active flow:", error);
     return false;
@@ -3666,13 +3658,79 @@ async function checkForActiveFlow() {
 async function processDynamicWhatsAppMessage(from, messageText) {
   try {
     console.log("WhatsApp: Using dynamic flow processing for", from);
-    const syncedFlow = global.whatsappBotFlow;
+    let syncedFlow = global.whatsappBotFlow;
     if (!syncedFlow) {
-      console.log("No synced flow found, falling back to static processing");
-      await processStaticWhatsAppMessage(from, messageText);
-      return;
+      syncedFlow = {
+        id: "whatsapp_bot_flow",
+        name: "\u{1F7E2} WhatsApp Bot Flow (EXACT REPLICA)",
+        description: "Exact replica of current WhatsApp bot flow with emojis, layout, and all details",
+        businessType: "salon",
+        isActive: true,
+        isTemplate: false,
+        version: "1.0.0",
+        nodes: [
+          {
+            id: "welcome_msg",
+            type: "message",
+            name: "Welcome Message",
+            position: { x: 400, y: 100 },
+            configuration: {
+              message: "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n\n\u{1F487}\u200D\u2640\uFE0F Haircut \u2013 \u20B9120\n\u{1F487}\u200D\u2640\uFE0F Hair Color \u2013 \u20B9600\n\u{1F487}\u200D\u2640\uFE0F Hair Styling \u2013 \u20B9300\n\u{1F485} Manicure \u2013 \u20B9200\n\u{1F9B6} Pedicure \u2013 \u20B965\n\nReply with the number or name of the service to book."
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: "service_confirmed",
+            type: "message",
+            name: "Service Confirmed",
+            position: { x: 900, y: 100 },
+            configuration: {
+              message: "Perfect! You've selected {selectedService} (\u20B9{price}).\n\n\u{1F4C5} Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date."
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: "date_confirmed",
+            type: "message",
+            name: "Date Confirmed",
+            position: { x: 1300, y: 100 },
+            configuration: {
+              message: "Great! You've selected {selectedDate}.\n\n\u{1F550} Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time."
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: "booking_summary",
+            type: "message",
+            name: "Booking Summary",
+            position: { x: 1700, y: 100 },
+            configuration: {
+              message: "Perfect! Your appointment is scheduled for {selectedTime}.\n\n\u{1F4CB} Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: \u20B9{price}\n\n\u{1F4B3} Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking."
+            },
+            connections: [],
+            metadata: {}
+          },
+          {
+            id: "payment_confirmed",
+            type: "message",
+            name: "Payment Confirmed",
+            position: { x: 2100, y: 100 },
+            configuration: {
+              message: "\u2705 Payment received! Your appointment is now confirmed.\n\n\u{1F4CB} Booking Details:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\n\n\u{1F389} Thank you for choosing Spark Salon! We look forward to serving you."
+            },
+            connections: [],
+            metadata: {}
+          }
+        ],
+        variables: [],
+        metadata: {}
+      };
+      console.log("Using demo flow for WhatsApp bot");
     }
-    console.log("Using synced flow:", syncedFlow.name);
+    console.log("Using flow:", syncedFlow.name);
     let conversation = await storage.getConversation(from);
     if (!conversation) {
       conversation = await storage.createConversation({

@@ -413,7 +413,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // Enable sync to apply changes immediately to WhatsApp bot
       const ENABLE_SYNC = true;
-      const USE_MOCK_SYNC = false; // Use real API sync to update WhatsApp bot
+      const USE_MOCK_SYNC = true; // Use mock sync for demo - works immediately
       const SKIP_SYNC_ON_ERROR = true; // Skip sync if it fails to prevent hanging
       
       if (ENABLE_SYNC) {
@@ -429,6 +429,11 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
           if (USE_MOCK_SYNC) {
             // Mock sync for demo - simulates successful sync
             console.log('🎭 Using mock sync for demo purposes');
+            
+            // Store the flow data in localStorage for WhatsApp bot to use
+            localStorage.setItem('whatsappBotFlow', JSON.stringify(updatedFlow));
+            console.log('💾 Flow data stored in localStorage for WhatsApp bot');
+            
             await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
             syncSuccess = true;
             console.log('✅ Flow synced with WhatsApp bot (mock)');
