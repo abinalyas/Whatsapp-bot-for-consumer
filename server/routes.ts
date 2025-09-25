@@ -1485,6 +1485,10 @@ We apologize for any inconvenience caused.`;
 
   // Simple sync endpoint that stores flow in memory (MOVED OUTSIDE bot-flows router to bypass tenant middleware)
   app.post('/api/sync-simple', (req, res) => {
+    console.log('🔄 Simple sync endpoint called - START');
+    console.log('🔄 Request method:', req.method);
+    console.log('🔄 Request URL:', req.url);
+    
     try {
       console.log('🔄 Simple sync endpoint called');
       console.log('Request body keys:', Object.keys(req.body || {}));
@@ -1521,6 +1525,19 @@ We apologize for any inconvenience caused.`;
         error: 'Failed to sync flow'
       });
     }
+  });
+  
+  console.log('✅ Route /api/sync-simple registered');
+  
+  // Test GET endpoint for sync-simple
+  app.get('/api/sync-simple', (req, res) => {
+    console.log('🧪 GET /api/sync-simple called');
+    res.json({
+      success: true,
+      message: 'Sync-simple endpoint is working',
+      method: 'GET',
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Get current flow data

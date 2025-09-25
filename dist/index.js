@@ -4740,6 +4740,9 @@ We apologize for any inconvenience caused.`;
     console.log("\u{1F9EA} Test sync endpoint called - RESPONSE SENT");
   });
   app2.post("/api/sync-simple", (req, res) => {
+    console.log("\u{1F504} Simple sync endpoint called - START");
+    console.log("\u{1F504} Request method:", req.method);
+    console.log("\u{1F504} Request URL:", req.url);
     try {
       console.log("\u{1F504} Simple sync endpoint called");
       console.log("Request body keys:", Object.keys(req.body || {}));
@@ -4768,6 +4771,16 @@ We apologize for any inconvenience caused.`;
         error: "Failed to sync flow"
       });
     }
+  });
+  console.log("\u2705 Route /api/sync-simple registered");
+  app2.get("/api/sync-simple", (req, res) => {
+    console.log("\u{1F9EA} GET /api/sync-simple called");
+    res.json({
+      success: true,
+      message: "Sync-simple endpoint is working",
+      method: "GET",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
   });
   app2.get("/api/bot-flows/current", async (req, res) => {
     try {
