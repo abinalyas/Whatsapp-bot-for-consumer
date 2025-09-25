@@ -4716,14 +4716,25 @@ We apologize for any inconvenience caused.`;
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
-  app2.get("/api/bot-flows/test-sync", async (req, res) => {
+  app2.get("/api/bot-flows/test-sync", (req, res) => {
     try {
       console.log("\u{1F9EA} Test sync endpoint called");
       console.log("\u{1F9EA} Request method:", req.method);
       console.log("\u{1F9EA} Request URL:", req.url);
-      const hasFlow = !!global.whatsappBotFlow;
-      const flowName = global.whatsappBotFlow?.name || "No flow";
-      const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
+      let hasFlow = false;
+      let flowName = "No flow";
+      let nodeCount = 0;
+      try {
+        hasFlow = !!global.whatsappBotFlow;
+        if (hasFlow) {
+          flowName = global.whatsappBotFlow.name || "Unnamed flow";
+          nodeCount = global.whatsappBotFlow.nodes?.length || 0;
+        }
+      } catch (globalError) {
+        console.log("\u26A0\uFE0F Error accessing global.whatsappBotFlow:", globalError.message);
+        hasFlow = false;
+        flowName = "Error accessing flow";
+      }
       console.log("\u2705 Global flow status:", { hasFlow, flowName, nodeCount });
       const response = {
         success: true,
@@ -4744,7 +4755,7 @@ We apologize for any inconvenience caused.`;
       });
     }
   });
-  app2.post("/api/bot-flows/sync-simple", async (req, res) => {
+  app2.post("/api/bot-flows/sync-simple", (req, res) => {
     try {
       console.log("\u{1F504} Simple sync endpoint called");
       console.log("Request body keys:", Object.keys(req.body || {}));
@@ -4761,13 +4772,11 @@ We apologize for any inconvenience caused.`;
       console.log("\u2705 Flow nodes count:", flowData.nodes?.length || 0);
       console.log("\u2705 Flow stored in global.whatsappBotFlow");
       console.log("\u2705 First node message preview:", flowData.nodes?.[0]?.configuration?.message?.substring(0, 100) || "No message");
-      setTimeout(() => {
-        res.json({
-          success: true,
-          message: "Flow synced successfully with WhatsApp bot",
-          flow: flowData
-        });
-      }, 100);
+      res.json({
+        success: true,
+        message: "Flow synced successfully with WhatsApp bot",
+        flow: flowData
+      });
     } catch (error) {
       console.error("\u274C Simple sync error:", error);
       res.status(500).json({
