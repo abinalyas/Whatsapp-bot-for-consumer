@@ -1454,51 +1454,33 @@ We apologize for any inconvenience caused.`;
     });
   });
 
+  // Alternative test sync endpoint
+  app.get('/api/sync-test', (req, res) => {
+    console.log('🧪 Alternative sync test endpoint called');
+    res.json({
+      success: true,
+      message: 'Alternative sync test completed',
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Test sync endpoint to verify flow is stored
   app.get('/api/bot-flows/test-sync', (req, res) => {
-    try {
-      console.log('🧪 Test sync endpoint called');
-      console.log('🧪 Request method:', req.method);
-      console.log('🧪 Request URL:', req.url);
-      
-      // Check if global.whatsappBotFlow exists
-      let hasFlow = false;
-      let flowName = 'No flow';
-      let nodeCount = 0;
-      
-      try {
-        hasFlow = !!global.whatsappBotFlow;
-        if (hasFlow) {
-          flowName = global.whatsappBotFlow.name || 'Unnamed flow';
-          nodeCount = global.whatsappBotFlow.nodes?.length || 0;
-        }
-      } catch (globalError) {
-        console.log('⚠️ Error accessing global.whatsappBotFlow:', globalError.message);
-        hasFlow = false;
-        flowName = 'Error accessing flow';
-      }
-      
-      console.log('✅ Global flow status:', { hasFlow, flowName, nodeCount });
-      
-      const response = {
-        success: true,
-        message: 'Sync test completed',
-        hasFlow,
-        flowName,
-        nodeCount,
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log('✅ Sending response:', response);
-      res.json(response);
-    } catch (error) {
-      console.error('❌ Test sync error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Test sync failed',
-        details: error.message
-      });
-    }
+    console.log('🧪 Test sync endpoint called - START');
+    
+    // Send immediate response to test if endpoint works
+    const response = {
+      success: true,
+      message: 'Sync test completed',
+      hasFlow: false,
+      flowName: 'No flow',
+      nodeCount: 0,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('🧪 Test sync endpoint called - SENDING RESPONSE');
+    res.json(response);
+    console.log('🧪 Test sync endpoint called - RESPONSE SENT');
   });
 
   // Simple sync endpoint that stores flow in memory

@@ -4717,44 +4717,27 @@ We apologize for any inconvenience caused.`;
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
+  app2.get("/api/sync-test", (req, res) => {
+    console.log("\u{1F9EA} Alternative sync test endpoint called");
+    res.json({
+      success: true,
+      message: "Alternative sync test completed",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  });
   app2.get("/api/bot-flows/test-sync", (req, res) => {
-    try {
-      console.log("\u{1F9EA} Test sync endpoint called");
-      console.log("\u{1F9EA} Request method:", req.method);
-      console.log("\u{1F9EA} Request URL:", req.url);
-      let hasFlow = false;
-      let flowName = "No flow";
-      let nodeCount = 0;
-      try {
-        hasFlow = !!global.whatsappBotFlow;
-        if (hasFlow) {
-          flowName = global.whatsappBotFlow.name || "Unnamed flow";
-          nodeCount = global.whatsappBotFlow.nodes?.length || 0;
-        }
-      } catch (globalError) {
-        console.log("\u26A0\uFE0F Error accessing global.whatsappBotFlow:", globalError.message);
-        hasFlow = false;
-        flowName = "Error accessing flow";
-      }
-      console.log("\u2705 Global flow status:", { hasFlow, flowName, nodeCount });
-      const response = {
-        success: true,
-        message: "Sync test completed",
-        hasFlow,
-        flowName,
-        nodeCount,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      console.log("\u2705 Sending response:", response);
-      res.json(response);
-    } catch (error) {
-      console.error("\u274C Test sync error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Test sync failed",
-        details: error.message
-      });
-    }
+    console.log("\u{1F9EA} Test sync endpoint called - START");
+    const response = {
+      success: true,
+      message: "Sync test completed",
+      hasFlow: false,
+      flowName: "No flow",
+      nodeCount: 0,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    console.log("\u{1F9EA} Test sync endpoint called - SENDING RESPONSE");
+    res.json(response);
+    console.log("\u{1F9EA} Test sync endpoint called - RESPONSE SENT");
   });
   app2.post("/api/bot-flows/sync-simple", (req, res) => {
     try {
