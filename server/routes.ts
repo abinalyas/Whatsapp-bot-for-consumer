@@ -1476,6 +1476,29 @@ We apologize for any inconvenience caused.`;
     }
   });
 
+  // Get current flow data
+  app.get('/api/bot-flows/current', async (req, res) => {
+    try {
+      if (global.whatsappBotFlow) {
+        res.json({
+          success: true,
+          flow: global.whatsappBotFlow
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'No active flow found'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Get current flow error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get current flow'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
