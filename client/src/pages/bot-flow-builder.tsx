@@ -265,15 +265,8 @@ const api = {
     try {
       console.log('🔄 Starting sync with WhatsApp bot for flow:', flow.name);
       
-      // Test if API is reachable (optional - don't fail if it doesn't work)
-      try {
-        const apiTest = await this.testBotFlowsAPI();
-        if (!apiTest) {
-          console.log('⚠️ API test failed, but continuing with sync attempt');
-        }
-      } catch (error) {
-        console.log('⚠️ API test error, but continuing with sync attempt:', error);
-      }
+      // Skip API test to prevent hanging
+      console.log('ℹ️ Skipping API test to prevent timeouts');
       
       // Add timeout to prevent hanging
       const controller = new AbortController();
@@ -427,28 +420,29 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
           });
           
           if (USE_MOCK_SYNC) {
-            // Mock sync for demo - simulates successful sync
+            // Mock sync for demo - works immediately
             console.log('🎭 Using mock sync for demo purposes');
             
             // Store the flow data in localStorage for WhatsApp bot to use
             localStorage.setItem('whatsappBotFlow', JSON.stringify(updatedFlow));
             console.log('💾 Flow data stored in localStorage for WhatsApp bot');
             
-            // Also try to sync via API as a backup
-            try {
-              const response = await fetch('/api/bot-flows/sync-simple', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ flowData: updatedFlow })
-              });
+            // Try API sync as a background task (non-blocking, no await)
+            fetch('/api/bot-flows/sync-simple', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ flowData: updatedFlow })
+            }).then(response => {
               if (response.ok) {
                 console.log('✅ API sync also successful');
+              } else {
+                console.log('⚠️ API sync failed with status:', response.status);
               }
-            } catch (apiError) {
+            }).catch(apiError => {
               console.log('⚠️ API sync failed, but localStorage sync works');
-            }
+            });
             
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+            // Immediate success - no waiting
             syncSuccess = true;
             console.log('✅ Flow synced with WhatsApp bot (mock)');
           } else {
