@@ -410,7 +410,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // Enable sync to apply changes immediately to WhatsApp bot
       const ENABLE_SYNC = true;
-      const USE_MOCK_SYNC = true; // Use mock sync for demo - works immediately
+      const USE_MOCK_SYNC = false; // Use real sync - API is working now
       const SKIP_SYNC_ON_ERROR = true; // Skip sync if it fails to prevent hanging
       
       if (ENABLE_SYNC) {
@@ -423,6 +423,12 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
             connectionsCount: updatedFlow.connections?.length || 0
           });
           
+          // Validate flow data before syncing
+          if (!updatedFlow || !updatedFlow.id || !updatedFlow.name) {
+            console.error('❌ Invalid flow data:', updatedFlow);
+            throw new Error('Invalid flow data - missing required fields');
+          }
+          
           if (USE_MOCK_SYNC) {
             // Mock sync for demo - works immediately
             console.log('🎭 Using mock sync for demo purposes');
@@ -432,7 +438,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
             console.log('💾 Flow data stored in localStorage for WhatsApp bot');
             
             // Try API sync as a background task (non-blocking, no await)
-            fetch('/api/bot-flows/sync-simple', {
+            fetch('/api/sync-simple', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ flowData: updatedFlow })
@@ -440,7 +446,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
               if (response.ok) {
                 console.log('✅ API sync also successful');
                 // Test if sync worked
-                fetch('/api/bot-flows/test-sync').then(testResponse => {
+                fetch('/api/test-sync').then(testResponse => {
                   if (testResponse.ok) {
                     testResponse.json().then(data => {
                       console.log('🧪 Sync verification:', data);
