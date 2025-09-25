@@ -4710,8 +4710,10 @@ We apologize for any inconvenience caused.`;
   app2.post("/api/bot-flows/sync-simple", async (req, res) => {
     try {
       console.log("\u{1F504} Simple sync endpoint called");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
       const { flowData } = req.body;
       if (!flowData) {
+        console.log("\u274C No flow data provided");
         return res.status(400).json({
           success: false,
           error: "Flow data is required"
@@ -4719,6 +4721,8 @@ We apologize for any inconvenience caused.`;
       }
       global.whatsappBotFlow = flowData;
       console.log("\u2705 Flow synced to WhatsApp bot:", flowData.name);
+      console.log("\u2705 Flow nodes count:", flowData.nodes?.length || 0);
+      console.log("\u2705 Flow stored in global.whatsappBotFlow");
       res.json({
         success: true,
         message: "Flow synced successfully with WhatsApp bot",
@@ -4757,6 +4761,22 @@ We apologize for any inconvenience caused.`;
     try {
       console.log("\u{1F9EA} Test sync endpoint called");
       console.log("Current global flow:", global.whatsappBotFlow ? global.whatsappBotFlow.name : "None");
+      if (!global.whatsappBotFlow) {
+        global.whatsappBotFlow = {
+          id: "test_flow",
+          name: "Test Flow",
+          nodes: [
+            {
+              id: "welcome_msg",
+              type: "message",
+              configuration: {
+                message: "This is a test message from the server!"
+              }
+            }
+          ]
+        };
+        console.log("\u2705 Set test flow in global.whatsappBotFlow");
+      }
       res.json({
         success: true,
         message: "Sync test successful",
