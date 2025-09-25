@@ -4708,26 +4708,39 @@ We apologize for any inconvenience caused.`;
       });
     }
   });
+  app2.get("/api/test", (req, res) => {
+    console.log("\u{1F9EA} Simple test endpoint called");
+    res.json({
+      success: true,
+      message: "API is working!",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  });
   app2.get("/api/bot-flows/test-sync", async (req, res) => {
     try {
       console.log("\u{1F9EA} Test sync endpoint called");
+      console.log("\u{1F9EA} Request method:", req.method);
+      console.log("\u{1F9EA} Request URL:", req.url);
       const hasFlow = !!global.whatsappBotFlow;
       const flowName = global.whatsappBotFlow?.name || "No flow";
       const nodeCount = global.whatsappBotFlow?.nodes?.length || 0;
       console.log("\u2705 Global flow status:", { hasFlow, flowName, nodeCount });
-      res.json({
+      const response = {
         success: true,
         message: "Sync test completed",
         hasFlow,
         flowName,
         nodeCount,
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      });
+      };
+      console.log("\u2705 Sending response:", response);
+      res.json(response);
     } catch (error) {
       console.error("\u274C Test sync error:", error);
       res.status(500).json({
         success: false,
-        error: "Test sync failed"
+        error: "Test sync failed",
+        details: error.message
       });
     }
   });
