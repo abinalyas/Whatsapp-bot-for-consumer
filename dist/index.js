@@ -3660,6 +3660,9 @@ async function processDynamicWhatsAppMessage(from, messageText) {
     console.log("WhatsApp: Using dynamic flow processing for", from);
     let syncedFlow = global.whatsappBotFlow;
     if (!syncedFlow) {
+      console.log("\u26A0\uFE0F No synced flow found, using demo flow");
+    }
+    if (!syncedFlow) {
       syncedFlow = {
         id: "whatsapp_bot_flow",
         name: "\u{1F7E2} WhatsApp Bot Flow (EXACT REPLICA)",
@@ -3790,7 +3793,11 @@ async function processMessageWithSyncedFlow(phoneNumber, messageText, conversati
     }
     let response = "";
     let newState = conversationState;
-    if (currentNode.configuration?.message) {
+    const isValidInput = validateUserInput(messageText, conversationState);
+    if (!isValidInput.valid) {
+      response = isValidInput.message;
+      newState = conversationState;
+    } else if (currentNode.configuration?.message) {
       response = currentNode.configuration.message;
       response = response.replace("{selectedService}", "Haircut");
       response = response.replace("{price}", "120");
@@ -3834,6 +3841,50 @@ async function processMessageWithSyncedFlow(phoneNumber, messageText, conversati
       response: "Sorry, I encountered an error. Please try again.",
       newState: "greeting"
     };
+  }
+}
+function validateUserInput(messageText, conversationState) {
+  const input = messageText.toLowerCase().trim();
+  switch (conversationState) {
+    case "greeting":
+      return { valid: true, message: "" };
+    case "awaiting_service":
+      const validServices = ["1", "2", "3", "4", "5", "haircut", "hair color", "hair styling", "manicure", "pedicure"];
+      if (validServices.some((service) => input.includes(service))) {
+        return { valid: true, message: "" };
+      }
+      return {
+        valid: false,
+        message: "\u274C Invalid service selection. Please choose from:\n\n1. Haircut\n2. Hair Color\n3. Hair Styling\n4. Manicure\n5. Pedicure\n\nReply with the number or name of the service."
+      };
+    case "awaiting_date":
+      const validDates = ["1", "2", "3", "4", "5", "6", "7"];
+      if (validDates.includes(input)) {
+        return { valid: true, message: "" };
+      }
+      return {
+        valid: false,
+        message: "\u274C Invalid date selection. Please choose a number from 1-7 for your preferred date."
+      };
+    case "awaiting_time":
+      const validTimes = ["1", "2", "3", "4", "5"];
+      if (validTimes.includes(input)) {
+        return { valid: true, message: "" };
+      }
+      return {
+        valid: false,
+        message: "\u274C Invalid time selection. Please choose a number from 1-5 for your preferred time."
+      };
+    case "awaiting_payment":
+      if (input.includes("paid") || input.includes("payment") || input.includes("done")) {
+        return { valid: true, message: "" };
+      }
+      return {
+        valid: false,
+        message: '\u274C Please confirm your payment by replying "paid" after completing the payment.'
+      };
+    default:
+      return { valid: true, message: "" };
   }
 }
 async function processStaticWhatsAppMessage(from, messageText) {
@@ -4651,6 +4702,31 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: "Test endpoint failed"
+      });
+    }
+  });
+  app2.post("/api/bot-flows/sync-simple", async (req, res) => {
+    try {
+      console.log("\u{1F504} Simple sync endpoint called");
+      const { flowData } = req.body;
+      if (!flowData) {
+        return res.status(400).json({
+          success: false,
+          error: "Flow data is required"
+        });
+      }
+      global.whatsappBotFlow = flowData;
+      console.log("\u2705 Flow synced to WhatsApp bot:", flowData.name);
+      res.json({
+        success: true,
+        message: "Flow synced successfully with WhatsApp bot",
+        flow: flowData
+      });
+    } catch (error) {
+      console.error("\u274C Simple sync error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to sync flow"
       });
     }
   });

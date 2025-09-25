@@ -150,6 +150,14 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
     // Get the synced flow from bot flow builder or use demo flow
     let syncedFlow = global.whatsappBotFlow;
     
+    // Try to get the flow from localStorage (this would be set by the bot flow builder)
+    // For now, we'll simulate getting the flow from localStorage
+    if (!syncedFlow) {
+      // In a real implementation, this would read from localStorage
+      // For demo, we'll use the demo flow but make it clear it's not synced
+      console.log("⚠️ No synced flow found, using demo flow");
+    }
+    
     if (!syncedFlow) {
       // Create a demo flow that matches the bot flow builder
       syncedFlow = {
@@ -313,7 +321,12 @@ async function processMessageWithSyncedFlow(
     let response = '';
     let newState = conversationState;
 
-    if (currentNode.configuration?.message) {
+    // Add input validation based on conversation state
+    const isValidInput = validateUserInput(messageText, conversationState);
+    if (!isValidInput.valid) {
+      response = isValidInput.message;
+      newState = conversationState; // Stay in same state
+    } else if (currentNode.configuration?.message) {
       response = currentNode.configuration.message;
       
       // Replace placeholders with actual values
@@ -365,6 +378,63 @@ async function processMessageWithSyncedFlow(
       response: 'Sorry, I encountered an error. Please try again.',
       newState: 'greeting'
     };
+  }
+}
+
+// Validate user input based on conversation state
+function validateUserInput(messageText: string, conversationState: string): { valid: boolean; message: string } {
+  const input = messageText.toLowerCase().trim();
+  
+  switch (conversationState) {
+    case 'greeting':
+      // Accept any input to start the conversation
+      return { valid: true, message: '' };
+      
+    case 'awaiting_service':
+      // Validate service selection
+      const validServices = ['1', '2', '3', '4', '5', 'haircut', 'hair color', 'hair styling', 'manicure', 'pedicure'];
+      if (validServices.some(service => input.includes(service))) {
+        return { valid: true, message: '' };
+      }
+      return { 
+        valid: false, 
+        message: '❌ Invalid service selection. Please choose from:\n\n1. Haircut\n2. Hair Color\n3. Hair Styling\n4. Manicure\n5. Pedicure\n\nReply with the number or name of the service.' 
+      };
+      
+    case 'awaiting_date':
+      // Validate date selection
+      const validDates = ['1', '2', '3', '4', '5', '6', '7'];
+      if (validDates.includes(input)) {
+        return { valid: true, message: '' };
+      }
+      return { 
+        valid: false, 
+        message: '❌ Invalid date selection. Please choose a number from 1-7 for your preferred date.' 
+      };
+      
+    case 'awaiting_time':
+      // Validate time selection
+      const validTimes = ['1', '2', '3', '4', '5'];
+      if (validTimes.includes(input)) {
+        return { valid: true, message: '' };
+      }
+      return { 
+        valid: false, 
+        message: '❌ Invalid time selection. Please choose a number from 1-5 for your preferred time.' 
+      };
+      
+    case 'awaiting_payment':
+      // Validate payment confirmation
+      if (input.includes('paid') || input.includes('payment') || input.includes('done')) {
+        return { valid: true, message: '' };
+      }
+      return { 
+        valid: false, 
+        message: '❌ Please confirm your payment by replying "paid" after completing the payment.' 
+      };
+      
+    default:
+      return { valid: true, message: '' };
   }
 }
 
@@ -1370,6 +1440,38 @@ We apologize for any inconvenience caused.`;
       res.status(500).json({
         success: false,
         error: 'Test endpoint failed'
+      });
+    }
+  });
+
+  // Simple sync endpoint that stores flow in memory
+  app.post('/api/bot-flows/sync-simple', async (req, res) => {
+    try {
+      console.log('🔄 Simple sync endpoint called');
+      const { flowData } = req.body;
+      
+      if (!flowData) {
+        return res.status(400).json({
+          success: false,
+          error: 'Flow data is required'
+        });
+      }
+      
+      // Store flow in global variable for WhatsApp bot to use
+      global.whatsappBotFlow = flowData;
+      
+      console.log('✅ Flow synced to WhatsApp bot:', flowData.name);
+      
+      res.json({
+        success: true,
+        message: 'Flow synced successfully with WhatsApp bot',
+        flow: flowData
+      });
+    } catch (error) {
+      console.error('❌ Simple sync error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to sync flow'
       });
     }
   });

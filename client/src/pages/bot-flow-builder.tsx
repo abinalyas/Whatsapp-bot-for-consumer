@@ -279,8 +279,8 @@ const api = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      console.log('📤 Sending sync request to /api/bot-flows/sync');
-      const response = await fetch('/api/bot-flows/sync', {
+      console.log('📤 Sending sync request to /api/bot-flows/sync-simple');
+      const response = await fetch('/api/bot-flows/sync-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -413,7 +413,7 @@ export const BotFlowBuilderPage: React.FC<BotFlowBuilderPageProps> = () => {
       
       // Enable sync to apply changes immediately to WhatsApp bot
       const ENABLE_SYNC = true;
-      const USE_MOCK_SYNC = true; // Use mock sync for demo - works immediately
+      const USE_MOCK_SYNC = false; // Use real sync to update WhatsApp bot
       const SKIP_SYNC_ON_ERROR = true; // Skip sync if it fails to prevent hanging
       
       if (ENABLE_SYNC) {
