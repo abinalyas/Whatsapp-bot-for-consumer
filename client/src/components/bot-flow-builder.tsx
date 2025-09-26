@@ -15,8 +15,11 @@ import {
   GitBranch, 
   Zap, 
   Link,
-  Eye
+  Eye,
+  FileText
 } from 'lucide-react';
+import { TemplateSelector } from './template-selector';
+import { IndustryTemplate } from '../../../shared/templates/industry-templates';
 
 // ===== TYPES =====
 
@@ -175,9 +178,17 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
   const [showProperties, setShowProperties] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // ===== TEMPLATE MANAGEMENT =====
+
+  const handleSelectTemplate = useCallback((template: IndustryTemplate) => {
+    setFlow(template.flow);
+    setShowTemplateSelector(false);
+  }, []);
 
   // ===== NODE MANAGEMENT =====
 
@@ -713,6 +724,14 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
+              onClick={() => setShowTemplateSelector(true)}
+              className="px-3 py-2 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors"
+            >
+              <FileText size={16} className="inline mr-1" />
+              Templates
+            </button>
+            
+            <button
               onClick={() => setShowNodePalette(!showNodePalette)}
               className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
@@ -1085,6 +1104,13 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Template Selector Modal */}
+      <TemplateSelector
+        isOpen={showTemplateSelector}
+        onClose={() => setShowTemplateSelector(false)}
+        onSelectTemplate={handleSelectTemplate}
+      />
     </div>
   );
 };
