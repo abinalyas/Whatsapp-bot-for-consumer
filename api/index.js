@@ -25,262 +25,6 @@ var __copyProps = (to, from, except, desc2) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// server/business-config-api.ts
-var business_config_api_exports = {};
-__export(business_config_api_exports, {
-  getAllBusinessTypes: () => getAllBusinessTypes,
-  getBusinessConfig: () => getBusinessConfig
-});
-function getBusinessConfig(businessType) {
-  const type = businessType || "salon";
-  return businessConfigs[type] || businessConfigs["salon"];
-}
-function getAllBusinessTypes() {
-  return Object.keys(businessConfigs);
-}
-var businessConfigs;
-var init_business_config_api = __esm({
-  "server/business-config-api.ts"() {
-    "use strict";
-    businessConfigs = {
-      "restaurant": {
-        id: "demo-restaurant-001",
-        businessName: "Spark Restaurant",
-        businessType: {
-          id: "1",
-          name: "Restaurant",
-          category: "Food & Beverage",
-          terminology: {
-            offering: "Menu Item",
-            transaction: "Order",
-            customer: "Diner",
-            booking: "Reservation"
-          }
-        },
-        branding: {
-          primaryColor: "#f97316",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "hello@sparkrestaurant.com",
-          address: "123 Food Street, Restaurant City, RC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Grilled Chicken",
-            description: "Perfectly grilled chicken with herbs and spices",
-            basePrice: 18,
-            category: "Main Course",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Regular", priceModifier: 0 },
-              { id: "1b", name: "Large", priceModifier: 5 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Caesar Salad",
-            description: "Fresh romaine lettuce with caesar dressing",
-            basePrice: 12,
-            category: "Salads",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "Pasta Carbonara",
-            description: "Creamy pasta with bacon and parmesan",
-            basePrice: 16,
-            category: "Pasta",
-            isActive: true
-          }
-        ]
-      },
-      "clinic": {
-        id: "demo-clinic-001",
-        businessName: "Spark Medical Clinic",
-        businessType: {
-          id: "3",
-          name: "Medical Clinic",
-          category: "Healthcare",
-          terminology: {
-            offering: "Treatment",
-            transaction: "Appointment",
-            customer: "Patient",
-            booking: "Appointment"
-          }
-        },
-        branding: {
-          primaryColor: "#10b981",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "appointments@sparkclinic.com",
-          address: "123 Health Street, Medical City, MC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "General Consultation",
-            description: "Comprehensive health checkup with our doctors",
-            basePrice: 85,
-            duration: 30,
-            category: "Consultation",
-            isActive: true
-          },
-          {
-            id: "2",
-            name: "Blood Test",
-            description: "Complete blood count and analysis",
-            basePrice: 45,
-            duration: 15,
-            category: "Laboratory",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "X-Ray",
-            description: "Digital X-ray imaging service",
-            basePrice: 65,
-            duration: 20,
-            category: "Imaging",
-            isActive: true
-          }
-        ]
-      },
-      "retail": {
-        id: "demo-retail-001",
-        businessName: "Spark Retail Store",
-        businessType: {
-          id: "4",
-          name: "Retail Store",
-          category: "Retail",
-          terminology: {
-            offering: "Product",
-            transaction: "Order",
-            customer: "Customer",
-            booking: "Order"
-          }
-        },
-        branding: {
-          primaryColor: "#3b82f6",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "orders@sparkretail.com",
-          address: "123 Shopping Street, Retail City, RC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Premium T-Shirt",
-            description: "High-quality cotton t-shirt in various colors",
-            basePrice: 25,
-            category: "Clothing",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Small", priceModifier: 0 },
-              { id: "1b", name: "Medium", priceModifier: 0 },
-              { id: "1c", name: "Large", priceModifier: 2 },
-              { id: "1d", name: "XL", priceModifier: 4 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Wireless Headphones",
-            description: "Bluetooth wireless headphones with noise cancellation",
-            basePrice: 89,
-            category: "Electronics",
-            isActive: true
-          },
-          {
-            id: "3",
-            name: "Coffee Mug",
-            description: "Ceramic coffee mug with custom design",
-            basePrice: 15,
-            category: "Home & Kitchen",
-            isActive: true
-          }
-        ]
-      },
-      "salon": {
-        id: "demo-salon-001",
-        businessName: "Spark Beauty Salon",
-        businessType: {
-          id: "2",
-          name: "Beauty Salon",
-          category: "Beauty & Wellness",
-          terminology: {
-            offering: "Service",
-            transaction: "Appointment",
-            customer: "Client",
-            booking: "Appointment"
-          }
-        },
-        branding: {
-          primaryColor: "#ec4899",
-          secondaryColor: "#64748b"
-        },
-        contact: {
-          phone: "+1 (555) 123-4567",
-          email: "hello@sparkbeauty.com",
-          address: "123 Beauty Street, Salon City, SC 12345"
-        },
-        offerings: [
-          {
-            id: "1",
-            name: "Haircut & Style",
-            description: "Professional haircut with styling and finishing",
-            basePrice: 45,
-            duration: 60,
-            category: "Hair Services",
-            isActive: true,
-            variants: [
-              { id: "1a", name: "Short Hair", priceModifier: 0 },
-              { id: "1b", name: "Long Hair", priceModifier: 15 }
-            ]
-          },
-          {
-            id: "2",
-            name: "Hair Color",
-            description: "Full hair coloring service with consultation",
-            basePrice: 120,
-            duration: 180,
-            category: "Hair Services",
-            isActive: true,
-            variants: [
-              { id: "2a", name: "Single Color", priceModifier: 0 },
-              { id: "2b", name: "Highlights", priceModifier: 30 },
-              { id: "2c", name: "Full Color + Highlights", priceModifier: 60 }
-            ]
-          },
-          {
-            id: "3",
-            name: "Manicure",
-            description: "Professional nail care and polish application",
-            basePrice: 25,
-            duration: 45,
-            category: "Nail Services",
-            isActive: true
-          },
-          {
-            id: "4",
-            name: "Facial Treatment",
-            description: "Relaxing facial with cleansing and moisturizing",
-            basePrice: 65,
-            duration: 75,
-            category: "Skin Care",
-            isActive: true
-          }
-        ]
-      }
-    };
-  }
-});
-
 // server/services/dynamic-flow-processor.service.ts
 var dynamic_flow_processor_service_exports = {};
 __export(dynamic_flow_processor_service_exports, {
@@ -610,6 +354,262 @@ Please confirm your booking by replying "CONFIRM" or "YES".`;
         content = content.replace(/\{selectedTime\}/g, context.selectedTime || "");
         content = content.replace(/\{phoneNumber\}/g, context.phoneNumber || "");
         return content;
+      }
+    };
+  }
+});
+
+// server/business-config-api.ts
+var business_config_api_exports = {};
+__export(business_config_api_exports, {
+  getAllBusinessTypes: () => getAllBusinessTypes,
+  getBusinessConfig: () => getBusinessConfig
+});
+function getBusinessConfig(businessType) {
+  const type = businessType || "salon";
+  return businessConfigs[type] || businessConfigs["salon"];
+}
+function getAllBusinessTypes() {
+  return Object.keys(businessConfigs);
+}
+var businessConfigs;
+var init_business_config_api = __esm({
+  "server/business-config-api.ts"() {
+    "use strict";
+    businessConfigs = {
+      "restaurant": {
+        id: "demo-restaurant-001",
+        businessName: "Spark Restaurant",
+        businessType: {
+          id: "1",
+          name: "Restaurant",
+          category: "Food & Beverage",
+          terminology: {
+            offering: "Menu Item",
+            transaction: "Order",
+            customer: "Diner",
+            booking: "Reservation"
+          }
+        },
+        branding: {
+          primaryColor: "#f97316",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkrestaurant.com",
+          address: "123 Food Street, Restaurant City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Grilled Chicken",
+            description: "Perfectly grilled chicken with herbs and spices",
+            basePrice: 18,
+            category: "Main Course",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Regular", priceModifier: 0 },
+              { id: "1b", name: "Large", priceModifier: 5 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Caesar Salad",
+            description: "Fresh romaine lettuce with caesar dressing",
+            basePrice: 12,
+            category: "Salads",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Pasta Carbonara",
+            description: "Creamy pasta with bacon and parmesan",
+            basePrice: 16,
+            category: "Pasta",
+            isActive: true
+          }
+        ]
+      },
+      "clinic": {
+        id: "demo-clinic-001",
+        businessName: "Spark Medical Clinic",
+        businessType: {
+          id: "3",
+          name: "Medical Clinic",
+          category: "Healthcare",
+          terminology: {
+            offering: "Treatment",
+            transaction: "Appointment",
+            customer: "Patient",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#10b981",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "appointments@sparkclinic.com",
+          address: "123 Health Street, Medical City, MC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "General Consultation",
+            description: "Comprehensive health checkup with our doctors",
+            basePrice: 85,
+            duration: 30,
+            category: "Consultation",
+            isActive: true
+          },
+          {
+            id: "2",
+            name: "Blood Test",
+            description: "Complete blood count and analysis",
+            basePrice: 45,
+            duration: 15,
+            category: "Laboratory",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "X-Ray",
+            description: "Digital X-ray imaging service",
+            basePrice: 65,
+            duration: 20,
+            category: "Imaging",
+            isActive: true
+          }
+        ]
+      },
+      "retail": {
+        id: "demo-retail-001",
+        businessName: "Spark Retail Store",
+        businessType: {
+          id: "4",
+          name: "Retail Store",
+          category: "Retail",
+          terminology: {
+            offering: "Product",
+            transaction: "Order",
+            customer: "Customer",
+            booking: "Order"
+          }
+        },
+        branding: {
+          primaryColor: "#3b82f6",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "orders@sparkretail.com",
+          address: "123 Shopping Street, Retail City, RC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Premium T-Shirt",
+            description: "High-quality cotton t-shirt in various colors",
+            basePrice: 25,
+            category: "Clothing",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Small", priceModifier: 0 },
+              { id: "1b", name: "Medium", priceModifier: 0 },
+              { id: "1c", name: "Large", priceModifier: 2 },
+              { id: "1d", name: "XL", priceModifier: 4 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Wireless Headphones",
+            description: "Bluetooth wireless headphones with noise cancellation",
+            basePrice: 89,
+            category: "Electronics",
+            isActive: true
+          },
+          {
+            id: "3",
+            name: "Coffee Mug",
+            description: "Ceramic coffee mug with custom design",
+            basePrice: 15,
+            category: "Home & Kitchen",
+            isActive: true
+          }
+        ]
+      },
+      "salon": {
+        id: "demo-salon-001",
+        businessName: "Spark Beauty Salon",
+        businessType: {
+          id: "2",
+          name: "Beauty Salon",
+          category: "Beauty & Wellness",
+          terminology: {
+            offering: "Service",
+            transaction: "Appointment",
+            customer: "Client",
+            booking: "Appointment"
+          }
+        },
+        branding: {
+          primaryColor: "#ec4899",
+          secondaryColor: "#64748b"
+        },
+        contact: {
+          phone: "+1 (555) 123-4567",
+          email: "hello@sparkbeauty.com",
+          address: "123 Beauty Street, Salon City, SC 12345"
+        },
+        offerings: [
+          {
+            id: "1",
+            name: "Haircut & Style",
+            description: "Professional haircut with styling and finishing",
+            basePrice: 45,
+            duration: 60,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "1a", name: "Short Hair", priceModifier: 0 },
+              { id: "1b", name: "Long Hair", priceModifier: 15 }
+            ]
+          },
+          {
+            id: "2",
+            name: "Hair Color",
+            description: "Full hair coloring service with consultation",
+            basePrice: 120,
+            duration: 180,
+            category: "Hair Services",
+            isActive: true,
+            variants: [
+              { id: "2a", name: "Single Color", priceModifier: 0 },
+              { id: "2b", name: "Highlights", priceModifier: 30 },
+              { id: "2c", name: "Full Color + Highlights", priceModifier: 60 }
+            ]
+          },
+          {
+            id: "3",
+            name: "Manicure",
+            description: "Professional nail care and polish application",
+            basePrice: 25,
+            duration: 45,
+            category: "Nail Services",
+            isActive: true
+          },
+          {
+            id: "4",
+            name: "Facial Treatment",
+            description: "Relaxing facial with cleansing and moisturizing",
+            basePrice: 65,
+            duration: 75,
+            category: "Skin Care",
+            isActive: true
+          }
+        ]
       }
     };
   }
@@ -3668,6 +3668,7 @@ router.post("/:id/test", async (req, res) => {
 var bot_flow_builder_routes_default = router;
 
 // server/routes.ts
+init_dynamic_flow_processor_service();
 var webhookVerificationSchema = z.object({
   "hub.mode": z.string(),
   "hub.challenge": z.string(),
@@ -3785,7 +3786,6 @@ async function processDynamicWhatsAppMessage(from, messageText) {
     if (syncedFlow) {
       console.log("\u2705 Using synced flow from bot flow builder:", syncedFlow.name);
       console.log("\u2705 Synced flow nodes:", syncedFlow.nodes?.length || 0);
-      console.log("\u2705 Synced flow first node message:", syncedFlow.nodes?.[0]?.configuration?.message?.substring(0, 50) || "No message");
     } else {
       console.log("\u26A0\uFE0F No synced flow found, using demo flow");
     }
@@ -3801,55 +3801,59 @@ async function processDynamicWhatsAppMessage(from, messageText) {
         nodes: [
           {
             id: "welcome_msg",
-            type: "message",
+            type: "service_message",
             name: "Welcome Message",
             position: { x: 400, y: 100 },
             configuration: {
-              message: "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n\n\u{1F487}\u200D\u2640\uFE0F Haircut \u2013 \u20B9120\n\u{1F487}\u200D\u2640\uFE0F Hair Color \u2013 \u20B9600\n\u{1F487}\u200D\u2640\uFE0F Hair Styling \u2013 \u20B9300\n\u{1F485} Manicure \u2013 \u20B9200\n\u{1F9B6} Pedicure \u2013 \u20B965\n\nReply with the number or name of the service to book."
+              welcomeText: "\u{1F44B} Welcome to Spark Salon!",
+              serviceIntro: "Here are our services:",
+              instruction: "Reply with the number or name of the service to book.",
+              showEmojis: true,
+              loadFromDatabase: true
             },
             connections: [],
             metadata: {}
           },
           {
             id: "service_confirmed",
-            type: "message",
-            name: "Service Confirmed",
+            type: "date_picker",
+            name: "Date Selection",
             position: { x: 900, y: 100 },
             configuration: {
-              message: "Perfect! You've selected {selectedService} (\u20B9{price}).\n\n\u{1F4C5} Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date."
+              minDate: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+              maxDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1e3).toISOString().split("T")[0],
+              availableDays: [0, 1, 2, 3, 4, 5, 6]
+              // All days
             },
             connections: [],
             metadata: {}
           },
           {
             id: "date_confirmed",
-            type: "message",
-            name: "Date Confirmed",
+            type: "time_slots",
+            name: "Time Selection",
             position: { x: 1300, y: 100 },
             configuration: {
-              message: "Great! You've selected {selectedDate}.\n\n\u{1F550} Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time."
+              timeSlots: [
+                { start: "09:00", end: "10:00" },
+                { start: "10:30", end: "11:30" },
+                { start: "12:00", end: "13:00" },
+                { start: "14:00", end: "15:00" },
+                { start: "15:30", end: "16:30" },
+                { start: "17:00", end: "18:00" }
+              ]
             },
             connections: [],
             metadata: {}
           },
           {
             id: "booking_summary",
-            type: "message",
+            type: "booking_summary",
             name: "Booking Summary",
             position: { x: 1700, y: 100 },
             configuration: {
-              message: "Perfect! Your appointment is scheduled for {selectedTime}.\n\n\u{1F4CB} Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: \u20B9{price}\n\n\u{1F4B3} Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking."
-            },
-            connections: [],
-            metadata: {}
-          },
-          {
-            id: "payment_confirmed",
-            type: "message",
-            name: "Payment Confirmed",
-            position: { x: 2100, y: 100 },
-            configuration: {
-              message: "\u2705 Payment received! Your appointment is now confirmed.\n\n\u{1F4CB} Booking Details:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\n\n\u{1F389} Thank you for choosing Spark Salon! We look forward to serving you."
+              template: '\u{1F4CB} **Booking Summary**\n\n\u{1F3AF} **Service:** {selectedService}\n\u{1F4B0} **Price:** \u20B9{price}\n\u{1F4C5} **Date:** {selectedDate}\n\u{1F550} **Time:** {selectedTime}\n\nPlease confirm your booking by replying "CONFIRM" or "YES".',
+              fallbackMessage: "Please contact us to complete your booking."
             },
             connections: [],
             metadata: {}
@@ -3868,150 +3872,94 @@ async function processDynamicWhatsAppMessage(from, messageText) {
         currentState: "greeting"
       });
     }
-    const result = await processMessageWithSyncedFlow(from, messageText, conversation.currentState, syncedFlow);
+    const dynamicProcessor = new DynamicFlowProcessorService(storage);
+    const context = {
+      tenantId: "default",
+      phoneNumber: from,
+      conversationId: conversation.id,
+      currentState: conversation.currentState,
+      selectedService: conversation.selectedService,
+      selectedDate: conversation.selectedDate,
+      selectedTime: conversation.selectedTime
+    };
+    const currentNode = syncedFlow.nodes.find(
+      (node) => node.id === conversation.currentState || conversation.currentState === "greeting" && node.id === "welcome_msg"
+    );
+    if (!currentNode) {
+      console.log("No matching node found for state:", conversation.currentState);
+      await sendWhatsAppMessage(from, "Sorry, I couldn't find the right response. Please start over.");
+      return;
+    }
+    console.log("Processing node:", currentNode.name, "Type:", currentNode.type);
+    const processedMessage = await dynamicProcessor.processNode(currentNode, context);
+    let newState = conversation.currentState;
+    let contextData = conversation.contextData || {};
+    if (conversation.currentState === "greeting") {
+      const services2 = await storage.getServices();
+      const selectedService = services2.find(
+        (service) => service.name.toLowerCase().includes(messageText.toLowerCase()) || messageText.includes(service.name.toLowerCase())
+      );
+      if (selectedService) {
+        newState = "service_confirmed";
+        contextData.selectedService = selectedService.id;
+        contextData.selectedServiceName = selectedService.name;
+        contextData.price = selectedService.price;
+      } else {
+        await sendWhatsAppMessage(from, processedMessage.content);
+        return;
+      }
+    } else if (conversation.currentState === "service_confirmed") {
+      const dateMatch = messageText.match(/(\d{1,2})/);
+      if (dateMatch) {
+        const dateIndex = parseInt(dateMatch[1]) - 1;
+        const availableDates = dynamicProcessor["generateAvailableDates"](7);
+        if (dateIndex >= 0 && dateIndex < availableDates.length) {
+          newState = "date_confirmed";
+          contextData.selectedDate = availableDates[dateIndex];
+        }
+      }
+    } else if (conversation.currentState === "date_confirmed") {
+      const timeMatch = messageText.match(/(\d{1,2})/);
+      if (timeMatch) {
+        const timeIndex = parseInt(timeMatch[1]) - 1;
+        const timeSlots = ["09:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
+        if (timeIndex >= 0 && timeIndex < timeSlots.length) {
+          newState = "booking_summary";
+          contextData.selectedTime = timeSlots[timeIndex];
+        }
+      }
+    } else if (conversation.currentState === "booking_summary") {
+      if (messageText.toLowerCase().includes("confirm") || messageText.toLowerCase().includes("yes")) {
+        newState = "completed";
+        if (contextData.selectedService && contextData.selectedDate && contextData.selectedTime) {
+          await storage.createBooking({
+            conversationId: conversation.id,
+            serviceId: contextData.selectedService,
+            phoneNumber: from,
+            amount: contextData.price,
+            status: "confirmed",
+            appointmentDate: contextData.selectedDate,
+            appointmentTime: contextData.selectedTime
+          });
+        }
+      }
+    }
     await storage.updateConversation(conversation.id, {
-      currentState: result.newState,
-      contextData: result.contextData
+      currentState: newState,
+      contextData,
+      selectedService: contextData.selectedService,
+      selectedDate: contextData.selectedDate,
+      selectedTime: contextData.selectedTime
     });
-    await sendWhatsAppMessage(from, result.response);
+    await sendWhatsAppMessage(from, processedMessage.content);
     console.log("\u2705 Dynamic flow processed successfully:", {
       phoneNumber: from,
-      newState: result.newState,
-      responseLength: result.response.length
+      newState,
+      responseLength: processedMessage.content.length
     });
   } catch (error) {
     console.error("Error in dynamic message processing:", error);
     await sendWhatsAppMessage(from, "Sorry, there was an issue with the dynamic flow. Please try again.");
-  }
-}
-async function processMessageWithSyncedFlow(phoneNumber, messageText, conversationState, syncedFlow) {
-  try {
-    console.log("Processing message with synced flow:", {
-      phoneNumber,
-      messageText,
-      conversationState,
-      flowName: syncedFlow.name
-    });
-    let currentNode = null;
-    switch (conversationState) {
-      case "greeting":
-        currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
-        break;
-      case "awaiting_service":
-        currentNode = syncedFlow.nodes.find((node) => node.id === "service_confirmed");
-        break;
-      case "awaiting_date":
-        currentNode = syncedFlow.nodes.find((node) => node.id === "date_confirmed");
-        break;
-      case "awaiting_time":
-        currentNode = syncedFlow.nodes.find((node) => node.id === "booking_summary");
-        break;
-      case "awaiting_payment":
-        currentNode = syncedFlow.nodes.find((node) => node.id === "payment_confirmed");
-        break;
-      default:
-        currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
-    }
-    if (!currentNode) {
-      currentNode = syncedFlow.nodes.find((node) => node.id === "welcome_msg");
-    }
-    if (!currentNode) {
-      throw new Error("No appropriate node found in synced flow");
-    }
-    let response = "";
-    let newState = conversationState;
-    const isValidInput = validateUserInput(messageText, conversationState);
-    if (!isValidInput.valid) {
-      response = isValidInput.message;
-      newState = conversationState;
-    } else if (currentNode.configuration?.message) {
-      response = currentNode.configuration.message;
-      response = response.replace("{selectedService}", "Haircut");
-      response = response.replace("{price}", "120");
-      response = response.replace("{selectedDate}", "Tomorrow");
-      response = response.replace("{selectedTime}", "10:00 AM");
-      const today = /* @__PURE__ */ new Date();
-      for (let i = 1; i <= 7; i++) {
-        const futureDate = new Date(today);
-        futureDate.setDate(today.getDate() + i);
-        const dateStr = futureDate.toLocaleDateString("en-GB", {
-          weekday: "short",
-          year: "numeric",
-          month: "short",
-          day: "numeric"
-        });
-        response = response.replace(`{date${i}}`, dateStr);
-      }
-      if (currentNode.id === "welcome_msg") {
-        newState = "awaiting_service";
-      } else if (currentNode.id === "service_confirmed") {
-        newState = "awaiting_date";
-      } else if (currentNode.id === "date_confirmed") {
-        newState = "awaiting_time";
-      } else if (currentNode.id === "booking_summary") {
-        newState = "awaiting_payment";
-      } else if (currentNode.id === "payment_confirmed") {
-        newState = "completed";
-      }
-    } else {
-      response = "Welcome! I can help you book an appointment.";
-      newState = "awaiting_service";
-    }
-    return {
-      response,
-      newState,
-      contextData: { syncedFlow: syncedFlow.name }
-    };
-  } catch (error) {
-    console.error("Error processing message with synced flow:", error);
-    return {
-      response: "Sorry, I encountered an error. Please try again.",
-      newState: "greeting"
-    };
-  }
-}
-function validateUserInput(messageText, conversationState) {
-  const input = messageText.toLowerCase().trim();
-  switch (conversationState) {
-    case "greeting":
-      return { valid: true, message: "" };
-    case "awaiting_service":
-      const validServices = ["1", "2", "3", "4", "5", "haircut", "hair color", "hair styling", "manicure", "pedicure"];
-      if (validServices.some((service) => input.includes(service))) {
-        return { valid: true, message: "" };
-      }
-      return {
-        valid: false,
-        message: "\u274C Invalid service selection. Please choose from:\n\n1. Haircut\n2. Hair Color\n3. Hair Styling\n4. Manicure\n5. Pedicure\n\nReply with the number or name of the service."
-      };
-    case "awaiting_date":
-      const validDates = ["1", "2", "3", "4", "5", "6", "7"];
-      if (validDates.includes(input)) {
-        return { valid: true, message: "" };
-      }
-      return {
-        valid: false,
-        message: "\u274C Invalid date selection. Please choose a number from 1-7 for your preferred date."
-      };
-    case "awaiting_time":
-      const validTimes = ["1", "2", "3", "4", "5"];
-      if (validTimes.includes(input)) {
-        return { valid: true, message: "" };
-      }
-      return {
-        valid: false,
-        message: "\u274C Invalid time selection. Please choose a number from 1-5 for your preferred time."
-      };
-    case "awaiting_payment":
-      if (input.includes("paid") || input.includes("payment") || input.includes("done")) {
-        return { valid: true, message: "" };
-      }
-      return {
-        valid: false,
-        message: '\u274C Please confirm your payment by replying "paid" after completing the payment.'
-      };
-    default:
-      return { valid: true, message: "" };
   }
 }
 async function processStaticWhatsAppMessage(from, messageText) {

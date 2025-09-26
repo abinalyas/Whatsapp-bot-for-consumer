@@ -5,6 +5,7 @@ import { z } from "zod";
 import { send } from "process";
 // import businessConfigRoutes from "./routes/business-config.routes"; // Temporarily disabled
 import botFlowRoutes from "./routes/bot-flow-builder.routes";
+import { DynamicFlowProcessorService } from './services/dynamic-flow-processor.service';
 
 // WhatsApp webhook verification schema
 const webhookVerificationSchema = z.object({
@@ -162,7 +163,6 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
     if (syncedFlow) {
       console.log("✅ Using synced flow from bot flow builder:", syncedFlow.name);
       console.log("✅ Synced flow nodes:", syncedFlow.nodes?.length || 0);
-      console.log("✅ Synced flow first node message:", syncedFlow.nodes?.[0]?.configuration?.message?.substring(0, 50) || 'No message');
     } else {
       console.log("⚠️ No synced flow found, using demo flow");
     }
@@ -180,55 +180,58 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
         nodes: [
           {
             id: 'welcome_msg',
-            type: 'message',
+            type: 'service_message',
             name: 'Welcome Message',
             position: { x: 400, y: 100 },
             configuration: {
-              message: '👋 Welcome to Spark Salon!\n\nHere are our services:\n\n💇‍♀️ Haircut – ₹120\n💇‍♀️ Hair Color – ₹600\n💇‍♀️ Hair Styling – ₹300\n💅 Manicure – ₹200\n🦶 Pedicure – ₹65\n\nReply with the number or name of the service to book.'
+              welcomeText: '👋 Welcome to Spark Salon!',
+              serviceIntro: 'Here are our services:',
+              instruction: 'Reply with the number or name of the service to book.',
+              showEmojis: true,
+              loadFromDatabase: true
             },
             connections: [],
             metadata: {}
           },
           {
             id: 'service_confirmed',
-            type: 'message',
-            name: 'Service Confirmed',
+            type: 'date_picker',
+            name: 'Date Selection',
             position: { x: 900, y: 100 },
             configuration: {
-              message: 'Perfect! You\'ve selected {selectedService} (₹{price}).\n\n📅 Now, please select your preferred appointment date.\n\nAvailable dates:\n1. {date1}\n2. {date2}\n3. {date3}\n4. {date4}\n5. {date5}\n6. {date6}\n7. {date7}\n\nReply with the number (1-7) for your preferred date.'
+              minDate: new Date().toISOString().split('T')[0],
+              maxDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              availableDays: [0, 1, 2, 3, 4, 5, 6] // All days
             },
             connections: [],
             metadata: {}
           },
           {
             id: 'date_confirmed',
-            type: 'message',
-            name: 'Date Confirmed',
+            type: 'time_slots',
+            name: 'Time Selection',
             position: { x: 1300, y: 100 },
             configuration: {
-              message: 'Great! You\'ve selected {selectedDate}.\n\n🕐 Now, please choose your preferred time slot:\n\nAvailable times:\n1. 10:00 AM\n2. 11:30 AM\n3. 02:00 PM\n4. 03:30 PM\n5. 05:00 PM\n\nReply with the number (1-5) for your preferred time.'
+              timeSlots: [
+                { start: '09:00', end: '10:00' },
+                { start: '10:30', end: '11:30' },
+                { start: '12:00', end: '13:00' },
+                { start: '14:00', end: '15:00' },
+                { start: '15:30', end: '16:30' },
+                { start: '17:00', end: '18:00' }
+              ]
             },
             connections: [],
             metadata: {}
           },
           {
             id: 'booking_summary',
-            type: 'message',
+            type: 'booking_summary',
             name: 'Booking Summary',
             position: { x: 1700, y: 100 },
             configuration: {
-              message: 'Perfect! Your appointment is scheduled for {selectedTime}.\n\n📋 Booking Summary:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\nAmount: ₹{price}\n\n💳 Please complete your payment:\n{upiLink}\n\nComplete payment in GPay/PhonePe/Paytm and reply \'paid\' to confirm your booking.'
-            },
-            connections: [],
-            metadata: {}
-          },
-          {
-            id: 'payment_confirmed',
-            type: 'message',
-            name: 'Payment Confirmed',
-            position: { x: 2100, y: 100 },
-            configuration: {
-              message: '✅ Payment received! Your appointment is now confirmed.\n\n📋 Booking Details:\nService: {selectedService}\nDate: {selectedDate}\nTime: {selectedTime}\n\n🎉 Thank you for choosing Spark Salon! We look forward to serving you.'
+              template: '📋 **Booking Summary**\n\n🎯 **Service:** {selectedService}\n💰 **Price:** ₹{price}\n📅 **Date:** {selectedDate}\n🕐 **Time:** {selectedTime}\n\nPlease confirm your booking by replying "CONFIRM" or "YES".',
+              fallbackMessage: 'Please contact us to complete your booking.'
             },
             connections: [],
             metadata: {}
@@ -251,22 +254,116 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
       });
     }
     
-    // Process message using the synced flow
-    const result = await processMessageWithSyncedFlow(from, messageText, conversation.currentState, syncedFlow);
+    // Initialize dynamic flow processor
+    const dynamicProcessor = new DynamicFlowProcessorService(storage);
+    
+    // Create context for dynamic processing
+    const context = {
+      tenantId: 'default',
+      phoneNumber: from,
+      conversationId: conversation.id,
+      currentState: conversation.currentState,
+      selectedService: conversation.selectedService,
+      selectedDate: conversation.selectedDate,
+      selectedTime: conversation.selectedTime
+    };
+    
+    // Find the current node based on conversation state
+    const currentNode = syncedFlow.nodes.find(node => 
+      node.id === conversation.currentState || 
+      (conversation.currentState === 'greeting' && node.id === 'welcome_msg')
+    );
+    
+    if (!currentNode) {
+      console.log("No matching node found for state:", conversation.currentState);
+      await sendWhatsAppMessage(from, "Sorry, I couldn't find the right response. Please start over.");
+      return;
+    }
+    
+    console.log("Processing node:", currentNode.name, "Type:", currentNode.type);
+    
+    // Process the node with dynamic data
+    const processedMessage = await dynamicProcessor.processNode(currentNode, context);
+    
+    // Handle user input and state transitions
+    let newState = conversation.currentState;
+    let contextData = conversation.contextData || {};
+    
+    // Process user input based on current state
+    if (conversation.currentState === 'greeting') {
+      // User is selecting a service
+      const services = await storage.getServices();
+      const selectedService = services.find(service => 
+        service.name.toLowerCase().includes(messageText.toLowerCase()) ||
+        messageText.includes(service.name.toLowerCase())
+      );
+      
+      if (selectedService) {
+        newState = 'service_confirmed';
+        contextData.selectedService = selectedService.id;
+        contextData.selectedServiceName = selectedService.name;
+        contextData.price = selectedService.price;
+      } else {
+        await sendWhatsAppMessage(from, processedMessage.content);
+        return;
+      }
+    } else if (conversation.currentState === 'service_confirmed') {
+      // User is selecting a date
+      const dateMatch = messageText.match(/(\d{1,2})/);
+      if (dateMatch) {
+        const dateIndex = parseInt(dateMatch[1]) - 1;
+        const availableDates = dynamicProcessor['generateAvailableDates'](7);
+        if (dateIndex >= 0 && dateIndex < availableDates.length) {
+          newState = 'date_confirmed';
+          contextData.selectedDate = availableDates[dateIndex];
+        }
+      }
+    } else if (conversation.currentState === 'date_confirmed') {
+      // User is selecting a time
+      const timeMatch = messageText.match(/(\d{1,2})/);
+      if (timeMatch) {
+        const timeIndex = parseInt(timeMatch[1]) - 1;
+        const timeSlots = ['09:00', '10:30', '12:00', '14:00', '15:30', '17:00'];
+        if (timeIndex >= 0 && timeIndex < timeSlots.length) {
+          newState = 'booking_summary';
+          contextData.selectedTime = timeSlots[timeIndex];
+        }
+      }
+    } else if (conversation.currentState === 'booking_summary') {
+      // User is confirming booking
+      if (messageText.toLowerCase().includes('confirm') || messageText.toLowerCase().includes('yes')) {
+        newState = 'completed';
+        // Create booking
+        if (contextData.selectedService && contextData.selectedDate && contextData.selectedTime) {
+          await storage.createBooking({
+            conversationId: conversation.id,
+            serviceId: contextData.selectedService,
+            phoneNumber: from,
+            amount: contextData.price,
+            status: 'confirmed',
+            appointmentDate: contextData.selectedDate,
+            appointmentTime: contextData.selectedTime
+          });
+        }
+      }
+    }
     
     // Update conversation state
     await storage.updateConversation(conversation.id, {
-      currentState: result.newState,
-      contextData: result.contextData
+      currentState: newState,
+      contextData: contextData,
+      selectedService: contextData.selectedService,
+      selectedDate: contextData.selectedDate,
+      selectedTime: contextData.selectedTime
     });
     
     // Send response
-    await sendWhatsAppMessage(from, result.response);
+    await sendWhatsAppMessage(from, processedMessage.content);
     
     console.log("✅ Dynamic flow processed successfully:", {
       phoneNumber: from,
-      newState: result.newState,
-      responseLength: result.response.length
+      newState: newState,
+      responseLength: processedMessage.content.length
     });
     
   } catch (error) {

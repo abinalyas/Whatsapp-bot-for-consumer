@@ -798,6 +798,104 @@ export const BotFlowBuilder: React.FC<BotFlowBuilderProps> = ({
               <Plus size={16} className="inline mr-1" />
               Welcome
             </button>
+
+            <button
+              onClick={() => {
+                // Quick action: Add a service list node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'service_list',
+                  name: 'Service Selection',
+                  position: { x: 400, y: 200 },
+                  configuration: {
+                    loadFromDatabase: true
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Services
+            </button>
+
+            <button
+              onClick={() => {
+                // Quick action: Add a date picker node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'date_picker',
+                  name: 'Date Selection',
+                  position: { x: 400, y: 300 },
+                  configuration: {
+                    minDate: new Date().toISOString().split('T')[0],
+                    maxDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    availableDays: [0, 1, 2, 3, 4, 5, 6]
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Dates
+            </button>
+
+            <button
+              onClick={() => {
+                // Quick action: Add a time slots node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'time_slots',
+                  name: 'Time Selection',
+                  position: { x: 400, y: 400 },
+                  configuration: {
+                    timeSlots: [
+                      { start: '09:00', end: '10:00' },
+                      { start: '10:30', end: '11:30' },
+                      { start: '12:00', end: '13:00' },
+                      { start: '14:00', end: '15:00' },
+                      { start: '15:30', end: '16:30' },
+                      { start: '17:00', end: '18:00' }
+                    ]
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Times
+            </button>
+
+            <button
+              onClick={() => {
+                // Quick action: Add a booking summary node
+                const newNode: BotFlowNode = {
+                  id: `node_${Date.now()}`,
+                  type: 'booking_summary',
+                  name: 'Booking Summary',
+                  position: { x: 400, y: 500 },
+                  configuration: {
+                    template: '📋 **Booking Summary**\n\n🎯 **Service:** {selectedService}\n💰 **Price:** ₹{price}\n📅 **Date:** {selectedDate}\n🕐 **Time:** {selectedTime}\n\nPlease confirm your booking by replying "CONFIRM" or "YES".',
+                    fallbackMessage: 'Please contact us to complete your booking.'
+                  },
+                  connections: [],
+                  metadata: {}
+                };
+                setNodes([...nodes, newNode]);
+              }}
+              className="px-3 py-2 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
+            >
+              <Plus size={16} className="inline mr-1" />
+              Summary
+            </button>
             
             <button
               onClick={handleTest}
