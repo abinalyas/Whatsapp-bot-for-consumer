@@ -5,7 +5,7 @@ export function Sidebar() {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
+    { href: "/", label: "Overview", icon: "fas fa-tachometer-alt" },
     { href: "/business-config-full", label: "Business Setup", icon: "fas fa-building" },
     { href: "/offerings", label: "Services", icon: "fas fa-cut" },
     { href: "/transactions", label: "Appointments", icon: "fas fa-calendar-check" },

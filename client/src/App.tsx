@@ -15,6 +15,7 @@ import BusinessDashboardPage from "@/pages/business-dashboard";
 import BusinessTypeDemoPage from "@/pages/business-type-demo";
 import BotFlowsListPage from "@/pages/bot-flows-list";
 import BotFlowBuilderPage from "@/pages/bot-flow-builder";
+import SalonDashboard from "@/pages/salon-dashboard";
 import TestRoutingPage from "@/pages/test-routing";
 import NotFound from "@/pages/not-found";
 
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/demo" component={BusinessTypeDemoPage} />
       <Route path="/bot-flows" component={BotFlowsListPage} />
       <Route path="/bot-flows/:flowId" component={BotFlowBuilderPage} />
+      <Route path="/salon-dashboard" component={SalonDashboard} />
       <Route path="/test" component={SimpleTestPage} />
       <Route path="/test-routing" component={TestRoutingPage} />
       <Route component={NotFound} />
