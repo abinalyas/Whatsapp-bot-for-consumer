@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -1549,6 +1549,25 @@ function CustomersSection() {
 }
 
 function PromotionsSection() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
+
+  const handleCreateCampaign = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleEditCampaign = (campaign) => {
+    setEditingCampaign(campaign);
+    setShowEditModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setEditingCampaign(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1557,7 +1576,7 @@ function PromotionsSection() {
           <h2 className="text-3xl font-bold">Promotions & Messaging</h2>
           <p className="text-muted-foreground">Create and manage marketing campaigns and customer communications.</p>
         </div>
-        <Button>
+        <Button onClick={handleCreateCampaign}>
           <Plus className="h-4 w-4 mr-2" />
           Create Campaign
         </Button>
@@ -1573,7 +1592,7 @@ function PromotionsSection() {
             {campaignTemplates.map((template) => (
               <Card key={template.id} className="relative">
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => handleEditCampaign(template)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                   <Button size="sm" variant="ghost">
@@ -1686,6 +1705,233 @@ function PromotionsSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Create Campaign Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Create New Campaign</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Campaign Name</label>
+                <input
+                  type="text"
+                  placeholder="Enter campaign name"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Type</label>
+                <select className="w-full p-3 border border-input rounded-md bg-background">
+                  <option value="promotion">Promotion</option>
+                  <option value="discount">Discount</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="greeting">Greeting</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Message</label>
+                <textarea
+                  rows={4}
+                  placeholder="Enter your message here..."
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use {`{name}`} for customer name, {`{service}`} for preferred service.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Discount (%)</label>
+                  <input
+                    type="number"
+                    placeholder="20"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Valid Until</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Target Audience</label>
+                <select className="w-full p-3 border border-input rounded-md bg-background">
+                  <option value="all">All Customers (156 customers)</option>
+                  <option value="vip">VIP Customers (25 customers)</option>
+                  <option value="new">New Customers (42 customers)</option>
+                  <option value="regular">Regular Customers (89 customers)</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Schedule Date (optional)</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Schedule Time (optional)</label>
+                  <div className="relative">
+                    <input
+                      type="time"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Campaign
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Campaign Modal */}
+      {showEditModal && editingCampaign && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Edit Campaign</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Campaign Name</label>
+                <input
+                  type="text"
+                  defaultValue={editingCampaign.name}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Type</label>
+                <select 
+                  defaultValue={editingCampaign.type}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                >
+                  <option value="promotion">Promotion</option>
+                  <option value="discount">Discount</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="greeting">Greeting</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Message</label>
+                <textarea
+                  rows={4}
+                  defaultValue={editingCampaign.description}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use {`{name}`} for customer name, {`{service}`} for preferred service.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Discount (%)</label>
+                  <input
+                    type="number"
+                    defaultValue={editingCampaign.discount.replace('%', '')}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Valid Until</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      defaultValue="2024-12-29"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Target Audience</label>
+                <select 
+                  defaultValue={editingCampaign.target === "All Customers" ? "all" : "vip"}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                >
+                  <option value="all">All Customers (156 customers)</option>
+                  <option value="vip">VIP Customers (25 customers)</option>
+                  <option value="new">New Customers (42 customers)</option>
+                  <option value="regular">Regular Customers (89 customers)</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Schedule Date (optional)</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Schedule Time (optional)</label>
+                  <div className="relative">
+                    <input
+                      type="time"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Campaign
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
