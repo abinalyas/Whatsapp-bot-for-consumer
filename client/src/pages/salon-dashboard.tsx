@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -186,6 +186,19 @@ const todaysStaffSchedule = [
   { time: "2:30 PM", staff: "Emma Johnson", customer: "John Smith", service: "Hair Wash" },
   { time: "4:00 PM", staff: "Sofia Martinez", customer: "Amanda White", service: "Facial" },
 ];
+
+const timeSlots = [
+  "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
+  "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM",
+  "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM"
+];
+
+const filterOptions = {
+  staffMembers: ["All Staff", "Emma Johnson", "David Rodriguez", "Anna Thompson", "Sofia Martinez"],
+  services: ["All Services", "Hair Cut", "Hair Color", "Beard Trim", "Manicure", "Pedicure", "Facial Treatment"],
+  status: ["All Status", "Confirmed", "Pending", "Cancelled", "Completed"]
+};
 
 function OverviewSection() {
   return (
@@ -699,6 +712,180 @@ function StaffSection() {
   );
 }
 
+function CalendarSection() {
+  const [viewMode, setViewMode] = useState("day");
+  const [selectedDate, setSelectedDate] = useState("Saturday, September 27, 2025");
+  const [filters, setFilters] = useState({
+    staffMember: "All Staff",
+    service: "All Services",
+    status: "All Status"
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Appointment Calendar</h2>
+          <p className="text-muted-foreground">Manage appointments and staff schedules.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "day" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("day")}
+          >
+            Day
+          </Button>
+          <Button
+            variant={viewMode === "week" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("week")}
+          >
+            Week
+          </Button>
+          <Button
+            variant={viewMode === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("month")}
+          >
+            Month
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Staff Member</label>
+              <div className="relative">
+                <select
+                  value={filters.staffMember}
+                  onChange={(e) => setFilters({...filters, staffMember: e.target.value})}
+                  className="w-full p-2 border border-input rounded-md bg-background"
+                >
+                  {filterOptions.staffMembers.map((member) => (
+                    <option key={member} value={member}>{member}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Service</label>
+              <div className="relative">
+                <select
+                  value={filters.service}
+                  onChange={(e) => setFilters({...filters, service: e.target.value})}
+                  className="w-full p-2 border border-input rounded-md bg-background"
+                >
+                  {filterOptions.services.map((service) => (
+                    <option key={service} value={service}>{service}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <div className="relative">
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  className="w-full p-2 border border-input rounded-md bg-background"
+                >
+                  {filterOptions.status.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Date Display */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold">{selectedDate}</h3>
+      </div>
+
+      {/* Calendar Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Available Slots */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Slots</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+              {timeSlots.map((time) => (
+                <Button
+                  key={time}
+                  variant="outline"
+                  className="h-10 text-sm"
+                  onClick={() => {
+                    // Handle slot selection
+                  }}
+                >
+                  {time}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appointments */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Appointments</CardTitle>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              New Appointment
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <CalendarDays className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No appointments found for this date.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4">
+            <Button variant="outline">
+              Block Time Slot
+            </Button>
+            <Button variant="outline">
+              Bulk Reschedule
+            </Button>
+            <Button variant="outline">
+              Send Reminders
+            </Button>
+            <Button variant="outline">
+              Export Schedule
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -710,6 +897,8 @@ export default function SalonDashboard() {
         return <ServicesSection />;
       case "staff":
         return <StaffSection />;
+      case "calendar":
+        return <CalendarSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
