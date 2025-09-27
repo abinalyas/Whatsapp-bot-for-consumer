@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -400,6 +400,51 @@ const customerSegments = [
   { name: "Regular Customers", count: 89 },
   { name: "Inactive (30+ days)", count: 18 }
 ];
+
+const businessInfo = {
+  name: "Bella Beauty Salon",
+  website: "www.bellasalon.com",
+  description: "Premium beauty and wellness services in the heart of downtown",
+  address: "123 Beauty Street, Fashion District, NY 10001",
+  phone: "+1 (555) 123-SALON",
+  email: "info@bellasalon.com"
+};
+
+const workingHours = [
+  { day: "Monday", enabled: true, start: "09:00 AM", end: "06:00 PM" },
+  { day: "Tuesday", enabled: true, start: "09:00 AM", end: "06:00 PM" },
+  { day: "Wednesday", enabled: true, start: "09:00 AM", end: "06:00 PM" },
+  { day: "Thursday", enabled: true, start: "09:00 AM", end: "08:00 PM" },
+  { day: "Friday", enabled: true, start: "09:00 AM", end: "08:00 PM" },
+  { day: "Saturday", enabled: true, start: "08:00 AM", end: "05:00 PM" },
+  { day: "Sunday", enabled: true, start: "10:00 AM", end: "04:00 PM" }
+];
+
+const holidays = [
+  { name: "Christmas Day", date: "2024-12-25" },
+  { name: "New Year's Day", date: "2024-01-01" },
+  { name: "Independence Day", date: "2024-07-04" },
+  { name: "Thanksgiving", date: "2024-11-28" }
+];
+
+const botSettings = {
+  greetingMessage: "Hello! Welcome to Bella Beauty Salon. How can I help you today?",
+  businessHoursMessage: "We're open Monday-Saturday 9AM-6PM. How can I assist you?",
+  bookingConfirmationMessage: "Great! I've scheduled your appointment. You'll receive a confirmation shortly.",
+  enableNotifications: true,
+  autoReminders: true,
+  reminderTime: 24
+};
+
+const paymentSettings = {
+  acceptCash: true,
+  acceptCards: true,
+  acceptUPI: true,
+  upiId: "bellasalon@paytm",
+  bankAccount: "****1234",
+  paymentGateway: "Stripe",
+  enableOnlinePayments: true
+};
 
 function OverviewSection() {
   return (
@@ -1645,6 +1690,393 @@ function PromotionsSection() {
   );
 }
 
+function SettingsSection() {
+  const [activeTab, setActiveTab] = useState("business-info");
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "business-info":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Business Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Business Name</label>
+                  <input
+                    type="text"
+                    defaultValue={businessInfo.name}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Website</label>
+                  <input
+                    type="text"
+                    defaultValue={businessInfo.website}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <textarea
+                  defaultValue={businessInfo.description}
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Address</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <label className="block text-sm font-medium">Address</label>
+              </div>
+              <input
+                type="text"
+                defaultValue={businessInfo.address}
+                className="w-full p-3 border border-input rounded-md bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <label className="block text-sm font-medium">Phone Number</label>
+                </div>
+                <input
+                  type="text"
+                  defaultValue={businessInfo.phone}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <label className="block text-sm font-medium">Email</label>
+                </div>
+                <input
+                  type="email"
+                  defaultValue={businessInfo.email}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Business Logo</h3>
+              <div className="border-2 border-dashed border-input rounded-lg p-8 text-center">
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">Click to upload your business logo</p>
+                <Button variant="outline">
+                  Choose File
+                </Button>
+              </div>
+            </div>
+
+            <Button className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Business Info
+            </Button>
+          </div>
+        );
+
+      case "working-hours":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Working Hours</h3>
+              <div className="space-y-4">
+                {workingHours.map((day, index) => (
+                  <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                    <div className="w-24 font-medium">{day.day}</div>
+                    <Switch checked={day.enabled} />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        defaultValue={day.start}
+                        className="p-2 border border-input rounded-md bg-background"
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        defaultValue={day.end}
+                        className="p-2 border border-input rounded-md bg-background"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Working Hours
+            </Button>
+          </div>
+        );
+
+      case "holidays":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Holiday Calendar</h3>
+              <div className="flex gap-4 mb-6">
+                <input
+                  type="date"
+                  placeholder="dd/mm/yyyy"
+                  className="p-3 border border-input rounded-md bg-background"
+                />
+                <input
+                  type="text"
+                  placeholder="e.g., Christmas Day"
+                  className="flex-1 p-3 border border-input rounded-md bg-background"
+                />
+                <Button>Add Holiday</Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Upcoming Holidays</h3>
+              <div className="space-y-2">
+                {holidays.map((holiday, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">{holiday.name}</div>
+                      <div className="text-sm text-muted-foreground">{holiday.date}</div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <X className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "bot-settings":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Bot Configuration</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Greeting Message</label>
+                  <input
+                    type="text"
+                    defaultValue={botSettings.greetingMessage}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Business Hours Message</label>
+                  <input
+                    type="text"
+                    defaultValue={botSettings.businessHoursMessage}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Booking Confirmation Message</label>
+                  <input
+                    type="text"
+                    defaultValue={botSettings.bookingConfirmationMessage}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Notifications</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Enable Notifications</div>
+                    <div className="text-sm text-muted-foreground">Allow bot to send notifications to customers</div>
+                  </div>
+                  <Switch checked={botSettings.enableNotifications} />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Auto Reminders</div>
+                    <div className="text-sm text-muted-foreground">Automatically send appointment reminders</div>
+                  </div>
+                  <Switch checked={botSettings.autoReminders} />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Reminder Time (hours before appointment)</div>
+                  </div>
+                  <input
+                    type="number"
+                    defaultValue={botSettings.reminderTime}
+                    className="w-20 p-2 border border-input rounded-md bg-background text-center"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Bot Settings
+            </Button>
+          </div>
+        );
+
+      case "payments":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Payment Configuration</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Accept cash at counter</div>
+                  </div>
+                  <Switch checked={paymentSettings.acceptCash} />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Accept credit/debit cards</div>
+                  </div>
+                  <Switch checked={paymentSettings.acceptCards} />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Accept UPI payments</div>
+                  </div>
+                  <Switch checked={paymentSettings.acceptUPI} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">UPI ID</label>
+                  <input
+                    type="text"
+                    defaultValue={paymentSettings.upiId}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Bank Account (Last 4 digits)</label>
+                  <input
+                    type="text"
+                    defaultValue={paymentSettings.bankAccount}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Payment Gateway</label>
+                  <select className="w-full p-3 border border-input rounded-md bg-background">
+                    <option value="Stripe">Stripe</option>
+                    <option value="PayPal">PayPal</option>
+                    <option value="Razorpay">Razorpay</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium">Allow customers to pay online when booking</div>
+                  </div>
+                  <Switch checked={paymentSettings.enableOnlinePayments} />
+                </div>
+              </div>
+            </div>
+
+            <Button className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Payment Settings
+            </Button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Settings</h2>
+          <p className="text-muted-foreground">Manage your salon configuration and preferences.</p>
+        </div>
+      </div>
+
+      {/* Settings Tabs */}
+      <div className="flex space-x-1 border-b">
+        <button
+          onClick={() => setActiveTab("business-info")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "business-info"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Briefcase className="h-4 w-4 mr-2 inline" />
+          Business Info
+        </button>
+        <button
+          onClick={() => setActiveTab("working-hours")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "working-hours"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Clock className="h-4 w-4 mr-2 inline" />
+          Working Hours
+        </button>
+        <button
+          onClick={() => setActiveTab("holidays")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "holidays"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Calendar className="h-4 w-4 mr-2 inline" />
+          Holidays
+        </button>
+        <button
+          onClick={() => setActiveTab("bot-settings")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "bot-settings"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <MessageSquare className="h-4 w-4 mr-2 inline" />
+          Bot Settings
+        </button>
+        <button
+          onClick={() => setActiveTab("payments")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "payments"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CreditCard className="h-4 w-4 mr-2 inline" />
+          Payments
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <Card>
+        <CardContent className="p-6">
+          {renderTabContent()}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -1664,6 +2096,8 @@ export default function SalonDashboard() {
         return <CustomersSection />;
       case "promotions":
         return <PromotionsSection />;
+      case "settings":
+        return <SettingsSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
