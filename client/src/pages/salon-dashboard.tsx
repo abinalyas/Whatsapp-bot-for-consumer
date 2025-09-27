@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -47,6 +48,77 @@ const feedbackSummary = {
     { customer: "Lisa R.", rating: 4, comment: "Great manicure, very relaxing atmosphere." },
   ]
 };
+
+const serviceCategories = [
+  { id: "all", name: "All Services" },
+  { id: "hair", name: "Hair" },
+  { id: "nails", name: "Nails" },
+  { id: "skincare", name: "Skincare" },
+  { id: "spa", name: "Spa" },
+];
+
+const services = [
+  {
+    id: 1,
+    title: "Hair Cut",
+    category: "hair",
+    description: "Professional hair cutting service",
+    price: 45,
+    duration: 60,
+    addOns: ["Hair Wash", "Styling"],
+    isAvailable: true,
+  },
+  {
+    id: 2,
+    title: "Hair Color",
+    category: "hair",
+    description: "Full hair coloring service",
+    price: 85,
+    duration: 120,
+    addOns: ["Deep Conditioning", "Styling"],
+    isAvailable: true,
+  },
+  {
+    id: 3,
+    title: "Manicure",
+    category: "nails",
+    description: "Complete manicure service",
+    price: 35,
+    duration: 45,
+    addOns: ["Nail Art", "French Tips"],
+    isAvailable: true,
+  },
+  {
+    id: 4,
+    title: "Pedicure",
+    category: "nails",
+    description: "Relaxing pedicure service",
+    price: 45,
+    duration: 60,
+    addOns: ["Callus Removal", "Nail Art"],
+    isAvailable: true,
+  },
+  {
+    id: 5,
+    title: "Facial Treatment",
+    category: "skincare",
+    description: "Deep cleansing facial treatment",
+    price: 75,
+    duration: 90,
+    addOns: ["Eye Treatment", "Neck Massage"],
+    isAvailable: false,
+  },
+  {
+    id: 6,
+    title: "Beard Trim",
+    category: "hair",
+    description: "Professional beard trimming and shaping",
+    price: 25,
+    duration: 30,
+    addOns: ["Beard Oil", "Hot Towel"],
+    isAvailable: true,
+  },
+];
 
 function OverviewSection() {
   return (
@@ -231,56 +303,166 @@ function OverviewSection() {
 }
 
 function ServicesSection() {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [viewMode, setViewMode] = useState("grid");
+
+  const filteredServices = selectedCategory === "all" 
+    ? services 
+    : services.filter(service => service.category === selectedCategory);
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">Services Management</h2>
-        <Button>Add New Service</Button>
+        <div>
+          <h2 className="text-3xl font-bold">Services Management</h2>
+          <p className="text-muted-foreground">Manage your salon services, pricing, and availability.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === "grid" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+          >
+            <Grid3X3 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Service
+          </Button>
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Hair Cut & Styling</CardTitle>
-            <Badge variant="default">Active</Badge>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Professional haircut and styling service</p>
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">$45</span>
-              <span className="text-sm text-muted-foreground">60 min</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Beard Trim</CardTitle>
-            <Badge variant="default">Active</Badge>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Professional beard trimming and shaping</p>
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">$25</span>
-              <span className="text-sm text-muted-foreground">30 min</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Hair Coloring</CardTitle>
-            <Badge variant="default">Active</Badge>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Professional hair coloring service</p>
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-bold">$120</span>
-              <span className="text-sm text-muted-foreground">120 min</span>
-            </div>
-          </CardContent>
-        </Card>
+
+      {/* Category Tabs */}
+      <div className="flex space-x-1 border-b">
+        {serviceCategories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedCategory === category.id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {category.name}
+          </button>
+        ))}
       </div>
+
+      {/* Services Grid */}
+      <div className={`grid gap-6 ${
+        viewMode === "grid" 
+          ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
+          : "grid-cols-1"
+      }`}>
+        {filteredServices.map((service) => (
+          <Card key={service.id} className="relative">
+            {/* Action Buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              <Button size="sm" variant="ghost">
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-lg">{service.title}</CardTitle>
+                  <Badge variant="secondary" className="mt-2">
+                    {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{service.description}</p>
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-2xl font-bold">${service.price}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {service.duration} mins
+                </div>
+              </div>
+
+              {/* Add-ons */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Add-ons:</span>
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {service.addOns.map((addOn, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {addOn}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Availability */}
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={service.isAvailable ? "default" : "destructive"}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {service.isAvailable ? "Available" : "Unavailable"}
+                  </Button>
+                </div>
+                <Switch
+                  checked={service.isAvailable}
+                  onCheckedChange={() => {
+                    // Handle availability toggle
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Services Summary & Analytics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Services Summary & Analytics
+            <Button variant="ghost" size="sm">
+              <Info className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{services.length}</div>
+              <div className="text-sm text-muted-foreground">Total Services</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{services.filter(s => s.isAvailable).length}</div>
+              <div className="text-sm text-muted-foreground">Available</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">${services.reduce((sum, s) => sum + s.price, 0)}</div>
+              <div className="text-sm text-muted-foreground">Total Value</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
