@@ -631,6 +631,33 @@ function OverviewSection() {
 function ServicesSection() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [deletingService, setDeletingService] = useState(null);
+
+  const handleAddService = () => {
+    setShowAddModal(true);
+  };
+
+  const handleEditService = (service) => {
+    setEditingService(service);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteService = (service) => {
+    setDeletingService(service);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setShowDeleteModal(false);
+    setEditingService(null);
+    setDeletingService(null);
+  };
 
   const filteredServices = selectedCategory === "all" 
     ? services 
@@ -659,10 +686,10 @@ function ServicesSection() {
           >
             <List className="h-4 w-4" />
           </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Service
-          </Button>
+                <Button onClick={handleAddService}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Service
+                </Button>
         </div>
       </div>
 
@@ -691,15 +718,15 @@ function ServicesSection() {
       }`}>
         {filteredServices.map((service) => (
           <Card key={service.id} className="relative">
-            {/* Action Buttons */}
-            <div className="absolute top-4 right-4 flex gap-2">
-              <Button size="sm" variant="ghost">
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button size="sm" variant="ghost" className="text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                  {/* Action Buttons */}
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => handleEditService(service)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDeleteService(service)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
 
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -789,6 +816,215 @@ function ServicesSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Service Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Add New Service</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Service Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Hair Cut"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <select className="w-full p-3 border border-input rounded-md bg-background">
+                  <option value="">Select category</option>
+                  <option value="hair">Hair</option>
+                  <option value="nails">Nails</option>
+                  <option value="skincare">Skincare</option>
+                  <option value="spa">Spa</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Price ($)</label>
+                  <input
+                    type="number"
+                    placeholder="45"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Duration (mins)</label>
+                  <input
+                    type="number"
+                    placeholder="60"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the service..."
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Add-ons (comma separated)</label>
+                <input
+                  type="text"
+                  placeholder="Hair Wash, Styling, etc."
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <div className="font-medium">Service Available</div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Service
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Service Modal */}
+      {showEditModal && editingService && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Edit Service</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Service Name</label>
+                <input
+                  type="text"
+                  defaultValue={editingService.title}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <select 
+                  defaultValue={editingService.category}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                >
+                  <option value="hair">Hair</option>
+                  <option value="nails">Nails</option>
+                  <option value="skincare">Skincare</option>
+                  <option value="spa">Spa</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Price ($)</label>
+                  <input
+                    type="number"
+                    defaultValue={editingService.price}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Duration (mins)</label>
+                  <input
+                    type="number"
+                    defaultValue={editingService.duration}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <textarea
+                  rows={3}
+                  defaultValue={editingService.description}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Add-ons (comma separated)</label>
+                <input
+                  type="text"
+                  defaultValue={editingService.addOns.join(", ")}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <div className="font-medium">Service Available</div>
+                </div>
+                <Switch defaultChecked={editingService.isAvailable} />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Service
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Service Modal */}
+      {showDeleteModal && deletingService && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Delete Service</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete this service? This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button variant="destructive">
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
