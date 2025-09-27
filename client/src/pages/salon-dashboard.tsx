@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -118,6 +118,73 @@ const services = [
     addOns: ["Beard Oil", "Hot Towel"],
     isAvailable: true,
   },
+];
+
+const staffMembers = [
+  {
+    id: 1,
+    name: "Emma Johnson",
+    role: "Senior Hair Stylist",
+    initials: "EJ",
+    email: "emma@bellasalon.com",
+    phone: "+1 (555) 123-4567",
+    workingHours: "9:00 AM - 6:00 PM",
+    specialties: ["Hair Cut", "Hair Color", "Styling"],
+    workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    rating: 4.9,
+    appointments: 156,
+    isAvailable: true,
+  },
+  {
+    id: 2,
+    name: "David Rodriguez",
+    role: "Barber",
+    initials: "DR",
+    email: "david@bellasalon.com",
+    phone: "+1 (555) 234-5678",
+    workingHours: "10:00 AM - 7:00 PM",
+    specialties: ["Hair Cut", "Beard Trim", "Shaving"],
+    workingDays: ["Tue", "Wed", "Thu", "Fri", "Sat"],
+    rating: 4.8,
+    appointments: 89,
+    isAvailable: true,
+  },
+  {
+    id: 3,
+    name: "Anna Thompson",
+    role: "Nail Technician",
+    initials: "AT",
+    email: "anna@bellasalon.com",
+    phone: "+1 (555) 345-6789",
+    workingHours: "9:00 AM - 5:00 PM",
+    specialties: ["Manicure", "Pedicure", "Nail Art"],
+    workingDays: ["Mon", "Wed", "Thu", "Fri", "Sat"],
+    rating: 4.7,
+    appointments: 134,
+    isAvailable: true,
+  },
+  {
+    id: 4,
+    name: "Sofia Martinez",
+    role: "Esthetician",
+    initials: "SM",
+    email: "sofia@bellasalon.com",
+    phone: "+1 (555) 456-7890",
+    workingHours: "11:00 AM - 8:00 PM",
+    specialties: ["Facial Treatment", "Skincare", "Eyebrow Shaping"],
+    workingDays: ["Mon", "Tue", "Thu", "Fri", "Sat"],
+    rating: 4.9,
+    appointments: 98,
+    isAvailable: false,
+  },
+];
+
+const todaysStaffSchedule = [
+  { time: "9:00 AM", staff: "Emma Johnson", customer: "Sarah Johnson", service: "Hair Cut" },
+  { time: "10:30 AM", staff: "David Rodriguez", customer: "Mike Chen", service: "Beard Trim" },
+  { time: "12:00 PM", staff: "Anna Thompson", customer: "Lisa Rodriguez", service: "Manicure" },
+  { time: "2:30 PM", staff: "Emma Johnson", customer: "John Smith", service: "Hair Wash" },
+  { time: "4:00 PM", staff: "Sofia Martinez", customer: "Amanda White", service: "Facial" },
 ];
 
 function OverviewSection() {
@@ -467,6 +534,171 @@ function ServicesSection() {
   );
 }
 
+function StaffSection() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Staff Management</h2>
+          <p className="text-muted-foreground">Manage your team members, schedules, and availability.</p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Staff
+        </Button>
+      </div>
+
+      {/* Staff Profiles */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {staffMembers.map((staff) => (
+          <Card key={staff.id} className="relative">
+            {/* Edit Button */}
+            <div className="absolute top-4 right-4">
+              <Button size="sm" variant="ghost">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <CardHeader className="pb-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                  {staff.initials}
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg">{staff.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{staff.role}</p>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Contact Info */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{staff.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{staff.phone}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span>{staff.workingHours}</span>
+                </div>
+              </div>
+
+              {/* Specialties */}
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Specialties:</span>
+                <div className="flex flex-wrap gap-1">
+                  {staff.specialties.map((specialty, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {specialty}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Working Days */}
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Working Days:</span>
+                <div className="flex gap-1">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <div
+                      key={day}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                        staff.workingDays.includes(day)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {day.slice(0, 1)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rating and Appointments */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < Math.floor(staff.rating)
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-medium">{staff.rating}</span>
+                  <span className="text-xs text-muted-foreground">({staff.appointments} appointments)</span>
+                </div>
+              </div>
+
+              {/* Availability */}
+              <div className="flex items-center justify-between pt-2 border-t">
+                <Button
+                  variant={staff.isAvailable ? "default" : "destructive"}
+                  size="sm"
+                  className="text-xs"
+                >
+                  {staff.isAvailable ? "Available" : "Unavailable"}
+                </Button>
+                <Switch
+                  checked={staff.isAvailable}
+                  onCheckedChange={() => {
+                    // Handle availability toggle
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Today's Staff Schedule */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Today's Staff Schedule</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Staff Member</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Service</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {todaysStaffSchedule.map((appointment, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{appointment.time}</TableCell>
+                  <TableCell>{appointment.staff}</TableCell>
+                  <TableCell>{appointment.customer}</TableCell>
+                  <TableCell>{appointment.service}</TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="outline">
+                      Reassign
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -476,6 +708,8 @@ export default function SalonDashboard() {
         return <OverviewSection />;
       case "services":
         return <ServicesSection />;
+      case "staff":
+        return <StaffSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
