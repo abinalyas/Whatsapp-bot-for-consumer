@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -315,6 +315,90 @@ const upcomingBirthdays = [
   { name: "John Smith", date: "2/14/2025", daysAway: 50 },
   { name: "Sarah Johnson", date: "3/15/2025", daysAway: 79 },
   { name: "Mike Chen", date: "7/22/2025", daysAway: 208 }
+];
+
+const campaignTemplates = [
+  {
+    id: 1,
+    name: "Weekend Special",
+    type: "discount",
+    description: "Weekend Special! Get 20% off on all hair services this Saturday & Sunday. Book now!",
+    discount: "20% discount",
+    validUntil: "Valid until 12/29/2024",
+    target: "All Customers"
+  },
+  {
+    id: 2,
+    name: "New Service Launch",
+    type: "promotion",
+    description: "Introducing our new Anti-Aging Facial! Book your session now and get 30% off. Limited time offer!",
+    discount: "30% discount",
+    validUntil: "Valid until 12/31/2024",
+    target: "VIP Customers"
+  },
+  {
+    id: 3,
+    name: "Birthday Wishes",
+    type: "birthday",
+    description: "Happy Birthday (name)! Enjoy a special 25% discount on your next visit. Valid for 30 days.",
+    discount: "25% discount",
+    validUntil: "Birthday Customers",
+    target: "Birthday Customers"
+  },
+  {
+    id: 4,
+    name: "Holiday Greetings",
+    type: "greeting",
+    description: "Season's Greetings from Bella Salon! Wishing you joy and beauty this holiday season.",
+    discount: "All Customers",
+    validUntil: "All Customers",
+    target: "All Customers"
+  }
+];
+
+const messageHistory = [
+  {
+    campaign: "Weekend Special",
+    sentDate: "12/26/2024",
+    recipients: 156,
+    delivered: 154,
+    read: 98,
+    responses: 12,
+    type: "WhatsApp",
+    openRate: 64,
+    responseRate: 12
+  },
+  {
+    campaign: "Birthday Wishes",
+    sentDate: "12/25/2024",
+    recipients: 8,
+    delivered: 8,
+    read: 6,
+    responses: 3,
+    type: "SMS",
+    openRate: 75,
+    responseRate: 50
+  },
+  {
+    campaign: "Holiday Greetings",
+    sentDate: "12/24/2024",
+    recipients: 200,
+    delivered: 198,
+    read: 145,
+    responses: 25,
+    type: "WhatsApp",
+    openRate: 73,
+    responseRate: 17
+  }
+];
+
+const customerSegments = [
+  { name: "All Customers", count: 156 },
+  { name: "New Customers", count: 42 },
+  { name: "VIP Customers", count: 25 },
+  { name: "Birthday This Month", count: 8 },
+  { name: "Regular Customers", count: 89 },
+  { name: "Inactive (30+ days)", count: 18 }
 ];
 
 function OverviewSection() {
@@ -1419,6 +1503,148 @@ function CustomersSection() {
   );
 }
 
+function PromotionsSection() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Promotions & Messaging</h2>
+          <p className="text-muted-foreground">Create and manage marketing campaigns and customer communications.</p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Campaign
+        </Button>
+      </div>
+
+      {/* Campaign Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Campaign Templates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {campaignTemplates.map((template) => (
+              <Card key={template.id} className="relative">
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <Button size="sm" variant="ghost">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={template.type === "discount" ? "default" : "secondary"}>
+                      {template.type}
+                    </Badge>
+                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Discount:</span>
+                      <span>{template.discount}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Valid Until:</span>
+                      <span>{template.validUntil}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Target:</span>
+                      <span>{template.target}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Message History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Message History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campaign</TableHead>
+                <TableHead>Sent Date</TableHead>
+                <TableHead>Recipients</TableHead>
+                <TableHead>Delivered</TableHead>
+                <TableHead>Read</TableHead>
+                <TableHead>Responses</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Performance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {messageHistory.map((message, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{message.campaign}</TableCell>
+                  <TableCell>{message.sentDate}</TableCell>
+                  <TableCell>{message.recipients}</TableCell>
+                  <TableCell>{message.delivered}</TableCell>
+                  <TableCell>{message.read}</TableCell>
+                  <TableCell>{message.responses}</TableCell>
+                  <TableCell>
+                    <Badge variant={message.type === "WhatsApp" ? "default" : "secondary"}>
+                      {message.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div>Open: {message.openRate}%</div>
+                      <div>Response: {message.responseRate}%</div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Customer Segments */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer Segments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {customerSegments.map((segment, index) => (
+              <Card key={index} className="relative">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold">{segment.count}</div>
+                      <div className="text-sm text-muted-foreground">{segment.name}</div>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Message
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -1436,6 +1662,8 @@ export default function SalonDashboard() {
         return <PaymentsSection />;
       case "customers":
         return <CustomersSection />;
+      case "promotions":
+        return <PromotionsSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
