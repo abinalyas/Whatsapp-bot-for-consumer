@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -27,11 +27,6 @@ const todaysAppointments = [
   { id: 5, time: "4:00 PM", customer: "Amanda White", service: "Facial Treatment", staff: "Sofia", status: "confirmed" },
 ];
 
-const revenueData = {
-  today: 850,
-  week: 5200,
-  month: 18500
-};
 
 const notifications = [
   { id: 1, type: "cancellation", message: "John Doe cancelled 3:00 PM appointment", time: "10 mins ago" },
@@ -200,6 +195,45 @@ const filterOptions = {
   status: ["All Status", "Confirmed", "Pending", "Cancelled", "Completed"]
 };
 
+const revenueData = {
+  today: { amount: 850, transactions: 8 },
+  week: { amount: 6900, change: "+12%", period: "from last week" },
+  month: { amount: 18500, transactions: 156 },
+  average: { amount: 133, period: "This week average" }
+};
+
+const revenueTrend = [
+  { day: "Mon", revenue: 450 },
+  { day: "Tue", revenue: 620 },
+  { day: "Wed", revenue: 580 },
+  { day: "Thu", revenue: 750 },
+  { day: "Fri", revenue: 920 },
+  { day: "Sat", revenue: 1100 },
+  { day: "Sun", revenue: 480 }
+];
+
+const revenueByService = [
+  { service: "Hair Cut", percentage: 35, amount: 6475, color: "bg-blue-500" },
+  { service: "Hair Color", percentage: 25, amount: 4625, color: "bg-green-500" },
+  { service: "Manicure", percentage: 20, amount: 3700, color: "bg-yellow-500" },
+  { service: "Facial", percentage: 12, amount: 2220, color: "bg-orange-500" },
+  { service: "Pedicure", percentage: 8, amount: 1480, color: "bg-purple-500" }
+];
+
+const recentTransactions = [
+  { date: "12/26/2024 2:30 PM", customer: "Sarah Johnson", service: "Hair Cut & Color", staff: "Emma", amount: 125, method: "Credit Card", status: "paid" },
+  { date: "12/26/2024 1:15 PM", customer: "Mike Chen", service: "Beard Trim", staff: "David", amount: 25, method: "Cash", status: "paid" },
+  { date: "12/26/2024 12:00 PM", customer: "Lisa Rodriguez", service: "Manicure", staff: "Anna", amount: 35, method: "UPI", status: "pending" },
+  { date: "12/25/2024 4:45 PM", customer: "John Smith", service: "Hair Wash & Style", staff: "Emma", amount: 65, method: "Credit Card", status: "paid" },
+  { date: "12/25/2024 3:20 PM", customer: "Amanda White", service: "Facial Treatment", staff: "Sofia", amount: 75, method: "UPI", status: "paid" }
+];
+
+const paymentMethods = [
+  { method: "Credit Card", amount: 4250, percentage: 62 },
+  { method: "UPI Payments", amount: 1890, percentage: 27 },
+  { method: "Cash", amount: 760, percentage: 11 }
+];
+
 function OverviewSection() {
   return (
     <div className="space-y-6">
@@ -211,7 +245,7 @@ function OverviewSection() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.today}</div>
+            <div className="text-2xl">${revenueData.today.amount}</div>
             <p className="text-xs text-muted-foreground">
               +12% from yesterday
             </p>
@@ -224,7 +258,7 @@ function OverviewSection() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.week}</div>
+            <div className="text-2xl">${revenueData.week.amount}</div>
             <p className="text-xs text-muted-foreground">
               +8% from last week
             </p>
@@ -237,7 +271,7 @@ function OverviewSection() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.month}</div>
+            <div className="text-2xl">${revenueData.month.amount}</div>
             <p className="text-xs text-muted-foreground">
               +15% from last month
             </p>
@@ -886,6 +920,232 @@ function CalendarSection() {
   );
 }
 
+function PaymentsSection() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Payments & Revenue</h2>
+          <p className="text-muted-foreground">Track income, transactions, and financial performance.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
+          <Button variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Revenue KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>Today's Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${revenueData.today.amount}</div>
+            <p className="text-xs text-muted-foreground">
+              {revenueData.today.transactions} transactions
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>This Week</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${revenueData.week.amount}</div>
+            <p className="text-xs text-muted-foreground">
+              {revenueData.week.change} {revenueData.week.period}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>This Month</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${revenueData.month.amount}</div>
+            <p className="text-xs text-muted-foreground">
+              {revenueData.month.transactions} transactions
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>Avg. Transaction</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${revenueData.average.amount}</div>
+            <p className="text-xs text-muted-foreground">
+              {revenueData.average.period}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end h-48">
+                {revenueTrend.map((item, index) => (
+                  <div key={index} className="flex flex-col items-center space-y-2">
+                    <div 
+                      className="bg-primary rounded-t-sm w-8"
+                      style={{ height: `${(item.revenue / 1200) * 180}px` }}
+                    ></div>
+                    <span className="text-xs text-muted-foreground">{item.day}</span>
+                    <span className="text-xs font-medium">${item.revenue}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue by Service */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue by Service</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {revenueByService.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                    <span className="text-sm font-medium">{item.service}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold">{item.percentage}%</div>
+                    <div className="text-xs text-muted-foreground">${item.amount}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent Transactions</CardTitle>
+          <div className="flex items-center gap-2">
+            <select className="text-sm border border-input rounded-md px-2 py-1">
+              <option>All Methods</option>
+              <option>Credit Card</option>
+              <option>UPI</option>
+              <option>Cash</option>
+            </select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Service</TableHead>
+                <TableHead>Staff</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTransactions.map((transaction, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{transaction.date}</TableCell>
+                  <TableCell>{transaction.customer}</TableCell>
+                  <TableCell>{transaction.service}</TableCell>
+                  <TableCell>{transaction.staff}</TableCell>
+                  <TableCell>${transaction.amount}</TableCell>
+                  <TableCell>{transaction.method}</TableCell>
+                  <TableCell>
+                    <Badge variant={transaction.status === "paid" ? "default" : "secondary"}>
+                      {transaction.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {transaction.status === "pending" && (
+                        <Button size="sm" variant="outline">Mark Paid</Button>
+                      )}
+                      <Button size="sm" variant="ghost">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Payment Methods Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {paymentMethods.map((method, index) => (
+          <Card key={index}>
+            <CardHeader>
+              <CardTitle className="text-lg">{method.method}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${method.amount.toLocaleString()}</div>
+              <p className="text-sm text-muted-foreground">
+                {method.percentage}% of total revenue
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4">
+            <Button variant="outline">
+              Process Refund
+            </Button>
+            <Button variant="outline">
+              Generate Invoice
+            </Button>
+            <Button variant="outline">
+              Send Payment Reminder
+            </Button>
+            <Button variant="outline">
+              Export Financial Report
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -899,6 +1159,8 @@ export default function SalonDashboard() {
         return <StaffSection />;
       case "calendar":
         return <CalendarSection />;
+      case "payments":
+        return <PaymentsSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
