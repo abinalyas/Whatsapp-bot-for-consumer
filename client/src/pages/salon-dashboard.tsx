@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift } from "lucide-react";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -232,6 +232,89 @@ const paymentMethods = [
   { method: "Credit Card", amount: 4250, percentage: 62 },
   { method: "UPI Payments", amount: 1890, percentage: 27 },
   { method: "Cash", amount: 760, percentage: 11 }
+];
+
+const customerKPIs = {
+  total: 5,
+  new: 1,
+  vip: 2,
+  regular: 3,
+  rating: 4.6,
+  revenue: 4335
+};
+
+const customers = [
+  {
+    id: 1,
+    name: "Sarah Johnson",
+    initials: "SJ",
+    email: "sarah.johnson@email.com",
+    phone: "+1 (555) 123-4567",
+    preferredStaff: "Emma",
+    visits: 24,
+    spent: 1850,
+    lastVisit: "12/20/2024",
+    rating: 5,
+    tags: ["VIP", "Regular"]
+  },
+  {
+    id: 2,
+    name: "Mike Chen",
+    initials: "MC",
+    email: "mike.chen@email.com",
+    phone: "+1 (555) 234-5678",
+    preferredStaff: "David",
+    visits: 12,
+    spent: 420,
+    lastVisit: "12/26/2024",
+    rating: 5,
+    tags: ["Regular"]
+  },
+  {
+    id: 3,
+    name: "Lisa Rodriguez",
+    initials: "LR",
+    email: "lisa.rodriguez@email.com",
+    phone: "+1 (555) 345-6789",
+    preferredStaff: "Anna",
+    visits: 8,
+    spent: 640,
+    lastVisit: "12/25/2024",
+    rating: 4,
+    tags: ["New"]
+  },
+  {
+    id: 4,
+    name: "John Smith",
+    initials: "JS",
+    email: "john.smith@email.com",
+    phone: "+1 (555) 456-7890",
+    preferredStaff: "Emma",
+    visits: 15,
+    spent: 975,
+    lastVisit: "12/24/2024",
+    rating: 4,
+    tags: ["Regular"]
+  },
+  {
+    id: 5,
+    name: "Amanda White",
+    initials: "AW",
+    email: "amanda.white@email.com",
+    phone: "+1 (555) 567-8901",
+    preferredStaff: "Sofia",
+    visits: 6,
+    spent: 450,
+    lastVisit: "12/22/2024",
+    rating: 5,
+    tags: ["VIP"]
+  }
+];
+
+const upcomingBirthdays = [
+  { name: "John Smith", date: "2/14/2025", daysAway: 50 },
+  { name: "Sarah Johnson", date: "3/15/2025", daysAway: 79 },
+  { name: "Mike Chen", date: "7/22/2025", daysAway: 208 }
 ];
 
 function OverviewSection() {
@@ -1146,6 +1229,196 @@ function PaymentsSection() {
   );
 }
 
+function CustomersSection() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Customers</h2>
+          <p className="text-muted-foreground">Customer Management</p>
+          <p className="text-sm text-muted-foreground">Manage customer relationships and communication.</p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Customer
+        </Button>
+      </div>
+
+      {/* Customer KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{customerKPIs.total}</div>
+            <div className="text-sm text-muted-foreground">Total Customers</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{customerKPIs.new}</div>
+            <div className="text-sm text-muted-foreground">New Customers</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{customerKPIs.vip}</div>
+            <div className="text-sm text-muted-foreground">VIP Customers</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{customerKPIs.regular}</div>
+            <div className="text-sm text-muted-foreground">Regular Customers</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{customerKPIs.rating}</div>
+            <div className="text-sm text-muted-foreground">Avg. Rating</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">${customerKPIs.revenue.toLocaleString()}</div>
+            <div className="text-sm text-muted-foreground">Total Revenue</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search customers by name, email, or phone..."
+            className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background"
+          />
+        </div>
+        <div className="relative">
+          <select className="px-4 py-2 border border-input rounded-md bg-background">
+            <option>All Customers</option>
+            <option>VIP Customers</option>
+            <option>Regular Customers</option>
+            <option>New Customers</option>
+          </select>
+          <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Customer List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Visits</TableHead>
+                <TableHead>Spent</TableHead>
+                <TableHead>Last Visit</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead>Tags</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                        {customer.initials}
+                      </div>
+                      <div>
+                        <div className="font-medium">{customer.name}</div>
+                        <div className="text-sm text-muted-foreground">Prefers {customer.preferredStaff}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="text-sm">{customer.email}</div>
+                      <div className="text-sm text-muted-foreground">{customer.phone}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{customer.visits}</TableCell>
+                  <TableCell>${customer.spent.toLocaleString()}</TableCell>
+                  <TableCell>{customer.lastVisit}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < customer.rating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {customer.tags.map((tag, index) => (
+                        <Badge key={index} variant={tag === "VIP" ? "default" : "secondary"} className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="ghost">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Birthdays */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gift className="h-5 w-5" />
+            Upcoming Birthdays
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {upcomingBirthdays.map((birthday, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">{birthday.name}</div>
+                    <div className="text-sm text-muted-foreground">{birthday.date} - {birthday.daysAway} days away</div>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline">
+                  Send Wishes
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
@@ -1161,6 +1434,8 @@ export default function SalonDashboard() {
         return <CalendarSection />;
       case "payments":
         return <PaymentsSection />;
+      case "customers":
+        return <CustomersSection />;
       default:
         return (
           <div className="flex items-center justify-center h-64">
