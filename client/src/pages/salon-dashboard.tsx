@@ -1030,6 +1030,34 @@ function ServicesSection() {
 }
 
 function StaffSection() {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+
+  const handleAddStaff = () => {
+    setShowAddModal(true);
+  };
+
+  const handleEditStaff = (staff) => {
+    setEditingStaff(staff);
+    setShowEditModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setEditingStaff(null);
+  };
+
+  const toggleDay = (day) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1038,7 +1066,7 @@ function StaffSection() {
           <h2 className="text-3xl font-bold">Staff Management</h2>
           <p className="text-muted-foreground">Manage your team members, schedules, and availability.</p>
         </div>
-        <Button>
+        <Button onClick={handleAddStaff}>
           <Plus className="h-4 w-4 mr-2" />
           Add Staff
         </Button>
@@ -1050,7 +1078,7 @@ function StaffSection() {
           <Card key={staff.id} className="relative">
             {/* Edit Button */}
             <div className="absolute top-4 right-4">
-              <Button size="sm" variant="ghost">
+              <Button size="sm" variant="ghost" onClick={() => handleEditStaff(staff)}>
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
@@ -1190,6 +1218,216 @@ function StaffSection() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Add Staff Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Add New Staff Member</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="John Doe"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Role</label>
+                  <input
+                    type="text"
+                    placeholder="Hair Stylist"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    placeholder="john@bellasalon.com"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Specialties (comma separated)</label>
+                <input
+                  type="text"
+                  placeholder="Hair Cut, Hair Color, Styling"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Working Hours</label>
+                <input
+                  type="text"
+                  placeholder="9:00 AM - 6:00 PM"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Working Days</label>
+                <div className="flex gap-2 mt-2">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <Button
+                      key={day}
+                      variant={selectedDays.includes(day) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleDay(day)}
+                      className="flex-1"
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <div className="font-medium">Currently Available</div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Staff Member
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Staff Modal */}
+      {showEditModal && editingStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Edit Staff Member</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    defaultValue={editingStaff.name}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Role</label>
+                  <input
+                    type="text"
+                    defaultValue={editingStaff.role}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    defaultValue={editingStaff.email}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    defaultValue={editingStaff.phone}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Specialties (comma separated)</label>
+                <input
+                  type="text"
+                  defaultValue={editingStaff.specialties.join(", ")}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Working Hours</label>
+                <input
+                  type="text"
+                  defaultValue={editingStaff.workingHours}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Working Days</label>
+                <div className="flex gap-2 mt-2">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <Button
+                      key={day}
+                      variant={editingStaff.workingDays.includes(day) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleDay(day)}
+                      className="flex-1"
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <div className="font-medium">Currently Available</div>
+                </div>
+                <Switch defaultChecked={editingStaff.isAvailable} />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Staff Member
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
