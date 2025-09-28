@@ -1427,6 +1427,7 @@ function StaffSection() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [showAvailabilityManager, setShowAvailabilityManager] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
   const [showStaffScheduler, setShowStaffScheduler] = useState(false);
