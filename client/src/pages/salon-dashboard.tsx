@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { salonApi } from "@/lib/salon-api";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -782,6 +783,36 @@ function ServicesSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [deletingService, setDeletingService] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load services from API
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoading(true);
+        const data = await salonApi.services.getAll();
+        setServices(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading services:', err);
+        setError('Failed to load services');
+        // Fallback to mock data
+        setServices([
+          { id: 1, name: "Hair Cut & Style", category: "Hair", base_price: 45, currency: "USD", duration_minutes: 60, is_active: true },
+          { id: 2, name: "Hair Color", category: "Hair", base_price: 80, currency: "USD", duration_minutes: 120, is_active: true },
+          { id: 3, name: "Manicure", category: "Nails", base_price: 35, currency: "USD", duration_minutes: 45, is_active: true },
+          { id: 4, name: "Pedicure", category: "Nails", base_price: 45, currency: "USD", duration_minutes: 60, is_active: true },
+          { id: 5, name: "Facial Treatment", category: "Skincare", base_price: 75, currency: "USD", duration_minutes: 90, is_active: true },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
 
   const handleAddService = () => {
     setShowAddModal(true);
@@ -795,6 +826,38 @@ function ServicesSection() {
   const handleDeleteService = (service) => {
     setDeletingService(service);
     setShowDeleteModal(true);
+  };
+
+  const handleSaveService = async (serviceData) => {
+    try {
+      if (editingService) {
+        // Update existing service
+        await salonApi.services.update(editingService.id, serviceData);
+        setServices(services.map(s => s.id === editingService.id ? { ...s, ...serviceData } : s));
+      } else {
+        // Create new service
+        const newService = await salonApi.services.create(serviceData);
+        setServices([...services, newService]);
+      }
+      setShowAddModal(false);
+      setShowEditModal(false);
+      setEditingService(null);
+    } catch (err) {
+      console.error('Error saving service:', err);
+      setError('Failed to save service');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await salonApi.services.delete(deletingService.id);
+      setServices(services.filter(s => s.id !== deletingService.id));
+      setShowDeleteModal(false);
+      setDeletingService(null);
+    } catch (err) {
+      console.error('Error deleting service:', err);
+      setError('Failed to delete service');
+    }
   };
 
   const handleCloseModals = () => {

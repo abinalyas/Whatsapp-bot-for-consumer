@@ -8,6 +8,11 @@
 import { Pool } from '@neondatabase/serverless';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function runMigration() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -23,7 +28,7 @@ async function runMigration() {
     console.log('🔄 Running database migration...');
     
     // Read the migration file
-    const migrationPath = join(__dirname, '../migrations/0004_add_missing_columns.sql');
+    const migrationPath = join(__dirname, '../migrations/0001_multi_tenant_schema.sql');
     const migrationSql = readFileSync(migrationPath, 'utf-8');
     
     // Execute the migration
@@ -31,14 +36,11 @@ async function runMigration() {
     
     console.log('✅ Migration completed successfully!');
     console.log('📋 Applied changes:');
-    console.log('   - Added duration_minutes column to services table');
-    console.log('   - Added customer_email column to bookings table');
-    console.log('   - Added custom_fields column to conversations table');
-    console.log('   - Added tenant_id column to messages table');
-    console.log('   - Added category and metadata columns to services table');
-    console.log('   - Added custom_fields and transaction_type columns to bookings table');
-    console.log('   - Created performance indexes');
-    console.log('   - Added data integrity constraints');
+    console.log('   - Created tenants table for multi-tenant support');
+    console.log('   - Created users table for tenant users and admins');
+    console.log('   - Created api_keys table for API authentication');
+    console.log('   - Created subscription_plans and subscriptions tables');
+    console.log('   - Created basic schema for multi-tenant SaaS platform');
     
   } catch (error) {
     console.error('❌ Migration failed:', error);
