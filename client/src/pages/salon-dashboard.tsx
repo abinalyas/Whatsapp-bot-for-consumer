@@ -827,20 +827,32 @@ function ServicesSection() {
     const loadServices = async () => {
       try {
         setLoading(true);
+        console.log('Loading services from API...');
         const data = await salonApi.services.getAll();
-        setServices(data);
-        setError(null);
+        console.log('Services API response:', data);
+        
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setServices(data);
+          setError(null);
+        } else {
+          console.warn('Services API returned non-array data:', data);
+          setServices([]);
+          setError('Invalid data format received');
+        }
       } catch (err) {
         console.error('Error loading services:', err);
         setError('Failed to load services');
         // Fallback to mock data
-        setServices([
+        const mockServices = [
           { id: 1, name: "Hair Cut & Style", category: "Hair", base_price: 45, currency: "USD", duration_minutes: 60, is_active: true },
           { id: 2, name: "Hair Color", category: "Hair", base_price: 80, currency: "USD", duration_minutes: 120, is_active: true },
           { id: 3, name: "Manicure", category: "Nails", base_price: 35, currency: "USD", duration_minutes: 45, is_active: true },
           { id: 4, name: "Pedicure", category: "Nails", base_price: 45, currency: "USD", duration_minutes: 60, is_active: true },
           { id: 5, name: "Facial Treatment", category: "Skincare", base_price: 75, currency: "USD", duration_minutes: 90, is_active: true },
-        ]);
+        ];
+        setServices(mockServices);
+        console.log('Using mock services data');
       } finally {
         setLoading(false);
       }
@@ -921,6 +933,26 @@ function ServicesSection() {
   const filteredServices = selectedCategory === "all" 
     ? (services || [])
     : (services || []).filter(service => service.category === selectedCategory);
+
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold">Services Management</h2>
+            <p className="text-muted-foreground">Manage your salon services, pricing, and availability.</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading services...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1017,7 +1049,7 @@ function ServicesSection() {
                   <Info className="h-3 w-3 text-muted-foreground" />
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {service.addOns.map((addOn, index) => (
+                  {(service.addOns || []).map((addOn, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
                       {addOn}
                     </Badge>
@@ -2572,7 +2604,7 @@ function CalendarSection() {
                       className="w-full p-3 border border-input rounded-md bg-background appearance-none"
                     >
                       <option value="">Select service</option>
-                      {services.map((service) => (
+                      {(services || []).map((service) => (
                         <option key={service.id} value={service.name}>{service.name}</option>
                       ))}
                     </select>
@@ -2588,7 +2620,7 @@ function CalendarSection() {
                       className="w-full p-3 border border-input rounded-md bg-background appearance-none"
                     >
                       <option value="">Select staff</option>
-                      {staff.map((staffMember) => (
+                      {(staff || []).map((staffMember) => (
                         <option key={staffMember.id} value={staffMember.name}>{staffMember.name}</option>
                       ))}
                     </select>
