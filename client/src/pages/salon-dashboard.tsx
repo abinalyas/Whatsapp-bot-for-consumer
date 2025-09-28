@@ -1579,6 +1579,17 @@ function CalendarSection() {
     service: "All Services",
     status: "All Status"
   });
+  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
+  const [newAppointment, setNewAppointment] = useState({
+    customerName: "",
+    phone: "+1 (555) 123-4567",
+    email: "customer@email.com",
+    service: "",
+    staffMember: "",
+    date: "28/09/2025",
+    time: "",
+    notes: ""
+  });
 
   // Mock data for appointments
   const appointments = [
@@ -1607,6 +1618,31 @@ function CalendarSection() {
   ];
 
   const staffMembers = ["Emma", "David", "Anna", "Sofia"];
+  const services = ["Hair Cut", "Hair Color", "Hair Cut & Color", "Beard Trim", "Manicure", "Pedicure", "Facial Treatment", "Hair Styling", "Beard Styling", "Eye Facial"];
+
+  const handleNewAppointment = () => {
+    setShowNewAppointmentModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowNewAppointmentModal(false);
+    setNewAppointment({
+      customerName: "",
+      phone: "+1 (555) 123-4567",
+      email: "customer@email.com",
+      service: "",
+      staffMember: "",
+      date: "28/09/2025",
+      time: "",
+      notes: ""
+    });
+  };
+
+  const handleBookAppointment = () => {
+    // Handle booking logic here
+    console.log("Booking appointment:", newAppointment);
+    handleCloseModal();
+  };
 
   const getAppointmentsForDate = (date) => {
     return appointments.filter(apt => 
@@ -2066,7 +2102,7 @@ function CalendarSection() {
           >
             Month
           </Button>
-          <Button className="ml-4">
+          <Button className="ml-4" onClick={handleNewAppointment}>
             <Plus className="h-4 w-4 mr-2" />
             New Appointment
           </Button>
@@ -2165,6 +2201,145 @@ function CalendarSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* New Appointment Modal */}
+      {showNewAppointmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Add New Appointment</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModal}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name</label>
+                <input
+                  type="text"
+                  placeholder="Customer name"
+                  value={newAppointment.customerName}
+                  onChange={(e) => setNewAppointment({...newAppointment, customerName: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              {/* Phone and Email Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={newAppointment.phone}
+                    onChange={(e) => setNewAppointment({...newAppointment, phone: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={newAppointment.email}
+                    onChange={(e) => setNewAppointment({...newAppointment, email: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              {/* Service and Staff Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Service</label>
+                  <div className="relative">
+                    <select
+                      value={newAppointment.service}
+                      onChange={(e) => setNewAppointment({...newAppointment, service: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select service</option>
+                      {services.map((service) => (
+                        <option key={service} value={service}>{service}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Staff Member</label>
+                  <div className="relative">
+                    <select
+                      value={newAppointment.staffMember}
+                      onChange={(e) => setNewAppointment({...newAppointment, staffMember: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select staff</option>
+                      {staffMembers.map((staff) => (
+                        <option key={staff} value={staff}>{staff}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Date and Time Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newAppointment.date}
+                      onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Time</label>
+                  <div className="relative">
+                    <select
+                      value={newAppointment.time}
+                      onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select time</option>
+                      {timeSlots.map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Additional Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Any special requirements or notes"
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModal}>
+                Cancel
+              </Button>
+              <Button onClick={handleBookAppointment}>
+                Book Appointment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
