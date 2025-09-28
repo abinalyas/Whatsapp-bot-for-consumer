@@ -2174,18 +2174,66 @@ function CalendarSection() {
           salonApi.services.getAll(),
           staffApi.getAll()
         ]);
-        setAppointments(appointmentsData);
+        // Enhance appointments with calendar display properties
+        const enhancedAppointments = appointmentsData.map(apt => {
+          const appointmentDateTime = new Date(apt.scheduled_at);
+          return {
+            ...apt,
+            // Calendar display properties
+            customer: apt.customer_name,
+            service: apt.service_name,
+            staff: apt.staff_name || 'Unassigned',
+            duration: apt.duration_minutes,
+            time: appointmentDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            status: 'confirmed'
+          };
+        });
+        
+        setAppointments(enhancedAppointments);
         setServices(servicesData);
         setStaff(staffData);
         setError(null);
       } catch (err) {
         console.error('Error loading calendar data:', err);
         setError('Failed to load calendar data');
-        // Fallback to mock data
-        setAppointments([
-          { id: 1, customer_name: "Sarah Johnson", service_name: "Hair Cut & Color", staff_name: "Emma", scheduled_at: new Date().toISOString(), duration_minutes: 120, amount: 180, payment_status: "paid" },
-          { id: 2, customer_name: "Mike Chen", service_name: "Beard Trim", staff_name: "David", scheduled_at: new Date().toISOString(), duration_minutes: 30, amount: 35, payment_status: "paid" }
-        ]);
+        // Fallback to mock data with calendar display properties
+        const mockAppointments = [
+          { 
+            id: 1, 
+            customer_name: "Sarah Johnson", 
+            service_name: "Hair Cut & Color", 
+            staff_name: "Emma", 
+            scheduled_at: new Date().toISOString(), 
+            duration_minutes: 120, 
+            amount: 180, 
+            payment_status: "paid",
+            // Calendar display properties
+            customer: "Sarah Johnson",
+            service: "Hair Cut & Color",
+            staff: "Emma",
+            duration: 120,
+            time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            status: 'confirmed'
+          },
+          { 
+            id: 2, 
+            customer_name: "Mike Chen", 
+            service_name: "Beard Trim", 
+            staff_name: "David", 
+            scheduled_at: new Date().toISOString(), 
+            duration_minutes: 30, 
+            amount: 35, 
+            payment_status: "paid",
+            // Calendar display properties
+            customer: "Mike Chen",
+            service: "Beard Trim",
+            staff: "David",
+            duration: 30,
+            time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            status: 'confirmed'
+          }
+        ];
+        setAppointments(mockAppointments);
         setServices([
           { id: 1, name: "Hair Cut & Style", category: "Hair", base_price: 45 },
           { id: 2, name: "Hair Color", category: "Hair", base_price: 80 },
