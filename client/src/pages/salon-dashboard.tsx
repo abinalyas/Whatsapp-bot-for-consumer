@@ -2236,12 +2236,26 @@ function CalendarSection() {
       
       // Create appointment data
       const selectedService = services.find(s => s.id === newAppointment.service);
+      
+      // Validate and format date/time
+      const appointmentDate = newAppointment.date || new Date().toISOString().split('T')[0];
+      const appointmentTime = newAppointment.time || '09:00';
+      
+      // Create date string in proper format
+      const dateTimeString = `${appointmentDate}T${appointmentTime}:00`;
+      const appointmentDateTime = new Date(dateTimeString);
+      
+      // Validate the date
+      if (isNaN(appointmentDateTime.getTime())) {
+        throw new Error('Invalid date or time selected');
+      }
+      
       const appointmentData = {
         customer_name: newAppointment.customerName,
         customer_phone: newAppointment.phone,
         customer_email: newAppointment.email,
         service_id: newAppointment.service,
-        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time || '09:00'}:00`).toISOString(),
+        scheduled_at: appointmentDateTime.toISOString(),
         duration_minutes: selectedService?.duration_minutes || 60,
         amount: selectedService?.base_price || 0,
         currency: 'USD',
@@ -2271,12 +2285,16 @@ function CalendarSection() {
     } catch (error) {
       console.error("Error creating appointment:", error);
       // For now, add to local state as fallback
+      const fallbackDate = newAppointment.date || new Date().toISOString().split('T')[0];
+      const fallbackTime = newAppointment.time || '09:00';
+      const fallbackDateTime = new Date(`${fallbackDate}T${fallbackTime}:00`);
+      
       const newApt = {
         id: Date.now(), // Temporary ID
         customer_name: newAppointment.customerName,
         service_name: services.find(s => s.id === newAppointment.service)?.name || 'Service',
         staff_name: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
-        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time || '09:00'}:00`).toISOString(),
+        scheduled_at: isNaN(fallbackDateTime.getTime()) ? new Date().toISOString() : fallbackDateTime.toISOString(),
         duration_minutes: 60,
         amount: 0,
         payment_status: 'pending'
