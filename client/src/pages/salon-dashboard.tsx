@@ -705,7 +705,7 @@ function OverviewSection() {
                 <label className="block text-sm font-medium mb-2">Customer Name</label>
                 <input
                   type="text"
-                  defaultValue={editingAppointment.customer}
+                  defaultValue={editingAppointment.customer || ''}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -742,7 +742,7 @@ function OverviewSection() {
                 <div className="relative">
                   <input
                     type="time"
-                    defaultValue={editingAppointment.time.replace(" AM", "").replace(" PM", "")}
+                    defaultValue={editingAppointment.time ? editingAppointment.time.replace(" AM", "").replace(" PM", "") : ""}
                     className="w-full p-3 border border-input rounded-md bg-background pr-10"
                   />
                   <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -4210,7 +4210,7 @@ function PromotionsSection() {
                 <label className="block text-sm font-medium mb-2">Campaign Name</label>
                 <input
                   type="text"
-                  defaultValue={editingCampaign.name}
+                  defaultValue={editingCampaign.name || ''}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -4218,7 +4218,7 @@ function PromotionsSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Type</label>
                 <select 
-                  defaultValue={editingCampaign.type}
+                  defaultValue={editingCampaign.type || 'promotion'}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 >
                   <option value="promotion">Promotion</option>
@@ -4232,7 +4232,7 @@ function PromotionsSection() {
                 <label className="block text-sm font-medium mb-2">Message</label>
                 <textarea
                   rows={4}
-                  defaultValue={editingCampaign.description}
+                  defaultValue={editingCampaign.description || ''}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -4245,7 +4245,7 @@ function PromotionsSection() {
                   <label className="block text-sm font-medium mb-2">Discount (%)</label>
                   <input
                     type="number"
-                    defaultValue={editingCampaign.discount.replace('%', '')}
+                    defaultValue={editingCampaign.discount ? editingCampaign.discount.replace('%', '') : ''}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
                 </div>
@@ -4265,7 +4265,7 @@ function PromotionsSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Target Audience</label>
                 <select 
-                  defaultValue={editingCampaign.target === "All Customers" ? "all" : "vip"}
+                  defaultValue={editingCampaign.target === "All Customers" ? "all" : (editingCampaign.target ? "vip" : "all")}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 >
                   <option value="all">All Customers (156 customers)</option>
