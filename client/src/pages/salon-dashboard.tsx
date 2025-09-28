@@ -1972,6 +1972,34 @@ function PaymentsSection() {
 }
 
 function CustomersSection() {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showWishesModal, setShowWishesModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [birthdayCustomer, setBirthdayCustomer] = useState(null);
+
+  const handleAddCustomer = () => {
+    setShowAddModal(true);
+  };
+
+  const handleEditCustomer = (customer) => {
+    setEditingCustomer(customer);
+    setShowEditModal(true);
+  };
+
+  const handleSendWishes = (customer) => {
+    setBirthdayCustomer(customer);
+    setShowWishesModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setShowWishesModal(false);
+    setEditingCustomer(null);
+    setBirthdayCustomer(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1981,7 +2009,7 @@ function CustomersSection() {
           <p className="text-muted-foreground">Customer Management</p>
           <p className="text-sm text-muted-foreground">Manage customer relationships and communication.</p>
         </div>
-        <Button>
+        <Button onClick={handleAddCustomer}>
           <Plus className="h-4 w-4 mr-2" />
           Add Customer
         </Button>
@@ -2115,7 +2143,7 @@ function CustomersSection() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost">
+                      <Button size="sm" variant="ghost" onClick={() => handleEditCustomer(customer)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button size="sm" variant="ghost" className="text-destructive">
@@ -2149,7 +2177,7 @@ function CustomersSection() {
                     <div className="text-sm text-muted-foreground">{birthday.date} - {birthday.daysAway} days away</div>
                   </div>
                 </div>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={() => handleSendWishes(birthday)}>
                   Send Wishes
                 </Button>
               </div>
@@ -2157,6 +2185,213 @@ function CustomersSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Customer Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Add New Customer</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Birth Date</label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                  />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    placeholder="john@email.com"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Special preferences, allergies, etc."
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Customer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {showEditModal && editingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Edit Customer</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Full Name</label>
+                <input
+                  type="text"
+                  defaultValue={editingCustomer.name}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Birth Date</label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    defaultValue="1990-03-15"
+                    className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                  />
+                  <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    defaultValue={editingCustomer.email}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    defaultValue="+1 (555) 123-4567"
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  defaultValue="Allergic to certain hair products"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Customer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Birthday Wishes Modal */}
+      {showWishesModal && birthdayCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Gift className="h-5 w-5" />
+                Send Birthday Wishes
+              </h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Birthday Customer Info */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium flex items-center gap-2 mb-3">
+                  <Gift className="h-4 w-4" />
+                  Birthday Customer
+                </h4>
+                <div className="space-y-2">
+                  <div><strong>Name:</strong> {birthdayCustomer.name}</div>
+                  <div><strong>Phone:</strong> +1 (555) 456-7890</div>
+                  <div><strong>Email:</strong> john.smith@email.com</div>
+                </div>
+              </div>
+              
+              {/* Birthday Message */}
+              <div>
+                <h4 className="font-medium mb-3">Birthday Message</h4>
+                <textarea
+                  rows={6}
+                  defaultValue="🎉 Happy Birthday John Smith! ✨ Wishing you a wonderful day filled with joy and happiness! As a birthday gift, we're offering you 25% off on your next visit to Bella Salon. Valid for 30 days. Book your appointment now! 🔔 Bella Salon Team"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              {/* Delivery Method */}
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="font-medium">Message will be sent via WhatsApp and SMS</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button className="bg-pink-500 hover:bg-pink-600">
+                <Send className="h-4 w-4 mr-2" />
+                Send Wishes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
