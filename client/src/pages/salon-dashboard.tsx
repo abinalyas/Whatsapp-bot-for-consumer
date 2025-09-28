@@ -1573,12 +1573,426 @@ function StaffSection() {
 
 function CalendarSection() {
   const [viewMode, setViewMode] = useState("day");
-  const [selectedDate, setSelectedDate] = useState("Saturday, September 27, 2025");
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 28)); // September 28, 2025
   const [filters, setFilters] = useState({
     staffMember: "All Staff",
     service: "All Services",
     status: "All Status"
   });
+
+  // Mock data for appointments
+  const appointments = [
+    { id: 1, customer: "Sarah Johnson", service: "Hair Cut & Color", staff: "Emma", time: "9:00 AM", duration: 120, price: 180, status: "confirmed", date: new Date(2025, 8, 28) },
+    { id: 2, customer: "Mike Chen", service: "Beard Trim", staff: "David", time: "9:30 AM", duration: 30, price: 35, status: "confirmed", date: new Date(2025, 8, 28) },
+    { id: 3, customer: "Lisa Rodriguez", service: "Manicure", staff: "Anna", time: "10:00 AM", duration: 45, price: 50, status: "pending", date: new Date(2025, 8, 28) },
+    { id: 4, customer: "James Wilson", service: "Hair Cut", staff: "Emma", time: "11:30 AM", duration: 45, price: 60, status: "confirmed", date: new Date(2025, 8, 28) },
+    { id: 5, customer: "Maria Garcia", service: "Facial Treatment", staff: "Sofia", time: "1:00 PM", duration: 60, price: 85, status: "confirmed", date: new Date(2025, 8, 28) },
+    { id: 6, customer: "David Kim", service: "Pedicure", staff: "Anna", time: "2:30 PM", duration: 45, price: 55, status: "pending", date: new Date(2025, 8, 28) },
+    { id: 7, customer: "Emily Davis", service: "Hair Styling", staff: "Emma", time: "4:00 PM", duration: 60, price: 75, status: "confirmed", date: new Date(2025, 8, 28) },
+    { id: 8, customer: "Alex Thompson", service: "Hair Cut & Style", staff: "Emma", time: "10:30 AM", duration: 120, price: 150, status: "confirmed", date: new Date(2025, 8, 29) },
+    { id: 9, customer: "Anna", service: "Hair Manicure", staff: "Anna", time: "2:00 PM", duration: 30, price: 30, status: "confirmed", date: new Date(2025, 8, 29) },
+    { id: 10, customer: "David", service: "Beard Trim & Styling", staff: "David", time: "3:00 PM", duration: 45, price: 50, status: "confirmed", date: new Date(2025, 8, 29) },
+    { id: 11, customer: "Ben Johnson", service: "Hair Cut", staff: "David", time: "8:30 AM", duration: 30, price: 30, status: "confirmed", date: new Date(2025, 8, 30) },
+    { id: 12, customer: "Julian Williams", service: "Eye Facial", staff: "Sofia", time: "1:30 PM", duration: 75, price: 80, status: "confirmed", date: new Date(2025, 8, 30) },
+    { id: 13, customer: "Tyler Brown", service: "Beard Styling", staff: "David", time: "11:00 AM", duration: 30, price: 50, status: "confirmed", date: new Date(2025, 9, 1) },
+    { id: 14, customer: "John Clark", service: "Hair Color Touch-up", staff: "Emma", time: "3:00 PM", duration: 90, price: 120, status: "confirmed", date: new Date(2025, 9, 1) },
+    { id: 15, customer: "Tyler Brown", service: "Beard Styling", staff: "David", time: "11:00 AM", duration: 30, price: 50, status: "confirmed", date: new Date(2025, 9, 2) },
+    { id: 16, customer: "John Clark", service: "Hair Color Touch-up", staff: "Emma", time: "3:00 PM", duration: 90, price: 120, status: "confirmed", date: new Date(2025, 9, 2) }
+  ];
+
+  const timeSlots = [
+    "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM",
+    "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM"
+  ];
+
+  const staffMembers = ["Emma", "David", "Anna", "Sofia"];
+
+  const getAppointmentsForDate = (date) => {
+    return appointments.filter(apt => 
+      apt.date.toDateString() === date.toDateString()
+    );
+  };
+
+  const getAppointmentsForWeek = (startDate) => {
+    const weekAppointments = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      weekAppointments.push({
+        date,
+        appointments: getAppointmentsForDate(date)
+      });
+    }
+    return weekAppointments;
+  };
+
+  const getAppointmentsForMonth = (date) => {
+    const monthAppointments = [];
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const currentDate = new Date(year, month, day);
+      monthAppointments.push({
+        date: currentDate,
+        appointments: getAppointmentsForDate(currentDate)
+      });
+    }
+    return monthAppointments;
+  };
+
+  const renderDayView = () => {
+    const dayAppointments = getAppointmentsForDate(currentDate);
+    const dateString = currentDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    return (
+      <div className="space-y-6">
+        {/* Date Header */}
+        <div className="text-center">
+          <h3 className="text-xl font-semibold">{dateString}</h3>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Daily Schedule */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {timeSlots.map((time, index) => {
+                  const appointment = dayAppointments.find(apt => apt.time === time);
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{time}</span>
+                      </div>
+                      <div className="text-right">
+                        {appointment ? (
+                          <div className="space-y-1">
+                            <div className="font-medium">{appointment.customer}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {appointment.service} with {appointment.staff}
+                            </div>
+                            <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
+                              {appointment.status}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Available</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Staff Schedule */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {staffMembers.map((staff, index) => {
+                  const staffAppointments = dayAppointments.filter(apt => apt.staff === staff);
+                  return (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">{staff}</h4>
+                        <Badge variant="outline">{staffAppointments.length} appointments</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {staffAppointments.map((appointment, aptIndex) => (
+                          <div key={aptIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div>
+                              <div className="font-medium text-sm">{appointment.customer}</div>
+                              <div className="text-xs text-muted-foreground">{appointment.service}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium">{appointment.time}</div>
+                              <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"} className="text-xs">
+                                {appointment.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Appointment Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Appointment Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {dayAppointments.map((appointment) => (
+                <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                      {appointment.time}
+                    </div>
+                    <div>
+                      <div className="font-medium">{appointment.customer}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {appointment.duration} mins • {appointment.service} with {appointment.staff}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
+                      {appointment.status}
+                    </Badge>
+                    <Button size="sm" variant="outline">Edit</Button>
+                    <Button size="sm" variant="outline" className="text-destructive">Cancel</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const weekStart = new Date(currentDate);
+    weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+    const weekAppointments = getAppointmentsForWeek(weekStart);
+    const weekRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+    return (
+      <div className="space-y-6">
+        {/* Week Header */}
+        <div className="text-center">
+          <h3 className="text-xl font-semibold">Week of {weekRange}</h3>
+        </div>
+
+        {/* Weekly Calendar Grid */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-7 gap-4">
+              {weekAppointments.map((day, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="text-center mb-4">
+                    <div className="font-medium">{day.date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                    <div className="text-sm text-muted-foreground">{day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                    <div className="text-xs text-muted-foreground">({day.appointments.length} appointments)</div>
+                  </div>
+                  <div className="space-y-2">
+                    {day.appointments.map((appointment) => (
+                      <div key={appointment.id} className="p-2 bg-gray-50 rounded text-xs">
+                        <div className="font-medium">{appointment.time}</div>
+                        <div className="text-muted-foreground">{appointment.customer}</div>
+                        <div className="text-muted-foreground">{appointment.service}</div>
+                        <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"} className="text-xs">
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                    ))}
+                    {day.appointments.length === 0 && (
+                      <div className="text-center text-muted-foreground text-xs">
+                        <div>Add Appointment</div>
+                        <div className="mt-2 space-y-1">
+                          <div>9:00 AM</div>
+                          <div>9:30 AM</div>
+                          <div>10:00 AM</div>
+                        </div>
+                        <Button size="sm" variant="outline" className="mt-2">+ Book First</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Time Slot Availability */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Time Slot Availability</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left p-2">Time</th>
+                    {weekAppointments.map((day, index) => (
+                      <th key={index} className="text-center p-2">
+                        {day.date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeSlots.slice(0, 13).map((time, timeIndex) => (
+                    <tr key={timeIndex}>
+                      <td className="p-2 font-medium">{time}</td>
+                      {weekAppointments.map((day, dayIndex) => {
+                        const appointment = day.appointments.find(apt => apt.time === time);
+                        return (
+                          <td key={dayIndex} className="p-2">
+                            {appointment ? (
+                              <div className={`p-2 rounded text-xs text-white ${
+                                appointment.status === "confirmed" ? "bg-green-500" :
+                                appointment.status === "pending" ? "bg-yellow-500" : "bg-red-500"
+                              }`}>
+                                {appointment.customer}
+                              </div>
+                            ) : (
+                              <div className="p-2 bg-gray-100 rounded text-xs text-center">Available</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded"></div>
+                <span>Confirmed</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded"></div>
+                <span>Canceled</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-gray-100 rounded"></div>
+                <span>Available</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderMonthView = () => {
+    const monthAppointments = getAppointmentsForMonth(currentDate);
+    const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const totalAppointments = appointments.filter(apt => 
+      apt.date.getMonth() === currentDate.getMonth() && 
+      apt.date.getFullYear() === currentDate.getFullYear()
+    );
+    const confirmedCount = totalAppointments.filter(apt => apt.status === "confirmed").length;
+    const pendingCount = totalAppointments.filter(apt => apt.status === "pending").length;
+    const cancelledCount = totalAppointments.filter(apt => apt.status === "cancelled").length;
+
+    return (
+      <div className="space-y-6">
+        {/* Month Header */}
+        <div className="text-center">
+          <h3 className="text-xl font-semibold">{monthName}</h3>
+        </div>
+
+        {/* Monthly Calendar Grid */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-7 gap-1">
+              {/* Days of week header */}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="p-2 text-center font-medium text-muted-foreground">
+                  {day}
+                </div>
+              ))}
+              
+              {/* Calendar days */}
+              {monthAppointments.map((day, index) => (
+                <div key={index} className="border rounded-lg p-2 min-h-[100px]">
+                  <div className="text-center mb-2">
+                    <div className="font-medium">{day.date.getDate()}</div>
+                    {day.appointments.length > 0 && (
+                      <div className="text-xs text-muted-foreground">({day.appointments.length})</div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {day.appointments.slice(0, 2).map((appointment) => (
+                      <div key={appointment.id} className={`p-1 rounded text-xs ${
+                        appointment.status === "confirmed" ? "bg-green-100 text-green-800" :
+                        appointment.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        <div className="font-medium">{appointment.time}</div>
+                        <div>{appointment.customer}</div>
+                      </div>
+                    ))}
+                    {day.appointments.length > 2 && (
+                      <div className="text-xs text-muted-foreground">+{day.appointments.length - 2} more</div>
+                    )}
+                    {day.appointments.length === 0 && (
+                      <div className="text-center text-muted-foreground text-xs">
+                        <div>+</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appointment Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{confirmedCount}</div>
+              <div className="text-sm text-muted-foreground">Confirmed</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
+              <div className="text-sm text-muted-foreground">Pending</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-red-600">{cancelledCount}</div>
+              <div className="text-sm text-muted-foreground">Cancelled</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold">${totalAppointments.reduce((sum, apt) => sum + apt.price, 0)}</div>
+              <div className="text-sm text-muted-foreground">Revenue</div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -1628,9 +2042,11 @@ function CalendarSection() {
                   onChange={(e) => setFilters({...filters, staffMember: e.target.value})}
                   className="w-full p-2 border border-input rounded-md bg-background"
                 >
-                  {filterOptions.staffMembers.map((member) => (
-                    <option key={member} value={member}>{member}</option>
-                  ))}
+                  <option value="All Staff">All Staff</option>
+                  <option value="Emma">Emma</option>
+                  <option value="David">David</option>
+                  <option value="Anna">Anna</option>
+                  <option value="Sofia">Sofia</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
@@ -1643,9 +2059,11 @@ function CalendarSection() {
                   onChange={(e) => setFilters({...filters, service: e.target.value})}
                   className="w-full p-2 border border-input rounded-md bg-background"
                 >
-                  {filterOptions.services.map((service) => (
-                    <option key={service} value={service}>{service}</option>
-                  ))}
+                  <option value="All Services">All Services</option>
+                  <option value="Hair Cut">Hair Cut</option>
+                  <option value="Hair Color">Hair Color</option>
+                  <option value="Manicure">Manicure</option>
+                  <option value="Facial Treatment">Facial Treatment</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
@@ -1658,9 +2076,10 @@ function CalendarSection() {
                   onChange={(e) => setFilters({...filters, status: e.target.value})}
                   className="w-full p-2 border border-input rounded-md bg-background"
                 >
-                  {filterOptions.status.map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
+                  <option value="All Status">All Status</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
@@ -1669,55 +2088,10 @@ function CalendarSection() {
         </CardContent>
       </Card>
 
-      {/* Date Display */}
-      <div className="text-center">
-        <h3 className="text-2xl font-bold">{selectedDate}</h3>
-      </div>
-
       {/* Calendar Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Available Slots */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Available Slots</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-              {timeSlots.map((time) => (
-                <Button
-                  key={time}
-                  variant="outline"
-                  className="h-10 text-sm"
-                  onClick={() => {
-                    // Handle slot selection
-                  }}
-                >
-                  {time}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Appointments */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Appointments</CardTitle>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Appointment
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <CalendarDays className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No appointments found for this date.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {viewMode === "day" && renderDayView()}
+      {viewMode === "week" && renderWeekView()}
+      {viewMode === "month" && renderMonthView()}
 
       {/* Quick Actions */}
       <Card>
@@ -1725,17 +2099,21 @@ function CalendarSection() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <Button variant="outline">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Clock className="h-6 w-6 mb-2" />
               Block Time Slot
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Calendar className="h-6 w-6 mb-2" />
               Bulk Reschedule
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Bell className="h-6 w-6 mb-2" />
               Send Reminders
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Download className="h-6 w-6 mb-2" />
               Export Schedule
             </Button>
           </div>
