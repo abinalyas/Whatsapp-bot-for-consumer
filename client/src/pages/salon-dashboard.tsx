@@ -2184,18 +2184,27 @@ function CalendarSection() {
             hour12: true 
           });
           
+          // Find service and staff names from the loaded data
+          const service = servicesData.find(s => s.id === apt.offering_id);
+          const staff = staffData.find(s => s.id === apt.staff_id);
+          
           return {
             ...apt,
             // Calendar display properties
-            customer: apt.customer_name,
-            service: apt.service_name,
-            staff: apt.staff_name || 'Unassigned',
-            duration: apt.duration_minutes,
+            customer: apt.customer_name || 'Unknown Customer',
+            service: service?.name || apt.service_name || 'Unknown Service',
+            staff: staff?.name || apt.staff_name || 'Unassigned',
+            duration: apt.duration_minutes || 60,
             time: timeString,
-            status: 'confirmed'
+            status: 'confirmed',
+            // Additional properties for calendar display
+            customer_name: apt.customer_name || 'Unknown Customer',
+            service_name: service?.name || apt.service_name || 'Unknown Service',
+            staff_name: staff?.name || apt.staff_name || 'Unassigned'
           };
         });
         
+        console.log('Original appointments data:', appointmentsData);
         console.log('Enhanced appointments:', enhancedAppointments);
         
         setAppointments(enhancedAppointments);
@@ -2506,10 +2515,8 @@ function CalendarSection() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {console.log('Day appointments for daily schedule:', dayAppointments)}
                 {timeSlots.map((time, index) => {
                   const appointment = dayAppointments.find(apt => apt.time === time);
-                  console.log(`Time slot: ${time}, Found appointment:`, appointment);
                   return (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
@@ -2519,9 +2526,9 @@ function CalendarSection() {
                       <div className="text-right">
                         {appointment ? (
                           <div className="space-y-1">
-                            <div className="font-medium">{appointment.customer}</div>
+                            <div className="font-medium">{appointment.customer || appointment.customer_name || 'Unknown Customer'}</div>
                             <div className="text-sm text-muted-foreground">
-                              {appointment.service} with {appointment.staff}
+                              {appointment.service || appointment.service_name || 'Unknown Service'} with {appointment.staff || appointment.staff_name || 'Unassigned'}
                             </div>
                             <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
                               {appointment.status}
@@ -2591,9 +2598,9 @@ function CalendarSection() {
                       {appointment.time}
                     </div>
                     <div>
-                      <div className="font-medium">{appointment.customer}</div>
+                      <div className="font-medium">{appointment.customer || appointment.customer_name || 'Unknown Customer'}</div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.duration} mins • {appointment.service} with {appointment.staff}
+                        {appointment.duration || appointment.duration_minutes || 60} mins • {appointment.service || appointment.service_name || 'Unknown Service'} with {appointment.staff || appointment.staff_name || 'Unassigned'}
                       </div>
                     </div>
                   </div>
