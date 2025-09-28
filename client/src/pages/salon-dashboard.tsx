@@ -932,12 +932,16 @@ function ServicesSection() {
       const formData = new FormData(e.target);
       const serviceData = {
         name: formData.get('name'),
-        category: formData.get('category'),
-        base_price: parseFloat(formData.get('base_price')),
-        duration_minutes: parseInt(formData.get('duration_minutes')),
         description: formData.get('description'),
-        addOns: formData.get('addOns')?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        is_active: true
+        category: formData.get('category'),
+        subcategory: '', // Default empty subcategory
+        base_price: parseFloat(formData.get('base_price')),
+        currency: 'USD', // Default currency
+        duration_minutes: parseInt(formData.get('duration_minutes')),
+        is_active: true,
+        display_order: 0, // Default display order
+        tags: [], // Default empty tags array
+        images: [] // Default empty images array
       };
       
       await salonApi.services.update(editingService.id, serviceData);
