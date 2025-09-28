@@ -2239,14 +2239,40 @@ function CalendarSection() {
       
       // Validate and format date/time
       const appointmentDate = newAppointment.date || new Date().toISOString().split('T')[0];
-      const appointmentTime = newAppointment.time || '09:00';
+      let appointmentTime = newAppointment.time || '09:00';
+      
+      // Convert time from "HH:MM AM/PM" to "HH:MM" format
+      if (appointmentTime.includes('AM') || appointmentTime.includes('PM')) {
+        const [time, period] = appointmentTime.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (period === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (period === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        appointmentTime = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
       
       // Create date string in proper format
       const dateTimeString = `${appointmentDate}T${appointmentTime}:00`;
       const appointmentDateTime = new Date(dateTimeString);
       
+      // Debug logging
+      console.log('Appointment data:', {
+        date: newAppointment.date,
+        time: newAppointment.time,
+        appointmentDate,
+        appointmentTime,
+        dateTimeString,
+        appointmentDateTime: appointmentDateTime.toISOString()
+      });
+      
       // Validate the date
       if (isNaN(appointmentDateTime.getTime())) {
+        console.error('Invalid date/time:', { appointmentDate, appointmentTime, dateTimeString });
         throw new Error('Invalid date or time selected');
       }
       
@@ -2286,7 +2312,23 @@ function CalendarSection() {
       console.error("Error creating appointment:", error);
       // For now, add to local state as fallback
       const fallbackDate = newAppointment.date || new Date().toISOString().split('T')[0];
-      const fallbackTime = newAppointment.time || '09:00';
+      let fallbackTime = newAppointment.time || '09:00';
+      
+      // Convert time from "HH:MM AM/PM" to "HH:MM" format
+      if (fallbackTime.includes('AM') || fallbackTime.includes('PM')) {
+        const [time, period] = fallbackTime.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (period === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (period === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        fallbackTime = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
+      
       const fallbackDateTime = new Date(`${fallbackDate}T${fallbackTime}:00`);
       
       const newApt = {
@@ -2952,12 +2994,12 @@ function CalendarSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Date</label>
                   <div className="relative">
-                    <input
-                      type="text"
-                      value={newAppointment.date}
-                      onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
-                      className="w-full p-3 border border-input rounded-md bg-background pr-10"
-                    />
+                  <input
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                  />
                     <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
