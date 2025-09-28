@@ -2291,7 +2291,8 @@ function CalendarSection() {
       // Call API to create appointment
       const response = await salonApi.appointments.create(appointmentData);
       
-      // Add to local state with proper structure
+      // Add to local state with proper structure for calendar display
+      const responseDateTime = new Date(response.scheduled_at);
       const newAppointmentData = {
         id: response.id,
         customer_name: response.customer_name,
@@ -2300,7 +2301,14 @@ function CalendarSection() {
         scheduled_at: response.scheduled_at,
         duration_minutes: response.duration_minutes,
         amount: response.amount,
-        payment_status: 'pending'
+        payment_status: 'pending',
+        // Calendar display properties
+        customer: response.customer_name,
+        service: selectedService?.name || 'Service',
+        staff: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
+        duration: response.duration_minutes,
+        time: responseDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        status: 'confirmed'
       };
       setAppointments(prev => [...prev, newAppointmentData]);
       
@@ -2339,7 +2347,14 @@ function CalendarSection() {
         scheduled_at: isNaN(fallbackDateTime.getTime()) ? new Date().toISOString() : fallbackDateTime.toISOString(),
         duration_minutes: 60,
         amount: 0,
-        payment_status: 'pending'
+        payment_status: 'pending',
+        // Calendar display properties
+        customer: newAppointment.customerName,
+        service: services.find(s => s.id === newAppointment.service)?.name || 'Service',
+        staff: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
+        duration: 60,
+        time: fallbackDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        status: 'confirmed'
       };
       setAppointments(prev => [...prev, newApt]);
       handleCloseModal();
