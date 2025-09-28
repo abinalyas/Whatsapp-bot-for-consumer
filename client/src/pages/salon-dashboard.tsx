@@ -925,6 +925,33 @@ function ServicesSection() {
     setShowDeleteModal(true);
   };
 
+  const handleEditServiceSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const formData = new FormData(e.target);
+      const serviceData = {
+        name: formData.get('name'),
+        category: formData.get('category'),
+        base_price: parseFloat(formData.get('base_price')),
+        duration_minutes: parseInt(formData.get('duration_minutes')),
+        description: formData.get('description'),
+        addOns: formData.get('addOns')?.split(',').map(s => s.trim()).filter(Boolean) || [],
+        is_active: true
+      };
+      
+      await salonApi.services.update(editingService.id, serviceData);
+      setServices(services.map(s => s.id === editingService.id ? { ...s, ...serviceData } : s));
+      setShowEditModal(false);
+      setEditingService(null);
+    } catch (err) {
+      console.error('Error updating service:', err);
+      setError('Failed to update service');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveService = async (serviceData) => {
     try {
       if (editingService) {
@@ -1270,11 +1297,12 @@ function ServicesSection() {
               </Button>
             </div>
             
-            <div className="space-y-4">
+            <form onSubmit={handleEditServiceSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Service Name</label>
                 <input
                   type="text"
+                  name="name"
                   defaultValue={editingService.name}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
@@ -1283,6 +1311,7 @@ function ServicesSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Category</label>
                 <select 
+                  name="category"
                   defaultValue={editingService.category}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 >
@@ -1298,6 +1327,7 @@ function ServicesSection() {
                   <label className="block text-sm font-medium mb-2">Price ($)</label>
                   <input
                     type="number"
+                    name="base_price"
                     defaultValue={editingService.base_price}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
@@ -1306,6 +1336,7 @@ function ServicesSection() {
                   <label className="block text-sm font-medium mb-2">Duration (mins)</label>
                   <input
                     type="number"
+                    name="duration_minutes"
                     defaultValue={editingService.duration_minutes}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
@@ -1315,6 +1346,7 @@ function ServicesSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
                 <textarea
+                  name="description"
                   rows={3}
                   defaultValue={editingService.description}
                   className="w-full p-3 border border-input rounded-md bg-background"
@@ -1325,6 +1357,7 @@ function ServicesSection() {
                 <label className="block text-sm font-medium mb-2">Add-ons (comma separated)</label>
                 <input
                   type="text"
+                  name="addOns"
                   defaultValue={(editingService.addOns || []).join(", ")}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
@@ -1336,16 +1369,16 @@ function ServicesSection() {
                 </div>
                 <Switch defaultChecked={editingService.is_active} />
               </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={handleCloseModals}>
-                Cancel
-              </Button>
-              <Button>
-                Save Service
-              </Button>
-            </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button type="button" variant="outline" onClick={handleCloseModals}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Service'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
