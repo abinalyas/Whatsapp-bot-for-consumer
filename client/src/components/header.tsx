@@ -15,9 +15,10 @@ import {
 interface HeaderProps {
   onSidebarToggle?: () => void;
   currentSection?: string;
+  sidebarCollapsed?: boolean;
 }
 
-export function Header({ onSidebarToggle, currentSection = "Overview" }: HeaderProps) {
+export function Header({ onSidebarToggle, currentSection = "Overview", sidebarCollapsed = false }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -30,7 +31,7 @@ export function Header({ onSidebarToggle, currentSection = "Overview" }: HeaderP
             variant="ghost"
             size="sm"
             onClick={onSidebarToggle}
-            className="md:hidden"
+            className="flex items-center justify-center"
           >
             <Menu className="h-5 w-5" />
           </Button>

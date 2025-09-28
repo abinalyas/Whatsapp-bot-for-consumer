@@ -7,6 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Header } from "@/components/header";
 import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -3965,6 +3971,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const getCurrentSectionName = () => {
     const sectionNames = {
@@ -3978,6 +3985,10 @@ export default function SalonDashboard() {
       settings: "Settings"
     };
     return sectionNames[activeSection] || "Overview";
+  };
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   const renderSection = () => {
@@ -4015,31 +4026,58 @@ export default function SalonDashboard() {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
-        <Sidebar>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Bella Salon</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        isActive={activeSection === item.id}
-                        onClick={() => setActiveSection(item.id)}
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
+        <div className={`transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+          <Sidebar>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel className={sidebarCollapsed ? 'hidden' : ''}>
+                  Bella Salon
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {menuItems.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        {sidebarCollapsed ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SidebarMenuButton
+                                  isActive={activeSection === item.id}
+                                  onClick={() => setActiveSection(item.id)}
+                                  className="justify-center"
+                                >
+                                  <item.icon />
+                                </SidebarMenuButton>
+                              </TooltipTrigger>
+                              <TooltipContent side="right">
+                                <p>{item.title}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <SidebarMenuButton
+                            isActive={activeSection === item.id}
+                            onClick={() => setActiveSection(item.id)}
+                          >
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </SidebarMenuButton>
+                        )}
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+        </div>
         
         <main className="flex-1 overflow-hidden">
-          <Header currentSection={getCurrentSectionName()} />
+          <Header 
+            currentSection={getCurrentSectionName()} 
+            onSidebarToggle={toggleSidebar}
+            sidebarCollapsed={sidebarCollapsed}
+          />
           <div className="h-[calc(100vh-4rem)] overflow-auto p-6">
             {renderSection()}
           </div>
