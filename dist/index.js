@@ -3677,6 +3677,16 @@ var pool2 = new Pool3({
 });
 router2.get("/services", async (req, res) => {
   try {
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const result = await pool2.query(`
       SELECT 
         id, name, description, category, subcategory, 
@@ -3685,7 +3695,7 @@ router2.get("/services", async (req, res) => {
       FROM offerings 
       WHERE tenant_id = $1 AND offering_type = 'service'
       ORDER BY display_order, name
-    `, [req.headers["x-tenant-id"] || "default-tenant-id"]);
+    `, [tenantId]);
     res.json({
       success: true,
       data: result.rows
@@ -3832,6 +3842,16 @@ router2.delete("/services/:id", async (req, res) => {
 router2.get("/appointments", async (req, res) => {
   try {
     const { date, status } = req.query;
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     let query = `
       SELECT 
         t.id, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
@@ -3842,7 +3862,7 @@ router2.get("/appointments", async (req, res) => {
       LEFT JOIN offerings o ON t.offering_id = o.id
       WHERE t.tenant_id = $1 AND t.transaction_type = 'booking'
     `;
-    const params = [req.headers["x-tenant-id"] || "default-tenant-id"];
+    const params = [tenantId];
     let paramIndex = 2;
     if (date) {
       query += ` AND DATE(t.scheduled_at) = $${paramIndex}`;
@@ -3994,7 +4014,16 @@ router2.delete("/appointments/:id", async (req, res) => {
 });
 router2.get("/stats", async (req, res) => {
   try {
-    const tenantId = req.headers["x-tenant-id"] || "default-tenant-id";
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const [todayAppointments, todayRevenue, totalServices] = await Promise.all([
       pool2.query(`
@@ -4042,6 +4071,16 @@ var pool3 = new Pool4({
 });
 router3.get("/staff", async (req, res) => {
   try {
+    const tenantResult = await pool3.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const result = await pool3.query(`
       SELECT 
         s.id, s.name, s.email, s.phone, s.role, s.specializations,
@@ -4056,7 +4095,7 @@ router3.get("/staff", async (req, res) => {
                s.working_hours, s.hourly_rate, s.commission_rate, s.is_active,
                s.hire_date, s.notes, s.avatar_url, s.created_at, s.updated_at
       ORDER BY s.name
-    `, [req.headers["x-tenant-id"] || "default-tenant-id"]);
+    `, [tenantId]);
     res.json({
       success: true,
       data: result.rows

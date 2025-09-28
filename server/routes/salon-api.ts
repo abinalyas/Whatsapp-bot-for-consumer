@@ -11,6 +11,19 @@ const pool = new Pool({
 // Get salon services (offerings)
 router.get('/services', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const result = await pool.query(`
       SELECT 
         id, name, description, category, subcategory, 
@@ -19,7 +32,7 @@ router.get('/services', async (req, res) => {
       FROM offerings 
       WHERE tenant_id = $1 AND offering_type = 'service'
       ORDER BY display_order, name
-    `, [req.headers['x-tenant-id'] || 'default-tenant-id']);
+    `, [tenantId]);
     
     res.json({
       success: true,
@@ -151,6 +164,19 @@ router.get('/appointments', async (req, res) => {
   try {
     const { date, status } = req.query;
     
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+    
     let query = `
       SELECT 
         t.id, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
@@ -162,7 +188,7 @@ router.get('/appointments', async (req, res) => {
       WHERE t.tenant_id = $1 AND t.transaction_type = 'booking'
     `;
     
-    const params = [req.headers['x-tenant-id'] || 'default-tenant-id'];
+    const params = [tenantId];
     let paramIndex = 2;
     
     if (date) {
@@ -308,7 +334,18 @@ router.delete('/appointments/:id', async (req, res) => {
 // Get salon dashboard stats
 router.get('/stats', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] || 'default-tenant-id';
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
     
     // Get today's stats
     const today = new Date().toISOString().split('T')[0];

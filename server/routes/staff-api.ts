@@ -11,6 +11,19 @@ const pool = new Pool({
 // Get all staff members
 router.get('/staff', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const result = await pool.query(`
       SELECT 
         s.id, s.name, s.email, s.phone, s.role, s.specializations,
@@ -25,7 +38,7 @@ router.get('/staff', async (req, res) => {
                s.working_hours, s.hourly_rate, s.commission_rate, s.is_active,
                s.hire_date, s.notes, s.avatar_url, s.created_at, s.updated_at
       ORDER BY s.name
-    `, [req.headers['x-tenant-id'] || 'default-tenant-id']);
+    `, [tenantId]);
     
     res.json({
       success: true,
