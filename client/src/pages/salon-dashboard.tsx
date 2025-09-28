@@ -2224,7 +2224,7 @@ function CalendarSection() {
       email: "customer@email.com",
       service: "",
       staffMember: "",
-      date: "28/09/2025",
+      date: new Date().toISOString().split('T')[0],
       time: "",
       notes: ""
     });
@@ -2241,7 +2241,7 @@ function CalendarSection() {
         customer_phone: newAppointment.phone,
         customer_email: newAppointment.email,
         service_id: newAppointment.service,
-        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time}:00`).toISOString(),
+        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time || '09:00'}:00`).toISOString(),
         duration_minutes: selectedService?.duration_minutes || 60,
         amount: selectedService?.base_price || 0,
         currency: 'USD',
@@ -2276,7 +2276,7 @@ function CalendarSection() {
         customer_name: newAppointment.customerName,
         service_name: services.find(s => s.id === newAppointment.service)?.name || 'Service',
         staff_name: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
-        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time}:00`).toISOString(),
+        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time || '09:00'}:00`).toISOString(),
         duration_minutes: 60,
         amount: 0,
         payment_status: 'pending'
