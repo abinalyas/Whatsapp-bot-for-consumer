@@ -2184,23 +2184,19 @@ function CalendarSection() {
             hour12: true 
           });
           
-          // Find service and staff names from the loaded data
-          const service = servicesData.find(s => s.id === apt.offering_id);
-          const staff = staffData.find(s => s.id === apt.staff_id);
-          
           return {
             ...apt,
-            // Calendar display properties
-            customer: apt.customer_name || 'Unknown Customer',
-            service: service?.name || apt.service_name || 'Unknown Service',
-            staff: staff?.name || apt.staff_name || 'Unassigned',
-            duration: apt.duration_minutes || 60,
+            // Calendar display properties - use the actual API data
+            customer: apt.customer_name,
+            service: apt.service_name,
+            staff: 'Unassigned', // No staff data in API response
+            duration: apt.duration_minutes,
             time: timeString,
             status: 'confirmed',
             // Additional properties for calendar display
-            customer_name: apt.customer_name || 'Unknown Customer',
-            service_name: service?.name || apt.service_name || 'Unknown Service',
-            staff_name: staff?.name || apt.staff_name || 'Unassigned'
+            customer_name: apt.customer_name,
+            service_name: apt.service_name,
+            staff_name: 'Unassigned'
           };
         });
         
@@ -2526,9 +2522,9 @@ function CalendarSection() {
                       <div className="text-right">
                         {appointment ? (
                           <div className="space-y-1">
-                            <div className="font-medium">{appointment.customer || appointment.customer_name || 'Unknown Customer'}</div>
+                            <div className="font-medium">{appointment.customer}</div>
                             <div className="text-sm text-muted-foreground">
-                              {appointment.service || appointment.service_name || 'Unknown Service'} with {appointment.staff || appointment.staff_name || 'Unassigned'}
+                              {appointment.service} with {appointment.staff}
                             </div>
                             <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
                               {appointment.status}
@@ -2598,9 +2594,9 @@ function CalendarSection() {
                       {appointment.time}
                     </div>
                     <div>
-                      <div className="font-medium">{appointment.customer || appointment.customer_name || 'Unknown Customer'}</div>
+                      <div className="font-medium">{appointment.customer}</div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.duration || appointment.duration_minutes || 60} mins • {appointment.service || appointment.service_name || 'Unknown Service'} with {appointment.staff || appointment.staff_name || 'Unassigned'}
+                        {appointment.duration} mins • {appointment.service} with {appointment.staff}
                       </div>
                     </div>
                   </div>
