@@ -1670,7 +1670,12 @@ function StaffSection() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{staffMember.working_hours ? 'Custom hours' : 'Standard hours'}</span>
+                  <span>
+                    {staffMember.working_hours?.from && staffMember.working_hours?.to 
+                      ? `${staffMember.working_hours.from} - ${staffMember.working_hours.to}`
+                      : 'Standard hours'
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -1694,7 +1699,7 @@ function StaffSection() {
                     <div
                       key={day}
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                        (staffMember.working_hours && Object.keys(staffMember.working_hours).includes(day.toLowerCase()))
+                        (staffMember.working_days || []).includes(day)
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground"
                       }`}
