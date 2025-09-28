@@ -1801,7 +1801,10 @@ function StaffSection() {
                 email: formData.get('email'),
                 phone: formData.get('phone'),
                 specializations: formData.get('specializations')?.split(',').map(s => s.trim()).filter(Boolean) || [],
-                working_hours: JSON.parse(formData.get('working_hours') || '{}'),
+                working_hours: {
+                  from: formData.get('working_hours_from') || '09:00',
+                  to: formData.get('working_hours_to') || '17:00'
+                },
                 is_active: formData.get('is_active') === 'on'
               };
               await handleAddStaff(staffData);
@@ -1863,12 +1866,21 @@ function StaffSection() {
               
               <div>
                 <label className="block text-sm font-medium mb-2">Working Hours</label>
-                <input
-                  name="working_hours"
-                  type="text"
-                  placeholder="9:00 AM - 6:00 PM"
-                  className="w-full p-3 border border-input rounded-md bg-background"
-                />
+                <div className="flex gap-2 items-center">
+                  <input
+                    name="working_hours_from"
+                    type="time"
+                    defaultValue="09:00"
+                    className="flex-1 p-3 border border-input rounded-md bg-background"
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <input
+                    name="working_hours_to"
+                    type="time"
+                    defaultValue="17:00"
+                    className="flex-1 p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
               </div>
               
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -1902,11 +1914,28 @@ function StaffSection() {
               </Button>
             </div>
             
-            <div className="space-y-4">
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const staffData = {
+                name: formData.get('name'),
+                role: formData.get('role'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                specializations: formData.get('specializations')?.split(',').map(s => s.trim()).filter(Boolean) || [],
+                working_hours: {
+                  from: formData.get('working_hours_from') || '09:00',
+                  to: formData.get('working_hours_to') || '17:00'
+                },
+                is_active: formData.get('is_active') === 'on'
+              };
+              await handleSaveStaff(staffData);
+            }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Full Name</label>
                   <input
+                    name="name"
                     type="text"
                     defaultValue={editingStaff.name}
                     className="w-full p-3 border border-input rounded-md bg-background"
@@ -1915,6 +1944,7 @@ function StaffSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Role</label>
                   <input
+                    name="role"
                     type="text"
                     defaultValue={editingStaff.role}
                     className="w-full p-3 border border-input rounded-md bg-background"
@@ -1926,6 +1956,7 @@ function StaffSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Email</label>
                   <input
+                    name="email"
                     type="email"
                     defaultValue={editingStaff.email}
                     className="w-full p-3 border border-input rounded-md bg-background"
@@ -1934,6 +1965,7 @@ function StaffSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone</label>
                   <input
+                    name="phone"
                     type="tel"
                     defaultValue={editingStaff.phone}
                     className="w-full p-3 border border-input rounded-md bg-background"
@@ -1944,6 +1976,7 @@ function StaffSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Specialties (comma separated)</label>
                 <input
+                  name="specializations"
                   type="text"
                   defaultValue={(editingStaff.specializations || []).join(", ")}
                   className="w-full p-3 border border-input rounded-md bg-background"
@@ -1952,11 +1985,21 @@ function StaffSection() {
               
               <div>
                 <label className="block text-sm font-medium mb-2">Working Hours</label>
-                <input
-                  type="text"
-                  defaultValue={editingStaff.working_hours}
-                  className="w-full p-3 border border-input rounded-md bg-background"
-                />
+                <div className="flex gap-2 items-center">
+                  <input
+                    name="working_hours_from"
+                    type="time"
+                    defaultValue={editingStaff.working_hours?.from || '09:00'}
+                    className="flex-1 p-3 border border-input rounded-md bg-background"
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <input
+                    name="working_hours_to"
+                    type="time"
+                    defaultValue={editingStaff.working_hours?.to || '17:00'}
+                    className="flex-1 p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
               </div>
               
               <div>
@@ -1980,18 +2023,18 @@ function StaffSection() {
                 <div>
                   <div className="font-medium">Currently Available</div>
                 </div>
-                <Switch defaultChecked={editingStaff.is_active} />
+                <Switch name="is_active" defaultChecked={editingStaff.is_active} />
               </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={handleCloseModals}>
-                Cancel
-              </Button>
-              <Button>
-                Save Staff Member
-              </Button>
-            </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button type="button" variant="outline" onClick={handleCloseModals}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Staff Member'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
