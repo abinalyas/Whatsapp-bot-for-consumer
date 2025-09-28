@@ -1951,6 +1951,7 @@ function StaffSection() {
                   from: formData.get('working_hours_from') || '09:00',
                   to: formData.get('working_hours_to') || '17:00'
                 },
+                working_days: editingStaff.working_days || [],
                 is_active: formData.get('is_active') === 'on'
               };
               await handleSaveStaff(staffData);
@@ -2032,16 +2033,31 @@ function StaffSection() {
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                     <Button
                       key={day}
-                      variant={(editingStaff.workingDays || []).includes(day) ? "default" : "outline"}
+                      type="button"
+                      variant={(editingStaff.working_days || []).includes(day) ? "default" : "outline"}
                       size="sm"
-                      onClick={() => toggleDay(day)}
-                      className="flex-1"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if ((editingStaff.working_days || []).includes(day)) {
+                          setEditingStaff({
+                            ...editingStaff,
+                            working_days: (editingStaff.working_days || []).filter(d => d !== day)
+                          });
+                        } else {
+                          setEditingStaff({
+                            ...editingStaff,
+                            working_days: [...(editingStaff.working_days || []), day]
+                          });
+                        }
+                      }}
                     >
                       {day}
                     </Button>
                   ))}
                 </div>
               </div>
+              
               
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
