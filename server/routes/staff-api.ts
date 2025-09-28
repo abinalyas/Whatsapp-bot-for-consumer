@@ -106,6 +106,19 @@ router.post('/staff', async (req, res) => {
 // Update staff member
 router.put('/staff/:id', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const { id } = req.params;
     const {
       name, email, phone, role, specializations, working_hours,
@@ -125,8 +138,7 @@ router.put('/staff/:id', async (req, res) => {
       RETURNING *
     `, [
       id, name, email, phone, role, JSON.stringify(formattedSpecializations), JSON.stringify(formattedWorkingHours),
-      hourly_rate, commission_rate, is_active, notes, avatar_url,
-      req.headers['x-tenant-id'] || 'default-tenant-id'
+      hourly_rate, commission_rate, is_active, notes, avatar_url, tenantId
     ]);
     
     if (result.rows.length === 0) {
@@ -152,13 +164,26 @@ router.put('/staff/:id', async (req, res) => {
 // Delete staff member
 router.delete('/staff/:id', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const { id } = req.params;
     
     const result = await pool.query(`
       DELETE FROM staff 
       WHERE id = $1 AND tenant_id = $2
       RETURNING id
-    `, [id, req.headers['x-tenant-id'] || 'default-tenant-id']);
+    `, [id, tenantId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({

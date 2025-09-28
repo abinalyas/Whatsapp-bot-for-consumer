@@ -4198,6 +4198,16 @@ router3.post("/staff", async (req, res) => {
 });
 router3.put("/staff/:id", async (req, res) => {
   try {
+    const tenantResult = await pool3.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const { id } = req.params;
     const {
       name,
@@ -4234,7 +4244,7 @@ router3.put("/staff/:id", async (req, res) => {
       is_active,
       notes,
       avatar_url,
-      req.headers["x-tenant-id"] || "default-tenant-id"
+      tenantId
     ]);
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -4256,12 +4266,22 @@ router3.put("/staff/:id", async (req, res) => {
 });
 router3.delete("/staff/:id", async (req, res) => {
   try {
+    const tenantResult = await pool3.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const { id } = req.params;
     const result = await pool3.query(`
       DELETE FROM staff 
       WHERE id = $1 AND tenant_id = $2
       RETURNING id
-    `, [id, req.headers["x-tenant-id"] || "default-tenant-id"]);
+    `, [id, tenantId]);
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,

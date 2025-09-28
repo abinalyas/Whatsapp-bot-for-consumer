@@ -1805,6 +1805,7 @@ function StaffSection() {
                   from: formData.get('working_hours_from') || '09:00',
                   to: formData.get('working_hours_to') || '17:00'
                 },
+                working_days: selectedDays,
                 is_active: formData.get('is_active') === 'on'
               };
               await handleAddStaff(staffData);
@@ -1880,6 +1881,29 @@ function StaffSection() {
                     defaultValue="17:00"
                     className="flex-1 p-3 border border-input rounded-md bg-background"
                   />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Working Days</label>
+                <div className="flex gap-2 mt-2">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <Button
+                      key={day}
+                      type="button"
+                      variant={selectedDays.includes(day) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        if (selectedDays.includes(day)) {
+                          setSelectedDays(selectedDays.filter(d => d !== day));
+                        } else {
+                          setSelectedDays([...selectedDays, day]);
+                        }
+                      }}
+                    >
+                      {day}
+                    </Button>
+                  ))}
                 </div>
               </div>
               
