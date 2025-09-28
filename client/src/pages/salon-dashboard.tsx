@@ -2140,6 +2140,7 @@ function StaffSection() {
 }
 
 function CalendarSection() {
+  console.log('🗓️ CALENDAR SECTION RENDERED');
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState({
@@ -2168,12 +2169,17 @@ function CalendarSection() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('🚀 STARTING DATA LOADING...');
         setLoading(true);
         const [appointmentsData, servicesData, staffData] = await Promise.all([
           salonApi.appointments.getAll(),
           salonApi.services.getAll(),
           staffApi.getAll()
         ]);
+        console.log('📊 RAW API DATA LOADED:');
+        console.log('📊 Appointments:', appointmentsData);
+        console.log('📊 Services:', servicesData);
+        console.log('📊 Staff:', staffData);
         // Enhance appointments with calendar display properties
         const enhancedAppointments = appointmentsData.map(apt => {
           const appointmentDateTime = new Date(apt.scheduled_at);
@@ -2200,9 +2206,11 @@ function CalendarSection() {
           };
         });
         
-        console.log('Original appointments data:', appointmentsData);
-        console.log('Enhanced appointments:', enhancedAppointments);
-        console.log('Sample enhanced appointment:', enhancedAppointments[0]);
+        console.log('🔧 ENHANCEMENT COMPLETE:');
+        console.log('🔧 Original appointments data:', appointmentsData);
+        console.log('🔧 Enhanced appointments:', enhancedAppointments);
+        console.log('🔧 Sample enhanced appointment:', enhancedAppointments[0]);
+        console.log('🔧 Setting appointments state with:', enhancedAppointments.length, 'appointments');
         
         setAppointments(enhancedAppointments);
         setServices(servicesData);
@@ -2494,12 +2502,15 @@ function CalendarSection() {
   };
 
   const renderDayView = () => {
+    console.log('📅 RENDER DAY VIEW CALLED');
     if (!currentDate) {
+      console.log('❌ No current date, showing loading');
       return <div>Loading...</div>;
     }
     
+    console.log('📅 Current date:', currentDate);
     const dayAppointments = getAppointmentsForDate(currentDate);
-  console.log('Day appointments for current date:', dayAppointments);
+    console.log('📅 Day appointments for current date:', dayAppointments);
     const dateString = currentDate.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
