@@ -2364,13 +2364,18 @@ function CalendarSection() {
   };
 
   const getAppointmentsForDate = (date) => {
-    return appointments.filter(apt => {
+    if (!date) return [];
+    return (appointments || []).filter(apt => {
+      if (!apt) return false;
       const aptDate = new Date(apt.scheduled_at || apt.date);
+      if (isNaN(aptDate.getTime())) return false;
       return aptDate.toDateString() === date.toDateString();
     });
   };
 
   const getAppointmentsForWeek = (startDate) => {
+    if (!startDate) return [];
+    
     const weekAppointments = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate);
@@ -2384,6 +2389,8 @@ function CalendarSection() {
   };
 
   const getAppointmentsForMonth = (date) => {
+    if (!date) return [];
+    
     const monthAppointments = [];
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -2696,8 +2703,10 @@ function CalendarSection() {
     
     const monthAppointments = getAppointmentsForMonth(currentDate);
     const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const totalAppointments = appointments.filter(apt => {
+    const totalAppointments = (appointments || []).filter(apt => {
+      if (!apt) return false;
       const aptDate = new Date(apt.scheduled_at || apt.date);
+      if (isNaN(aptDate.getTime())) return false;
       return aptDate.getMonth() === currentDate.getMonth() && 
              aptDate.getFullYear() === currentDate.getFullYear();
     });
