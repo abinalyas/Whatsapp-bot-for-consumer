@@ -4026,35 +4026,16 @@ export default function SalonDashboard() {
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
-        <div className={`transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
-          <Sidebar>
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupLabel className={sidebarCollapsed ? 'hidden' : ''}>
-                  Bella Salon
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {menuItems.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        {sidebarCollapsed ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <SidebarMenuButton
-                                  isActive={activeSection === item.id}
-                                  onClick={() => setActiveSection(item.id)}
-                                  className="justify-center"
-                                >
-                                  <item.icon />
-                                </SidebarMenuButton>
-                              </TooltipTrigger>
-                              <TooltipContent side="right">
-                                <p>{item.title}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
+        {!sidebarCollapsed && (
+          <div className="w-64 transition-all duration-300">
+            <Sidebar>
+              <SidebarContent>
+                <SidebarGroup>
+                  <SidebarGroupLabel>Bella Salon</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.map((item) => (
+                        <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             isActive={activeSection === item.id}
                             onClick={() => setActiveSection(item.id)}
@@ -4062,15 +4043,15 @@ export default function SalonDashboard() {
                             <item.icon />
                             <span>{item.title}</span>
                           </SidebarMenuButton>
-                        )}
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-          </Sidebar>
-        </div>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+            </Sidebar>
+          </div>
+        )}
         
         <main className="flex-1 overflow-hidden">
           <Header 
