@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { salonApi } from "@/lib/salon-api";
+import { staffApi } from "@/lib/staff-api";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -1243,14 +1244,64 @@ function StaffSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+  const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load staff from API
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        setLoading(true);
+        const data = await staffApi.getAll();
+        setStaff(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading staff:', err);
+        setError('Failed to load staff');
+        // Fallback to mock data
+        setStaff([
+          { id: 1, name: "Emma Wilson", role: "stylist", specializations: ["Hair", "Color"], is_active: true, total_appointments: 45, upcoming_appointments: 3 },
+          { id: 2, name: "David Chen", role: "stylist", specializations: ["Hair", "Beard"], is_active: true, total_appointments: 38, upcoming_appointments: 2 },
+          { id: 3, name: "Anna Rodriguez", role: "stylist", specializations: ["Nails", "Manicure"], is_active: true, total_appointments: 52, upcoming_appointments: 4 },
+          { id: 4, name: "Sofia Martinez", role: "stylist", specializations: ["Skincare", "Facial"], is_active: true, total_appointments: 29, upcoming_appointments: 1 },
+          { id: 5, name: "Alex Manager", role: "manager", specializations: ["Management"], is_active: true, total_appointments: 0, upcoming_appointments: 0 },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStaff();
+  }, []);
 
   const handleAddStaff = () => {
     setShowAddModal(true);
   };
 
-  const handleEditStaff = (staff) => {
-    setEditingStaff(staff);
+  const handleEditStaff = (staffMember) => {
+    setEditingStaff(staffMember);
     setShowEditModal(true);
+  };
+
+  const handleSaveStaff = async (staffData) => {
+    try {
+      if (editingStaff) {
+        // Update existing staff
+        await staffApi.update(editingStaff.id, staffData);
+        setStaff(staff.map(s => s.id === editingStaff.id ? { ...s, ...staffData } : s));
+      } else {
+        // Create new staff
+        const newStaff = await staffApi.create(staffData);
+        setStaff([...staff, newStaff]);
+      }
+      setShowAddModal(false);
+      setShowEditModal(false);
+      setEditingStaff(null);
+    } catch (err) {
+      console.error('Error saving staff:', err);
+      setError('Failed to save staff member');
+    }
   };
 
   const handleCloseModals = () => {
@@ -1283,11 +1334,11 @@ function StaffSection() {
 
       {/* Staff Profiles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {staffMembers.map((staff) => (
-          <Card key={staff.id} className="relative">
+        {staff.map((staffMember) => (
+          <Card key={staffMember.id} className="relative">
             {/* Edit Button */}
             <div className="absolute top-4 right-4">
-              <Button size="sm" variant="ghost" onClick={() => handleEditStaff(staff)}>
+              <Button size="sm" variant="ghost" onClick={() => handleEditStaff(staffMember)}>
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
@@ -1295,11 +1346,11 @@ function StaffSection() {
             <CardHeader className="pb-4">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
-                  {staff.initials}
+                  {staffMember.name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-lg">{staff.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{staff.role}</p>
+                  <CardTitle className="text-lg">{staffMember.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground capitalize">{staffMember.role}</p>
                 </div>
               </div>
             </CardHeader>
@@ -1309,15 +1360,15 @@ function StaffSection() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{staff.email}</span>
+                  <span>{staffMember.email || 'No email'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{staff.phone}</span>
+                  <span>{staffMember.phone || 'No phone'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{staff.workingHours}</span>
+                  <span>{staffMember.working_hours ? 'Custom hours' : 'Standard hours'}</span>
                 </div>
               </div>
 
@@ -1325,7 +1376,7 @@ function StaffSection() {
               <div className="space-y-2">
                 <span className="text-sm font-medium">Specialties:</span>
                 <div className="flex flex-wrap gap-1">
-                  {staff.specialties.map((specialty, index) => (
+                  {(staffMember.specializations || []).map((specialty, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
                       {specialty}
                     </Badge>
@@ -1341,7 +1392,7 @@ function StaffSection() {
                     <div
                       key={day}
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                        staff.workingDays.includes(day)
+                        (staffMember.working_hours && Object.keys(staffMember.working_hours).includes(day.toLowerCase()))
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground"
                       }`}
@@ -1360,29 +1411,29 @@ function StaffSection() {
                       <Star
                         key={i}
                         className={`h-4 w-4 ${
-                          i < Math.floor(staff.rating)
+                          i < 4
                             ? "fill-yellow-400 text-yellow-400"
                             : "text-gray-300"
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-sm font-medium">{staff.rating}</span>
-                  <span className="text-xs text-muted-foreground">({staff.appointments} appointments)</span>
+                  <span className="text-sm font-medium">4.8</span>
+                  <span className="text-xs text-muted-foreground">({staffMember.total_appointments || 0} appointments)</span>
                 </div>
               </div>
 
               {/* Availability */}
               <div className="flex items-center justify-between pt-2 border-t">
                 <Button
-                  variant={staff.isAvailable ? "default" : "destructive"}
+                  variant={staffMember.is_active ? "default" : "destructive"}
                   size="sm"
                   className="text-xs"
                 >
-                  {staff.isAvailable ? "Available" : "Unavailable"}
+                  {staffMember.is_active ? "Available" : "Unavailable"}
                 </Button>
                 <Switch
-                  checked={staff.isAvailable}
+                  checked={staffMember.is_active}
                   onCheckedChange={() => {
                     // Handle availability toggle
                   }}

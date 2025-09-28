@@ -6,6 +6,7 @@ import { send } from "process";
 // import businessConfigRoutes from "./routes/business-config.routes"; // Temporarily disabled
 import botFlowRoutes from "./routes/bot-flow-builder.routes";
 import salonApiRoutes from "./routes/salon-api";
+import staffApiRoutes from "./routes/staff-api";
 import { DynamicFlowProcessorService } from './services/dynamic-flow-processor.service';
 
 // WhatsApp webhook verification schema
@@ -1298,6 +1299,9 @@ We apologize for any inconvenience caused.`;
   
   // Salon API endpoints - handled by dedicated router
   app.use("/api/salon", salonApiRoutes);
+  
+  // Staff API endpoints - handled by dedicated router
+  app.use("/api/staff", staffApiRoutes);
 
   // Flow activation endpoints
   app.post("/api/bot-flows/:flowId/activate", async (req, res) => {
