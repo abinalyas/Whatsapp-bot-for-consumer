@@ -1275,7 +1275,7 @@ function ServicesSection() {
                 <label className="block text-sm font-medium mb-2">Service Name</label>
                 <input
                   type="text"
-                  defaultValue={editingService.title}
+                  defaultValue={editingService.name}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -1298,7 +1298,7 @@ function ServicesSection() {
                   <label className="block text-sm font-medium mb-2">Price ($)</label>
                   <input
                     type="number"
-                    defaultValue={editingService.price}
+                    defaultValue={editingService.base_price}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
                 </div>
@@ -1306,7 +1306,7 @@ function ServicesSection() {
                   <label className="block text-sm font-medium mb-2">Duration (mins)</label>
                   <input
                     type="number"
-                    defaultValue={editingService.duration}
+                    defaultValue={editingService.duration_minutes}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
                 </div>
@@ -1325,7 +1325,7 @@ function ServicesSection() {
                 <label className="block text-sm font-medium mb-2">Add-ons (comma separated)</label>
                 <input
                   type="text"
-                  defaultValue={editingService.addOns.join(", ")}
+                  defaultValue={(editingService.addOns || []).join(", ")}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -1334,7 +1334,7 @@ function ServicesSection() {
                 <div>
                   <div className="font-medium">Service Available</div>
                 </div>
-                <Switch defaultChecked={editingService.isAvailable} />
+                <Switch defaultChecked={editingService.is_active} />
               </div>
             </div>
             
@@ -1907,7 +1907,7 @@ function StaffSection() {
                 <label className="block text-sm font-medium mb-2">Specialties (comma separated)</label>
                 <input
                   type="text"
-                  defaultValue={editingStaff.specialties.join(", ")}
+                  defaultValue={(editingStaff.specializations || []).join(", ")}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -1916,7 +1916,7 @@ function StaffSection() {
                 <label className="block text-sm font-medium mb-2">Working Hours</label>
                 <input
                   type="text"
-                  defaultValue={editingStaff.workingHours}
+                  defaultValue={editingStaff.working_hours}
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -1927,7 +1927,7 @@ function StaffSection() {
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                     <Button
                       key={day}
-                      variant={editingStaff.workingDays.includes(day) ? "default" : "outline"}
+                      variant={(editingStaff.workingDays || []).includes(day) ? "default" : "outline"}
                       size="sm"
                       onClick={() => toggleDay(day)}
                       className="flex-1"
@@ -1942,7 +1942,7 @@ function StaffSection() {
                 <div>
                   <div className="font-medium">Currently Available</div>
                 </div>
-                <Switch defaultChecked={editingStaff.isAvailable} />
+                <Switch defaultChecked={editingStaff.is_active} />
               </div>
             </div>
             
