@@ -2192,9 +2192,9 @@ function CalendarSection() {
           { id: 3, name: "Manicure", category: "Nails", base_price: 35 }
         ]);
         setStaff([
-          { id: 1, name: "Emma Wilson", role: "stylist" },
-          { id: 2, name: "David Chen", role: "stylist" },
-          { id: 3, name: "Anna Rodriguez", role: "stylist" }
+          { id: 1, name: "Emma Wilson", role: "stylist", working_days: ["Mon", "Tue", "Wed", "Thu", "Fri"], working_hours: { from: "09:00", to: "17:00" } },
+          { id: 2, name: "David Chen", role: "stylist", working_days: ["Mon", "Tue", "Wed", "Thu", "Fri"], working_hours: { from: "09:00", to: "17:00" } },
+          { id: 3, name: "Anna Rodriguez", role: "stylist", working_days: ["Mon", "Tue", "Wed", "Thu", "Fri"], working_hours: { from: "09:00", to: "17:00" } }
         ]);
       } finally {
         setLoading(false);
@@ -2237,9 +2237,10 @@ function CalendarSection() {
   };
 
   const getAppointmentsForDate = (date) => {
-    return appointments.filter(apt => 
-      apt.date.toDateString() === date.toDateString()
-    );
+    return appointments.filter(apt => {
+      const aptDate = new Date(apt.scheduled_at || apt.date);
+      return aptDate.toDateString() === date.toDateString();
+    });
   };
 
   const getAppointmentsForWeek = (startDate) => {
