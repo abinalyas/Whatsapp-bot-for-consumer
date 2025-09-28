@@ -447,6 +447,28 @@ const paymentSettings = {
 };
 
 function OverviewSection() {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [cancellingAppointment, setCancellingAppointment] = useState(null);
+
+  const handleEditAppointment = (appointment) => {
+    setEditingAppointment(appointment);
+    setShowEditModal(true);
+  };
+
+  const handleCancelAppointment = (appointment) => {
+    setCancellingAppointment(appointment);
+    setShowCancelModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowEditModal(false);
+    setShowCancelModal(false);
+    setEditingAppointment(null);
+    setCancellingAppointment(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Revenue Cards */}
@@ -527,8 +549,8 @@ function OverviewSection() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">Edit</Button>
-                          <Button size="sm" variant="outline">Cancel</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleEditAppointment(appointment)}>Edit</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleCancelAppointment(appointment)}>Cancel</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -624,6 +646,123 @@ function OverviewSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Appointment Modal */}
+      {showEditModal && editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Edit Appointment</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name</label>
+                <input
+                  type="text"
+                  defaultValue={editingAppointment.customer}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Service</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background pr-10">
+                    <option value="hair-cut-color">Hair Cut & Color (120 mins)</option>
+                    <option value="beard-trim">Beard Trim (30 mins)</option>
+                    <option value="manicure">Manicure (45 mins)</option>
+                    <option value="hair-wash-style">Hair Wash & Style (60 mins)</option>
+                    <option value="facial">Facial Treatment (90 mins)</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Staff Member</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background pr-10">
+                    <option value="emma">Emma</option>
+                    <option value="david">David</option>
+                    <option value="anna">Anna</option>
+                    <option value="sofia">Sofia</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Time</label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    defaultValue={editingAppointment.time.replace(" AM", "").replace(" PM", "")}
+                    className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                  />
+                  <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Any special requirements or notes"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Appointment Modal */}
+      {showCancelModal && cancellingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-yellow-500" />
+                Cancel Appointment
+              </h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-muted-foreground mb-4">
+                Are you sure you want to cancel the appointment for <strong>{cancellingAppointment.customer} at {cancellingAppointment.time}</strong>?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This action cannot be undone. The customer will be notified about the cancellation.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Keep Appointment
+              </Button>
+              <Button variant="destructive">
+                Cancel Appointment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
