@@ -3710,13 +3710,23 @@ router2.get("/services", async (req, res) => {
 });
 router2.post("/services", async (req, res) => {
   try {
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const {
       name,
       description,
       category,
       subcategory,
       base_price,
-      currency,
+      currency = "USD",
       duration_minutes,
       is_active = true,
       display_order = 0,
@@ -3731,7 +3741,7 @@ router2.post("/services", async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'service')
       RETURNING *
     `, [
-      req.headers["x-tenant-id"] || "default-tenant-id",
+      tenantId,
       name,
       description,
       category,
@@ -4110,6 +4120,16 @@ router3.get("/staff", async (req, res) => {
 });
 router3.post("/staff", async (req, res) => {
   try {
+    const tenantResult = await pool3.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const {
       name,
       email,
@@ -4130,7 +4150,7 @@ router3.post("/staff", async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
-      req.headers["x-tenant-id"] || "default-tenant-id",
+      tenantId,
       name,
       email,
       phone,

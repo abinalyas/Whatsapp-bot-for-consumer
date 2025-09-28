@@ -50,9 +50,22 @@ router.get('/services', async (req, res) => {
 // Create new service
 router.post('/services', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const {
       name, description, category, subcategory, 
-      base_price, currency, duration_minutes, 
+      base_price, currency = 'USD', duration_minutes, 
       is_active = true, display_order = 0, tags = [], images = []
     } = req.body;
     
@@ -64,7 +77,7 @@ router.post('/services', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'service')
       RETURNING *
     `, [
-      req.headers['x-tenant-id'] || 'default-tenant-id',
+      tenantId,
       name, description, category, subcategory,
       base_price, currency, duration_minutes, is_active,
       display_order, tags, images
