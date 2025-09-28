@@ -820,6 +820,7 @@ function ServicesSection() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // Load services from API
   useEffect(() => {
@@ -848,7 +849,7 @@ function ServicesSection() {
     loadServices();
   }, []);
 
-  const handleAddService = () => {
+  const handleShowAddService = () => {
     setShowAddModal(true);
   };
 
@@ -902,6 +903,20 @@ function ServicesSection() {
     setDeletingService(null);
   };
 
+  const handleAddService = async (formData) => {
+    try {
+      setSaving(true);
+      const newService = await salonApi.services.create(formData);
+      setServices(prev => [...prev, newService]);
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error adding service:', err);
+      setError('Failed to add service');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredServices = selectedCategory === "all" 
     ? services 
     : services.filter(service => service.category === selectedCategory);
@@ -929,7 +944,7 @@ function ServicesSection() {
           >
             <List className="h-4 w-4" />
           </Button>
-                <Button onClick={handleAddService}>
+                <Button onClick={handleShowAddService}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Service
                 </Button>
@@ -1071,19 +1086,34 @@ function ServicesSection() {
               </Button>
             </div>
             
-            <div className="space-y-4">
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const serviceData = {
+                name: formData.get('name'),
+                category: formData.get('category'),
+                base_price: parseFloat(formData.get('price')),
+                duration_minutes: parseInt(formData.get('duration')),
+                description: formData.get('description'),
+                is_active: formData.get('is_active') === 'on',
+                offering_type: 'service'
+              };
+              await handleAddService(serviceData);
+            }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Service Name</label>
                 <input
+                  name="name"
                   type="text"
                   placeholder="e.g., Hair Cut"
                   className="w-full p-3 border border-input rounded-md bg-background"
+                  required
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium mb-2">Category</label>
-                <select className="w-full p-3 border border-input rounded-md bg-background">
+                <select name="category" className="w-full p-3 border border-input rounded-md bg-background" required>
                   <option value="">Select category</option>
                   <option value="hair">Hair</option>
                   <option value="nails">Nails</option>
@@ -1096,17 +1126,22 @@ function ServicesSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Price ($)</label>
                   <input
+                    name="price"
                     type="number"
+                    step="0.01"
                     placeholder="45"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Duration (mins)</label>
                   <input
+                    name="duration"
                     type="number"
                     placeholder="60"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
                   />
                 </div>
               </div>
@@ -1114,17 +1149,9 @@ function ServicesSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
                 <textarea
+                  name="description"
                   rows={3}
                   placeholder="Describe the service..."
-                  className="w-full p-3 border border-input rounded-md bg-background"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Add-ons (comma separated)</label>
-                <input
-                  type="text"
-                  placeholder="Hair Wash, Styling, etc."
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
@@ -1133,18 +1160,18 @@ function ServicesSection() {
                 <div>
                   <div className="font-medium">Service Available</div>
                 </div>
-                <Switch defaultChecked />
+                <Switch name="is_active" defaultChecked />
               </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={handleCloseModals}>
-                Cancel
-              </Button>
-              <Button>
-                Save Service
-              </Button>
-            </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button type="button" variant="outline" onClick={handleCloseModals}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Service'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1311,7 +1338,7 @@ function StaffSection() {
     loadStaff();
   }, []);
 
-  const handleAddStaff = () => {
+  const handleShowAddStaff = () => {
     setShowAddModal(true);
   };
 
@@ -1344,6 +1371,20 @@ function StaffSection() {
     setShowAddModal(false);
     setShowEditModal(false);
     setEditingStaff(null);
+  };
+
+  const handleAddStaff = async (formData) => {
+    try {
+      setSaving(true);
+      const newStaff = await staffApi.create(formData);
+      setStaff(prev => [...prev, newStaff]);
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error adding staff:', err);
+      setError('Failed to add staff member');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditAvailability = (staffMember) => {
@@ -1385,7 +1426,7 @@ function StaffSection() {
             <Calendar className="h-4 w-4 mr-2" />
             View Schedule
           </Button>
-          <Button onClick={handleAddStaff}>
+          <Button onClick={handleShowAddStaff}>
             <Plus className="h-4 w-4 mr-2" />
             Add Staff
           </Button>
@@ -1558,22 +1599,39 @@ function StaffSection() {
               </Button>
             </div>
             
-            <div className="space-y-4">
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const staffData = {
+                name: formData.get('name'),
+                role: formData.get('role'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                specializations: formData.get('specializations')?.split(',').map(s => s.trim()).filter(Boolean) || [],
+                working_hours: formData.get('working_hours'),
+                is_active: formData.get('is_active') === 'on'
+              };
+              await handleAddStaff(staffData);
+            }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Full Name</label>
                   <input
+                    name="name"
                     type="text"
                     placeholder="John Doe"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Role</label>
                   <input
+                    name="role"
                     type="text"
                     placeholder="Hair Stylist"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
                   />
                 </div>
               </div>
@@ -1582,14 +1640,17 @@ function StaffSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Email</label>
                   <input
+                    name="email"
                     type="email"
                     placeholder="john@bellasalon.com"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone</label>
                   <input
+                    name="phone"
                     type="tel"
                     placeholder="+1 (555) 123-4567"
                     className="w-full p-3 border border-input rounded-md bg-background"
@@ -1600,6 +1661,7 @@ function StaffSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Specialties (comma separated)</label>
                 <input
+                  name="specializations"
                   type="text"
                   placeholder="Hair Cut, Hair Color, Styling"
                   className="w-full p-3 border border-input rounded-md bg-background"
@@ -1609,45 +1671,29 @@ function StaffSection() {
               <div>
                 <label className="block text-sm font-medium mb-2">Working Hours</label>
                 <input
+                  name="working_hours"
                   type="text"
                   placeholder="9:00 AM - 6:00 PM"
                   className="w-full p-3 border border-input rounded-md bg-background"
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-2">Working Days</label>
-                <div className="flex gap-2 mt-2">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                    <Button
-                      key={day}
-                      variant={selectedDays.includes(day) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => toggleDay(day)}
-                      className="flex-1"
-                    >
-                      {day}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <div className="font-medium">Currently Available</div>
                 </div>
-                <Switch defaultChecked />
+                <Switch name="is_active" defaultChecked />
               </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={handleCloseModals}>
-                Cancel
-              </Button>
-              <Button>
-                Save Staff Member
-              </Button>
-            </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <Button type="button" variant="outline" onClick={handleCloseModals}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Staff Member'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
