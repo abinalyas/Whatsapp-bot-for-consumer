@@ -2965,7 +2965,7 @@ function CalendarSection() {
                     >
                       <option value="">Select service</option>
                       {(services || []).map((service) => (
-                        <option key={service.id} value={service.name}>{service.name}</option>
+                        <option key={service.id} value={service.id}>{service.name}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -2981,7 +2981,7 @@ function CalendarSection() {
                     >
                       <option value="">Select staff</option>
                       {(staff || []).map((staffMember) => (
-                        <option key={staffMember.id} value={staffMember.name}>{staffMember.name}</option>
+                        <option key={staffMember.id} value={staffMember.id}>{staffMember.name}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
