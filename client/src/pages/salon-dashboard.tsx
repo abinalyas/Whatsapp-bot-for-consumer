@@ -1653,11 +1653,25 @@ function CalendarSection() {
       day: 'numeric' 
     });
 
+    const navigateDay = (direction) => {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() + direction);
+      setCurrentDate(newDate);
+    };
+
     return (
       <div className="space-y-6">
-        {/* Date Header */}
-        <div className="text-center">
-          <h3 className="text-xl font-semibold">{dateString}</h3>
+        {/* Date Header with Navigation */}
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => navigateDay(-1)}>
+            <ChevronDown className="h-4 w-4 rotate-90" />
+          </Button>
+          <div className="text-center">
+            <h3 className="text-xl font-semibold">{dateString}</h3>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigateDay(1)}>
+            <ChevronDown className="h-4 w-4 -rotate-90" />
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1779,11 +1793,25 @@ function CalendarSection() {
     const weekAppointments = getAppointmentsForWeek(weekStart);
     const weekRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
+    const navigateWeek = (direction) => {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() + (direction * 7));
+      setCurrentDate(newDate);
+    };
+
     return (
       <div className="space-y-6">
-        {/* Week Header */}
-        <div className="text-center">
-          <h3 className="text-xl font-semibold">Week of {weekRange}</h3>
+        {/* Week Header with Navigation */}
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => navigateWeek(-1)}>
+            <ChevronDown className="h-4 w-4 rotate-90" />
+          </Button>
+          <div className="text-center">
+            <h3 className="text-xl font-semibold">Week of {weekRange}</h3>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigateWeek(1)}>
+            <ChevronDown className="h-4 w-4 -rotate-90" />
+          </Button>
         </div>
 
         {/* Weekly Calendar Grid */}
@@ -1908,11 +1936,25 @@ function CalendarSection() {
     const pendingCount = totalAppointments.filter(apt => apt.status === "pending").length;
     const cancelledCount = totalAppointments.filter(apt => apt.status === "cancelled").length;
 
+    const navigateMonth = (direction) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(currentDate.getMonth() + direction);
+      setCurrentDate(newDate);
+    };
+
     return (
       <div className="space-y-6">
-        {/* Month Header */}
-        <div className="text-center">
-          <h3 className="text-xl font-semibold">{monthName}</h3>
+        {/* Month Header with Navigation */}
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => navigateMonth(-1)}>
+            <ChevronDown className="h-4 w-4 rotate-90" />
+          </Button>
+          <div className="text-center">
+            <h3 className="text-xl font-semibold">{monthName}</h3>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigateMonth(1)}>
+            <ChevronDown className="h-4 w-4 -rotate-90" />
+          </Button>
         </div>
 
         {/* Monthly Calendar Grid */}
@@ -2023,6 +2065,10 @@ function CalendarSection() {
             onClick={() => setViewMode("month")}
           >
             Month
+          </Button>
+          <Button className="ml-4">
+            <Plus className="h-4 w-4 mr-2" />
+            New Appointment
           </Button>
         </div>
       </div>
