@@ -99,6 +99,19 @@ router.post('/services', async (req, res) => {
 // Update service
 router.put('/services/:id', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const { id } = req.params;
     const {
       name, description, category, subcategory, 
@@ -117,8 +130,7 @@ router.put('/services/:id', async (req, res) => {
     `, [
       id, name, description, category, subcategory,
       base_price, currency, duration_minutes, is_active,
-      display_order, tags, images,
-      req.headers['x-tenant-id'] || 'default-tenant-id'
+      display_order, tags, images, tenantId
     ]);
     
     if (result.rows.length === 0) {
@@ -144,13 +156,26 @@ router.put('/services/:id', async (req, res) => {
 // Delete service
 router.delete('/services/:id', async (req, res) => {
   try {
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
     const { id } = req.params;
     
     const result = await pool.query(`
       DELETE FROM offerings 
       WHERE id = $1 AND tenant_id = $2
       RETURNING id
-    `, [id, req.headers['x-tenant-id'] || 'default-tenant-id']);
+    `, [id, tenantId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({

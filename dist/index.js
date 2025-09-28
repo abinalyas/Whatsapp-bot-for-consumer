@@ -3768,6 +3768,16 @@ router2.post("/services", async (req, res) => {
 });
 router2.put("/services/:id", async (req, res) => {
   try {
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const { id } = req.params;
     const {
       name,
@@ -3803,7 +3813,7 @@ router2.put("/services/:id", async (req, res) => {
       display_order,
       tags,
       images,
-      req.headers["x-tenant-id"] || "default-tenant-id"
+      tenantId
     ]);
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -3825,12 +3835,22 @@ router2.put("/services/:id", async (req, res) => {
 });
 router2.delete("/services/:id", async (req, res) => {
   try {
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const { id } = req.params;
     const result = await pool2.query(`
       DELETE FROM offerings 
       WHERE id = $1 AND tenant_id = $2
       RETURNING id
-    `, [id, req.headers["x-tenant-id"] || "default-tenant-id"]);
+    `, [id, tenantId]);
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
