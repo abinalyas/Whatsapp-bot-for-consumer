@@ -578,7 +578,7 @@ function OverviewSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {appointments.map((appointment) => (
+                  {(appointments || []).map((appointment) => (
                     <TableRow key={appointment.id}>
                       <TableCell>{new Date(appointment.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</TableCell>
                       <TableCell>{appointment.customer_name}</TableCell>
@@ -907,6 +907,7 @@ function ServicesSection() {
     try {
       setSaving(true);
       const newService = await salonApi.services.create(formData);
+      console.log('New service created:', newService);
       setServices(prev => [...prev, newService]);
       setShowAddModal(false);
     } catch (err) {
@@ -918,8 +919,8 @@ function ServicesSection() {
   };
 
   const filteredServices = selectedCategory === "all" 
-    ? services 
-    : services.filter(service => service.category === selectedCategory);
+    ? (services || [])
+    : (services || []).filter(service => service.category === selectedCategory);
 
   return (
     <div className="space-y-6">
@@ -974,7 +975,7 @@ function ServicesSection() {
           ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
           : "grid-cols-1"
       }`}>
-        {filteredServices.map((service) => (
+        {(filteredServices || []).map((service) => (
           <Card key={service.id} className="relative">
                   {/* Action Buttons */}
                   <div className="absolute top-4 right-4 flex gap-2">
@@ -1377,6 +1378,7 @@ function StaffSection() {
     try {
       setSaving(true);
       const newStaff = await staffApi.create(formData);
+      console.log('New staff created:', newStaff);
       setStaff(prev => [...prev, newStaff]);
       setShowAddModal(false);
     } catch (err) {
@@ -1435,7 +1437,7 @@ function StaffSection() {
 
       {/* Staff Profiles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {staff.map((staffMember) => (
+        {(staff || []).map((staffMember) => (
           <Card key={staffMember.id} className="relative">
             {/* Action Buttons */}
             <div className="absolute top-4 right-4 flex gap-2">
