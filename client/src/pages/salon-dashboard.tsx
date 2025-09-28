@@ -4029,18 +4029,20 @@ export default function SalonDashboard() {
         {!sidebarCollapsed && (
           <div className="w-64 transition-all duration-300">
             <Sidebar>
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarGroupLabel>Bella Salon</SidebarGroupLabel>
+              <SidebarContent className="p-6">
+                <SidebarGroup className="p-0">
+                  <SidebarGroupLabel className="text-lg font-bold mb-6 px-0">Bella Salon</SidebarGroupLabel>
                   <SidebarGroupContent>
-                    <SidebarMenu>
+                    <SidebarMenu className="space-y-3">
                       {menuItems.map((item) => (
                         <SidebarMenuItem key={item.id}>
                           <SidebarMenuButton
                             isActive={activeSection === item.id}
                             onClick={() => setActiveSection(item.id)}
+                            size="lg"
+                            className="h-14 px-4 py-4 gap-4 text-base font-semibold"
                           >
-                            <item.icon />
+                            <item.icon className="h-6 w-6" />
                             <span>{item.title}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
