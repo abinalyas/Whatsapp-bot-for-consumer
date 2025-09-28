@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { Header } from "@/components/header";
 import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle } from "lucide-react";
 
 const menuItems = [
@@ -3965,6 +3966,20 @@ function SettingsSection() {
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
 
+  const getCurrentSectionName = () => {
+    const sectionNames = {
+      overview: "Overview",
+      services: "Services", 
+      staff: "Staff",
+      calendar: "Calendar",
+      payments: "Payments",
+      customers: "Customers",
+      promotions: "Promotions",
+      settings: "Settings"
+    };
+    return sectionNames[activeSection] || "Overview";
+  };
+
   const renderSection = () => {
     switch (activeSection) {
       case "overview":
@@ -4024,11 +4039,8 @@ export default function SalonDashboard() {
         </Sidebar>
         
         <main className="flex-1 overflow-hidden">
-          <div className="flex items-center gap-4 border-b px-6 py-4">
-            <SidebarTrigger />
-            <h1>{menuItems.find(item => item.id === activeSection)?.title || "Overview"}</h1>
-          </div>
-          <div className="h-[calc(100vh-5rem)] overflow-auto p-6">
+          <Header currentSection={getCurrentSectionName()} />
+          <div className="h-[calc(100vh-4rem)] overflow-auto p-6">
             {renderSection()}
           </div>
         </main>
