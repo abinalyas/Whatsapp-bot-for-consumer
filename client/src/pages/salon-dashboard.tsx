@@ -1746,6 +1746,19 @@ function CalendarSection() {
 }
 
 function PaymentsSection() {
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [markingTransaction, setMarkingTransaction] = useState(null);
+
+  const handleMarkPaid = (transaction) => {
+    setMarkingTransaction(transaction);
+    setShowMarkPaidModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowMarkPaidModal(false);
+    setMarkingTransaction(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1914,7 +1927,7 @@ function PaymentsSection() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {transaction.status === "pending" && (
-                        <Button size="sm" variant="outline">Mark Paid</Button>
+                        <Button size="sm" variant="outline" onClick={() => handleMarkPaid(transaction)}>Mark Paid</Button>
                       )}
                       <Button size="sm" variant="ghost">
                         <Download className="h-4 w-4" />
@@ -1967,6 +1980,56 @@ function PaymentsSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mark Payment as Paid Modal */}
+      {showMarkPaidModal && markingTransaction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
+                  <X className="h-4 w-4 text-white" />
+                </div>
+                Mark Payment as Paid
+              </h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-muted-foreground mb-4">
+                Are you sure you want to mark this payment as paid?
+              </p>
+              
+              {/* Transaction Summary */}
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="space-y-2">
+                  <div><strong>Customer:</strong> {markingTransaction.customer}</div>
+                  <div><strong>Service:</strong> {markingTransaction.service}</div>
+                  <div><strong>Amount:</strong> ${markingTransaction.amount}</div>
+                  <div><strong>Method:</strong> {markingTransaction.method}</div>
+                  <div><strong>Staff:</strong> {markingTransaction.staff}</div>
+                </div>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mt-4">
+                This action will update the payment status and cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button className="bg-green-500 hover:bg-green-600">
+                <X className="h-4 w-4 mr-2" />
+                Mark as Paid
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2399,7 +2462,9 @@ function CustomersSection() {
 function PromotionsSection() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
+  const [sendingCampaign, setSendingCampaign] = useState(null);
 
   const handleCreateCampaign = () => {
     setShowCreateModal(true);
@@ -2410,10 +2475,17 @@ function PromotionsSection() {
     setShowEditModal(true);
   };
 
+  const handleSendCampaign = (campaign) => {
+    setSendingCampaign(campaign);
+    setShowSendModal(true);
+  };
+
   const handleCloseModals = () => {
     setShowCreateModal(false);
     setShowEditModal(false);
+    setShowSendModal(false);
     setEditingCampaign(null);
+    setSendingCampaign(null);
   };
 
   return (
@@ -2443,7 +2515,7 @@ function PromotionsSection() {
                   <Button size="sm" variant="ghost" onClick={() => handleEditCampaign(template)}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => handleSendCampaign(template)}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
@@ -2775,6 +2847,126 @@ function PromotionsSection() {
               </Button>
               <Button>
                 Save Campaign
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Campaign Modal */}
+      {showSendModal && sendingCampaign && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Send className="h-5 w-5 text-blue-500" />
+                Send Campaign
+              </h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseModals}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Campaign Details */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Campaign:</span>
+                    <div className="font-medium">{sendingCampaign.name}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Type:</span>
+                    <div>
+                      <Badge variant="secondary" className="ml-2">{sendingCampaign.type}</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Target:</span>
+                    <div className="font-medium">{sendingCampaign.target}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">Recipients:</span>
+                    <div className="font-medium text-blue-600">0 customers</div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Delivery Channels */}
+              <div>
+                <h4 className="font-medium mb-3">Delivery Channels</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">WhatsApp</div>
+                        <div className="text-sm text-muted-foreground">Recommended</div>
+                      </div>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">SMS</div>
+                        <div className="text-sm text-muted-foreground">Text message</div>
+                      </div>
+                    </div>
+                    <Switch />
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Email</div>
+                        <div className="text-sm text-muted-foreground">Email notification</div>
+                      </div>
+                    </div>
+                    <Switch />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Schedule for Later */}
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Schedule for Later</div>
+                    <div className="text-sm text-muted-foreground">Send at a specific time</div>
+                  </div>
+                </div>
+                <Switch />
+              </div>
+              
+              {/* Preview Message */}
+              <div>
+                <h4 className="font-medium mb-3">Preview Message:</h4>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm">{sendingCampaign.description}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseModals}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-500 hover:bg-blue-600">
+                <Send className="h-4 w-4 mr-2" />
+                Send Now
               </Button>
             </div>
           </div>
