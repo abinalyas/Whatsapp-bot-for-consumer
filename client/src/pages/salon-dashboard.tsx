@@ -460,6 +460,36 @@ function OverviewSection() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [stats, setStats] = useState({ todayAppointments: 0, todayRevenue: 0, totalServices: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load appointments and stats from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [appointmentsData, statsData] = await Promise.all([
+          salonApi.appointments.getAll({ date: new Date().toISOString().split('T')[0] }),
+          salonApi.stats.getStats()
+        ]);
+        setAppointments(appointmentsData);
+        setStats(statsData);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading overview data:', err);
+        setError('Failed to load overview data');
+        // Fallback to mock data
+        setAppointments(todaysAppointments);
+        setStats({ todayAppointments: 5, todayRevenue: 450, totalServices: 8 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
@@ -488,7 +518,7 @@ function OverviewSection() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.today.amount}</div>
+            <div className="text-2xl">${stats.todayRevenue}</div>
             <p className="text-xs text-muted-foreground">
               +12% from yesterday
             </p>
@@ -545,15 +575,15 @@ function OverviewSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {todaysAppointments.map((appointment) => (
+                  {appointments.map((appointment) => (
                     <TableRow key={appointment.id}>
-                      <TableCell>{appointment.time}</TableCell>
-                      <TableCell>{appointment.customer}</TableCell>
-                      <TableCell>{appointment.service}</TableCell>
-                      <TableCell>{appointment.staff}</TableCell>
+                      <TableCell>{new Date(appointment.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</TableCell>
+                      <TableCell>{appointment.customer_name}</TableCell>
+                      <TableCell>{appointment.service_name}</TableCell>
+                      <TableCell>{appointment.staff_name || 'Unassigned'}</TableCell>
                       <TableCell>
-                        <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
-                          {appointment.status}
+                        <Badge variant={appointment.payment_status === "paid" ? "default" : "secondary"}>
+                          {appointment.payment_status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -1694,7 +1724,7 @@ function StaffSection() {
 
 function CalendarSection() {
   const [viewMode, setViewMode] = useState("day");
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 28)); // September 28, 2025
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState({
     staffMember: "All Staff",
     service: "All Services",
@@ -1703,34 +1733,59 @@ function CalendarSection() {
   const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
   const [newAppointment, setNewAppointment] = useState({
     customerName: "",
-    phone: "+1 (555) 123-4567",
-    email: "customer@email.com",
+    phone: "",
+    email: "",
     service: "",
     staffMember: "",
-    date: "28/09/2025",
+    date: new Date().toISOString().split('T')[0],
     time: "",
     notes: ""
   });
+  const [appointments, setAppointments] = useState([]);
+  const [services, setServices] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock data for appointments
-  const appointments = [
-    { id: 1, customer: "Sarah Johnson", service: "Hair Cut & Color", staff: "Emma", time: "9:00 AM", duration: 120, price: 180, status: "confirmed", date: new Date(2025, 8, 28) },
-    { id: 2, customer: "Mike Chen", service: "Beard Trim", staff: "David", time: "9:30 AM", duration: 30, price: 35, status: "confirmed", date: new Date(2025, 8, 28) },
-    { id: 3, customer: "Lisa Rodriguez", service: "Manicure", staff: "Anna", time: "10:00 AM", duration: 45, price: 50, status: "pending", date: new Date(2025, 8, 28) },
-    { id: 4, customer: "James Wilson", service: "Hair Cut", staff: "Emma", time: "11:30 AM", duration: 45, price: 60, status: "confirmed", date: new Date(2025, 8, 28) },
-    { id: 5, customer: "Maria Garcia", service: "Facial Treatment", staff: "Sofia", time: "1:00 PM", duration: 60, price: 85, status: "confirmed", date: new Date(2025, 8, 28) },
-    { id: 6, customer: "David Kim", service: "Pedicure", staff: "Anna", time: "2:30 PM", duration: 45, price: 55, status: "pending", date: new Date(2025, 8, 28) },
-    { id: 7, customer: "Emily Davis", service: "Hair Styling", staff: "Emma", time: "4:00 PM", duration: 60, price: 75, status: "confirmed", date: new Date(2025, 8, 28) },
-    { id: 8, customer: "Alex Thompson", service: "Hair Cut & Style", staff: "Emma", time: "10:30 AM", duration: 120, price: 150, status: "confirmed", date: new Date(2025, 8, 29) },
-    { id: 9, customer: "Anna", service: "Hair Manicure", staff: "Anna", time: "2:00 PM", duration: 30, price: 30, status: "confirmed", date: new Date(2025, 8, 29) },
-    { id: 10, customer: "David", service: "Beard Trim & Styling", staff: "David", time: "3:00 PM", duration: 45, price: 50, status: "confirmed", date: new Date(2025, 8, 29) },
-    { id: 11, customer: "Ben Johnson", service: "Hair Cut", staff: "David", time: "8:30 AM", duration: 30, price: 30, status: "confirmed", date: new Date(2025, 8, 30) },
-    { id: 12, customer: "Julian Williams", service: "Eye Facial", staff: "Sofia", time: "1:30 PM", duration: 75, price: 80, status: "confirmed", date: new Date(2025, 8, 30) },
-    { id: 13, customer: "Tyler Brown", service: "Beard Styling", staff: "David", time: "11:00 AM", duration: 30, price: 50, status: "confirmed", date: new Date(2025, 9, 1) },
-    { id: 14, customer: "John Clark", service: "Hair Color Touch-up", staff: "Emma", time: "3:00 PM", duration: 90, price: 120, status: "confirmed", date: new Date(2025, 9, 1) },
-    { id: 15, customer: "Tyler Brown", service: "Beard Styling", staff: "David", time: "11:00 AM", duration: 30, price: 50, status: "confirmed", date: new Date(2025, 9, 2) },
-    { id: 16, customer: "John Clark", service: "Hair Color Touch-up", staff: "Emma", time: "3:00 PM", duration: 90, price: 120, status: "confirmed", date: new Date(2025, 9, 2) }
-  ];
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [appointmentsData, servicesData, staffData] = await Promise.all([
+          salonApi.appointments.getAll(),
+          salonApi.services.getAll(),
+          staffApi.getAll()
+        ]);
+        setAppointments(appointmentsData);
+        setServices(servicesData);
+        setStaff(staffData);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading calendar data:', err);
+        setError('Failed to load calendar data');
+        // Fallback to mock data
+        setAppointments([
+          { id: 1, customer_name: "Sarah Johnson", service_name: "Hair Cut & Color", staff_name: "Emma", scheduled_at: new Date().toISOString(), duration_minutes: 120, amount: 180, payment_status: "paid" },
+          { id: 2, customer_name: "Mike Chen", service_name: "Beard Trim", staff_name: "David", scheduled_at: new Date().toISOString(), duration_minutes: 30, amount: 35, payment_status: "paid" }
+        ]);
+        setServices([
+          { id: 1, name: "Hair Cut & Style", category: "Hair", base_price: 45 },
+          { id: 2, name: "Hair Color", category: "Hair", base_price: 80 },
+          { id: 3, name: "Manicure", category: "Nails", base_price: 35 }
+        ]);
+        setStaff([
+          { id: 1, name: "Emma Wilson", role: "stylist" },
+          { id: 2, name: "David Chen", role: "stylist" },
+          { id: 3, name: "Anna Rodriguez", role: "stylist" }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const timeSlots = [
     "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
@@ -1739,7 +1794,6 @@ function CalendarSection() {
   ];
 
   const staffMembers = ["Emma", "David", "Anna", "Sofia"];
-  const services = ["Hair Cut", "Hair Color", "Hair Cut & Color", "Beard Trim", "Manicure", "Pedicure", "Facial Treatment", "Hair Styling", "Beard Styling", "Eye Facial"];
 
   const handleNewAppointment = () => {
     setShowNewAppointmentModal(true);
@@ -2381,7 +2435,7 @@ function CalendarSection() {
                     >
                       <option value="">Select service</option>
                       {services.map((service) => (
-                        <option key={service} value={service}>{service}</option>
+                        <option key={service.id} value={service.name}>{service.name}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -2396,8 +2450,8 @@ function CalendarSection() {
                       className="w-full p-3 border border-input rounded-md bg-background appearance-none"
                     >
                       <option value="">Select staff</option>
-                      {staffMembers.map((staff) => (
-                        <option key={staff} value={staff}>{staff}</option>
+                      {staff.map((staffMember) => (
+                        <option key={staffMember.id} value={staffMember.name}>{staffMember.name}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
