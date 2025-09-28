@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/tooltip";
 import { salonApi } from "@/lib/salon-api";
 import { staffApi } from "@/lib/staff-api";
+import { AvailabilityManager } from "@/components/availability-manager";
+import { TimeSlotSelector } from "@/components/time-slot-selector";
+import { StaffScheduler } from "@/components/staff-scheduler";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -1277,6 +1280,9 @@ function StaffSection() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAvailabilityManager, setShowAvailabilityManager] = useState(false);
+  const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
+  const [showStaffScheduler, setShowStaffScheduler] = useState(false);
 
   // Load staff from API
   useEffect(() => {
@@ -1340,6 +1346,24 @@ function StaffSection() {
     setEditingStaff(null);
   };
 
+  const handleEditAvailability = (staffMember) => {
+    setSelectedStaffForAvailability(staffMember);
+    setShowAvailabilityManager(true);
+  };
+
+  const handleCloseAvailabilityManager = () => {
+    setShowAvailabilityManager(false);
+    setSelectedStaffForAvailability(null);
+  };
+
+  const handleShowScheduler = () => {
+    setShowStaffScheduler(true);
+  };
+
+  const handleCloseScheduler = () => {
+    setShowStaffScheduler(false);
+  };
+
   const toggleDay = (day) => {
     setSelectedDays(prev => 
       prev.includes(day) 
@@ -1356,20 +1380,34 @@ function StaffSection() {
           <h2 className="text-3xl font-bold">Staff Management</h2>
           <p className="text-muted-foreground">Manage your team members, schedules, and availability.</p>
         </div>
-        <Button onClick={handleAddStaff}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Staff
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleShowScheduler}>
+            <Calendar className="h-4 w-4 mr-2" />
+            View Schedule
+          </Button>
+          <Button onClick={handleAddStaff}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* Staff Profiles */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {staff.map((staffMember) => (
           <Card key={staffMember.id} className="relative">
-            {/* Edit Button */}
-            <div className="absolute top-4 right-4">
+            {/* Action Buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => handleEditStaff(staffMember)}>
                 <Edit className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => handleEditAvailability(staffMember)}
+                title="Edit Availability"
+              >
+                <Clock className="h-4 w-4" />
               </Button>
             </div>
 
@@ -1714,6 +1752,58 @@ function StaffSection() {
               <Button>
                 Save Staff Member
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Availability Manager Modal */}
+      {showAvailabilityManager && selectedStaffForAvailability && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-semibold">Manage Availability - {selectedStaffForAvailability.name}</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseAvailabilityManager}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <AvailabilityManager
+                staffId={selectedStaffForAvailability.id}
+                staffName={selectedStaffForAvailability.name}
+                onSave={handleCloseAvailabilityManager}
+                onCancel={handleCloseAvailabilityManager}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Scheduler Modal */}
+      {showStaffScheduler && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-semibold">Staff Schedule</h3>
+              <Button variant="ghost" size="sm" onClick={handleCloseScheduler}>
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <StaffScheduler
+                onStaffSelect={(staffId) => {
+                  console.log('Staff selected:', staffId);
+                  // Handle staff selection for booking
+                }}
+                onAvailabilityEdit={(staffId) => {
+                  const staffMember = staff.find(s => s.id === staffId);
+                  if (staffMember) {
+                    setSelectedStaffForAvailability(staffMember);
+                    setShowStaffScheduler(false);
+                    setShowAvailabilityManager(true);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
