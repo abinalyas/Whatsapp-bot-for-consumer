@@ -2401,6 +2401,10 @@ function CalendarSection() {
   };
 
   const renderDayView = () => {
+    if (!currentDate) {
+      return <div>Loading...</div>;
+    }
+    
     const dayAppointments = getAppointmentsForDate(currentDate);
     const dateString = currentDate.toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -2544,6 +2548,10 @@ function CalendarSection() {
   };
 
   const renderWeekView = () => {
+    if (!currentDate) {
+      return <div>Loading...</div>;
+    }
+    
     const weekStart = new Date(currentDate);
     weekStart.setDate(currentDate.getDate() - currentDate.getDay());
     const weekAppointments = getAppointmentsForWeek(weekStart);
@@ -2682,12 +2690,17 @@ function CalendarSection() {
   };
 
   const renderMonthView = () => {
+    if (!currentDate) {
+      return <div>Loading...</div>;
+    }
+    
     const monthAppointments = getAppointmentsForMonth(currentDate);
     const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const totalAppointments = appointments.filter(apt => 
-      apt.date.getMonth() === currentDate.getMonth() && 
-      apt.date.getFullYear() === currentDate.getFullYear()
-    );
+    const totalAppointments = appointments.filter(apt => {
+      const aptDate = new Date(apt.scheduled_at || apt.date);
+      return aptDate.getMonth() === currentDate.getMonth() && 
+             aptDate.getFullYear() === currentDate.getFullYear();
+    });
     const confirmedCount = totalAppointments.filter(apt => apt.status === "confirmed").length;
     const pendingCount = totalAppointments.filter(apt => apt.status === "pending").length;
     const cancelledCount = totalAppointments.filter(apt => apt.status === "cancelled").length;
