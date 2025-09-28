@@ -3920,6 +3920,16 @@ router2.get("/appointments", async (req, res) => {
 });
 router2.post("/appointments", async (req, res) => {
   try {
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
     const {
       customer_name,
       customer_phone,
@@ -3938,7 +3948,7 @@ router2.post("/appointments", async (req, res) => {
       ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
-      req.headers["x-tenant-id"] || "default-tenant-id",
+      tenantId,
       customer_name,
       customer_phone,
       customer_email,

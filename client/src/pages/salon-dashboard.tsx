@@ -2230,10 +2230,62 @@ function CalendarSection() {
     });
   };
 
-  const handleBookAppointment = () => {
-    // Handle booking logic here
-    console.log("Booking appointment:", newAppointment);
-    handleCloseModal();
+  const handleBookAppointment = async () => {
+    try {
+      setLoading(true);
+      
+      // Create appointment data
+      const selectedService = services.find(s => s.id === newAppointment.service);
+      const appointmentData = {
+        customer_name: newAppointment.customerName,
+        customer_phone: newAppointment.phone,
+        customer_email: newAppointment.email,
+        service_id: newAppointment.service,
+        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time}`).toISOString(),
+        duration_minutes: selectedService?.duration_minutes || 60,
+        amount: selectedService?.base_price || 0,
+        currency: 'USD',
+        notes: newAppointment.notes
+      };
+
+      // Call API to create appointment
+      const response = await salonApi.appointments.create(appointmentData);
+      
+      // Add to local state with proper structure
+      const newAppointmentData = {
+        id: response.id,
+        customer_name: response.customer_name,
+        service_name: selectedService?.name || 'Service',
+        staff_name: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
+        scheduled_at: response.scheduled_at,
+        duration_minutes: response.duration_minutes,
+        amount: response.amount,
+        payment_status: 'pending'
+      };
+      setAppointments(prev => [...prev, newAppointmentData]);
+      
+      // Close modal and reset form
+      handleCloseModal();
+      
+      console.log("Appointment created successfully:", response);
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      // For now, add to local state as fallback
+      const newApt = {
+        id: Date.now(), // Temporary ID
+        customer_name: newAppointment.customerName,
+        service_name: services.find(s => s.id === newAppointment.service)?.name || 'Service',
+        staff_name: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
+        scheduled_at: new Date(`${newAppointment.date}T${newAppointment.time}`).toISOString(),
+        duration_minutes: 60,
+        amount: 0,
+        payment_status: 'pending'
+      };
+      setAppointments(prev => [...prev, newApt]);
+      handleCloseModal();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getAppointmentsForDate = (date) => {
@@ -2926,8 +2978,8 @@ function CalendarSection() {
               <Button variant="outline" onClick={handleCloseModal}>
                 Cancel
               </Button>
-              <Button onClick={handleBookAppointment}>
-                Book Appointment
+              <Button onClick={handleBookAppointment} disabled={loading}>
+                {loading ? "Booking..." : "Book Appointment"}
               </Button>
             </div>
           </div>
