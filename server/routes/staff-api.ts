@@ -74,6 +74,10 @@ router.post('/staff', async (req, res) => {
       hourly_rate, commission_rate, hire_date, notes, avatar_url
     } = req.body;
     
+    // Ensure specializations and working_hours are properly formatted JSON
+    const formattedSpecializations = Array.isArray(specializations) ? specializations : [];
+    const formattedWorkingHours = typeof working_hours === 'object' ? working_hours : {};
+    
     const result = await pool.query(`
       INSERT INTO staff (
         tenant_id, name, email, phone, role, specializations,
@@ -82,7 +86,7 @@ router.post('/staff', async (req, res) => {
       RETURNING *
     `, [
       tenantId,
-      name, email, phone, role, specializations, working_hours,
+      name, email, phone, role, JSON.stringify(formattedSpecializations), JSON.stringify(formattedWorkingHours),
       hourly_rate, commission_rate, hire_date, notes, avatar_url
     ]);
     
@@ -108,6 +112,10 @@ router.put('/staff/:id', async (req, res) => {
       hourly_rate, commission_rate, is_active, notes, avatar_url
     } = req.body;
     
+    // Ensure specializations and working_hours are properly formatted JSON
+    const formattedSpecializations = Array.isArray(specializations) ? specializations : [];
+    const formattedWorkingHours = typeof working_hours === 'object' ? working_hours : {};
+    
     const result = await pool.query(`
       UPDATE staff SET
         name = $2, email = $3, phone = $4, role = $5, specializations = $6,
@@ -116,7 +124,7 @@ router.put('/staff/:id', async (req, res) => {
       WHERE id = $1 AND tenant_id = $13
       RETURNING *
     `, [
-      id, name, email, phone, role, specializations, working_hours,
+      id, name, email, phone, role, JSON.stringify(formattedSpecializations), JSON.stringify(formattedWorkingHours),
       hourly_rate, commission_rate, is_active, notes, avatar_url,
       req.headers['x-tenant-id'] || 'default-tenant-id'
     ]);

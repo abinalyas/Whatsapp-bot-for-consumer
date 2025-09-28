@@ -1801,7 +1801,7 @@ function StaffSection() {
                 email: formData.get('email'),
                 phone: formData.get('phone'),
                 specializations: formData.get('specializations')?.split(',').map(s => s.trim()).filter(Boolean) || [],
-                working_hours: formData.get('working_hours'),
+                working_hours: JSON.parse(formData.get('working_hours') || '{}'),
                 is_active: formData.get('is_active') === 'on'
               };
               await handleAddStaff(staffData);
