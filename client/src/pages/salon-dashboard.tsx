@@ -2177,6 +2177,13 @@ function CalendarSection() {
         // Enhance appointments with calendar display properties
         const enhancedAppointments = appointmentsData.map(apt => {
           const appointmentDateTime = new Date(apt.scheduled_at);
+          // Format time to match timeSlots format (e.g., "9:00 AM")
+          const timeString = appointmentDateTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          
           return {
             ...apt,
             // Calendar display properties
@@ -2184,10 +2191,12 @@ function CalendarSection() {
             service: apt.service_name,
             staff: apt.staff_name || 'Unassigned',
             duration: apt.duration_minutes,
-            time: appointmentDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            time: timeString,
             status: 'confirmed'
           };
         });
+        
+        console.log('Enhanced appointments:', enhancedAppointments);
         
         setAppointments(enhancedAppointments);
         setServices(servicesData);
@@ -2497,8 +2506,10 @@ function CalendarSection() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
+                {console.log('Day appointments for daily schedule:', dayAppointments)}
                 {timeSlots.map((time, index) => {
                   const appointment = dayAppointments.find(apt => apt.time === time);
+                  console.log(`Time slot: ${time}, Found appointment:`, appointment);
                   return (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
