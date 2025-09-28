@@ -1099,7 +1099,7 @@ function ServicesSection() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-lg">{service.title}</CardTitle>
+                  <CardTitle className="text-lg">{service.name}</CardTitle>
                   <Badge variant="secondary" className="mt-2">
                     {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
                   </Badge>
@@ -1112,10 +1112,10 @@ function ServicesSection() {
               
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-2xl font-bold">${service.price}</span>
+                  <span className="text-2xl font-bold">${service.base_price}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {service.duration} mins
+                  {service.duration_minutes} mins
                 </div>
               </div>
 
