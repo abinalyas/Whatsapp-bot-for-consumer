@@ -2427,13 +2427,36 @@ function CalendarSection() {
   };
 
   const getAppointmentsForDate = (date) => {
-    if (!date) return [];
-    return (appointments || []).filter(apt => {
-      if (!apt) return false;
+    console.log('🔍 getAppointmentsForDate called with date:', date);
+    console.log('🔍 Current appointments array:', appointments);
+    console.log('🔍 Appointments length:', appointments?.length);
+    
+    if (!date) {
+      console.log('❌ No date provided, returning empty array');
+      return [];
+    }
+    
+    const filtered = (appointments || []).filter(apt => {
+      if (!apt) {
+        console.log('❌ Appointment is null/undefined');
+        return false;
+      }
+      
       const aptDate = new Date(apt.scheduled_at || apt.date);
-      if (isNaN(aptDate.getTime())) return false;
-      return aptDate.toDateString() === date.toDateString();
+      console.log('🔍 Checking appointment:', apt.id, 'scheduled_at:', apt.scheduled_at, 'parsed date:', aptDate);
+      
+      if (isNaN(aptDate.getTime())) {
+        console.log('❌ Invalid date for appointment:', apt.id);
+        return false;
+      }
+      
+      const matches = aptDate.toDateString() === date.toDateString();
+      console.log('🔍 Date match:', aptDate.toDateString(), '===', date.toDateString(), '=', matches);
+      return matches;
     });
+    
+    console.log('✅ Filtered appointments for date:', filtered);
+    return filtered;
   };
 
   const getAppointmentsForWeek = (startDate) => {
@@ -2515,6 +2538,16 @@ function CalendarSection() {
               <div className="space-y-2">
                 {timeSlots.map((time, index) => {
                   const appointment = dayAppointments.find(apt => apt.time === time);
+                  console.log('🕐 Time slot:', time, 'Found appointment:', appointment);
+                  if (appointment) {
+                    console.log('📋 Appointment details:', {
+                      customer: appointment.customer,
+                      service: appointment.service,
+                      staff: appointment.staff,
+                      duration: appointment.duration,
+                      time: appointment.time
+                    });
+                  }
                   return (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
@@ -2589,7 +2622,15 @@ function CalendarSection() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {dayAppointments.map((appointment) => (
+              {dayAppointments.map((appointment) => {
+                console.log('📝 Rendering appointment details for:', appointment.id, {
+                  customer: appointment.customer,
+                  service: appointment.service,
+                  staff: appointment.staff,
+                  duration: appointment.duration,
+                  time: appointment.time
+                });
+                return (
                 <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
@@ -2610,7 +2651,8 @@ function CalendarSection() {
                     <Button size="sm" variant="outline" className="text-destructive">Cancel</Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
