@@ -2202,6 +2202,7 @@ function CalendarSection() {
         
         console.log('Original appointments data:', appointmentsData);
         console.log('Enhanced appointments:', enhancedAppointments);
+        console.log('Sample enhanced appointment:', enhancedAppointments[0]);
         
         setAppointments(enhancedAppointments);
         setServices(servicesData);
@@ -2475,6 +2476,7 @@ function CalendarSection() {
     }
     
     const dayAppointments = getAppointmentsForDate(currentDate);
+  console.log('Day appointments for current date:', dayAppointments);
     const dateString = currentDate.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
