@@ -5690,6 +5690,7 @@ export default function SalonDashboard() {
   const [loading, setLoading] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   
   // Quick Actions modals state
   const [showQuickBookModal, setShowQuickBookModal] = useState(false);
