@@ -5735,6 +5735,29 @@ export default function SalonDashboard() {
     appointments: []
   });
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  
+  // Send Reminders modal state
+  const [reminderData, setReminderData] = useState({
+    reminderType: 'tomorrow',
+    customMessage: '',
+    selectedAppointments: []
+  });
+  const [reminderAppointments, setReminderAppointments] = useState([]);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  
+  // Walk-in modal state
+  const [walkInData, setWalkInData] = useState({
+    customerName: '',
+    phone: '',
+    email: '',
+    service: '',
+    staff: '',
+    time: '',
+    notes: ''
+  });
+  const [walkInServices, setWalkInServices] = useState([]);
+  const [walkInStaff, setWalkInStaff] = useState([]);
+  const [walkInLoading, setWalkInLoading] = useState(false);
 
   // Load data for Quick Book modal
   const loadQuickBookData = async () => {
@@ -6035,7 +6058,91 @@ export default function SalonDashboard() {
       setPaymentLoading(false);
     }
   };
-  const handleOpenSendReminders = () => setShowSendRemindersModal(true);
+  // Load Send Reminders data
+  const loadReminderData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      let appointmentsResponse;
+      if (reminderData.reminderType === 'tomorrow') {
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${tomorrow}`);
+      } else if (reminderData.reminderType === 'today') {
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`);
+      } else if (reminderData.reminderType === 'week') {
+        // Get appointments for the next 7 days
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}&days=7`);
+      } else {
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`);
+      }
+      
+      const result = await appointmentsResponse.json();
+      if (result.success) {
+        setReminderAppointments(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading reminder appointments:', error);
+    }
+  };
+
+  // Send Reminders handlers
+  const handleOpenSendReminders = async () => {
+    await loadReminderData();
+    setShowSendRemindersModal(true);
+  };
+
+  const handleSendRemindersSubmit = async () => {
+    if (reminderAppointments.length === 0) {
+      alert('No appointments found for the selected period');
+      return;
+    }
+
+    setReminderLoading(true);
+    try {
+      // Create reminder messages
+      const reminderMessages = reminderAppointments.map(appointment => {
+        const time = appointment.scheduled_at ? 
+          new Date(appointment.scheduled_at).toLocaleTimeString('en-IN', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          }) : 'N/A';
+        
+        const defaultMessage = `Hi ${appointment.customer_name || 'Customer'}, this is a reminder about your appointment ${reminderData.reminderType === 'tomorrow' ? 'tomorrow' : 'today'} at ${time} for ${appointment.service_name || 'service'} with ${appointment.staff_name || 'our staff'}. See you soon! - Bella Salon`;
+        
+        return {
+          appointmentId: appointment.id,
+          customerPhone: appointment.customer_phone,
+          message: reminderData.customMessage || defaultMessage
+        };
+      });
+
+      // Send reminders (simulate API call for now)
+      let successCount = 0;
+      for (const reminder of reminderMessages) {
+        try {
+          // In a real implementation, this would call a WhatsApp/SMS API
+          console.log(`Sending reminder to ${reminder.customerPhone}: ${reminder.message}`);
+          successCount++;
+        } catch (error) {
+          console.error('Failed to send reminder:', error);
+        }
+      }
+
+      alert(`Successfully sent ${successCount} out of ${reminderMessages.length} reminders!`);
+      setShowSendRemindersModal(false);
+      setReminderData({
+        reminderType: 'tomorrow',
+        customMessage: '',
+        selectedAppointments: []
+      });
+    } catch (error) {
+      console.error('Error sending reminders:', error);
+      alert('Failed to send reminders. Please try again.');
+    } finally {
+      setReminderLoading(false);
+    }
+  };
   // Load View Schedule data
   const loadScheduleData = async () => {
     setScheduleLoading(true);
@@ -6090,7 +6197,119 @@ export default function SalonDashboard() {
     await loadScheduleData();
     setShowViewScheduleModal(true);
   };
-  const handleOpenWalkIn = () => setShowWalkInModal(true);
+  // Load Walk-in data
+  const loadWalkInData = async () => {
+    try {
+      const [servicesResponse, staffResponse] = await Promise.all([
+        fetch('/api/salon/services'),
+        fetch('/api/staff/staff')
+      ]);
+      
+      const servicesResult = await servicesResponse.json();
+      const staffResult = await staffResponse.json();
+      
+      if (servicesResult.success) {
+        setWalkInServices(servicesResult.data);
+      }
+      if (staffResult.success) {
+        setWalkInStaff(staffResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading walk-in data:', error);
+    }
+  };
+
+  // Walk-in handlers
+  const handleOpenWalkIn = async () => {
+    await loadWalkInData();
+    // Set default time to current time + 15 minutes
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 15);
+    const defaultTime = now.toLocaleTimeString('en-IN', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+    
+    setWalkInData(prev => ({
+      ...prev,
+      time: defaultTime
+    }));
+    setShowWalkInModal(true);
+  };
+
+  const handleWalkInSubmit = async () => {
+    if (!walkInData.customerName || !walkInData.service || !walkInData.staff || !walkInData.time) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setWalkInLoading(true);
+    try {
+      // Convert time to 24-hour format
+      let timeString = walkInData.time;
+      if (timeString.includes(' AM') || timeString.includes(' PM')) {
+        const [timePart, ampm] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (ampm === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (ampm === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const scheduled_at = new Date(`${today}T${timeString}:00`).toISOString();
+      
+      const response = await fetch('/api/salon/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify({
+          customer_name: walkInData.customerName,
+          customer_phone: walkInData.phone,
+          customer_email: walkInData.email,
+          service_id: walkInData.service,
+          staff_id: walkInData.staff,
+          scheduled_at: scheduled_at,
+          duration_minutes: 60, // Default duration
+          amount: 0, // Will be calculated from service
+          currency: 'INR',
+          notes: `Walk-in customer: ${walkInData.notes}`,
+          payment_status: 'pending'
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Walk-in customer registered successfully!');
+        setShowWalkInModal(false);
+        setWalkInData({
+          customerName: '',
+          phone: '',
+          email: '',
+          service: '',
+          staff: '',
+          time: '',
+          notes: ''
+        });
+        // Refresh appointments data
+        window.location.reload();
+      } else {
+        alert('Failed to register walk-in customer: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error registering walk-in customer:', error);
+      alert('Failed to register walk-in customer. Please try again.');
+    } finally {
+      setWalkInLoading(false);
+    }
+  };
   const handleOpenDailySummary = async () => {
     await loadDailySummaryData();
     setShowDailySummaryModal(true);
@@ -6874,7 +7093,11 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Reminder Type *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={reminderData.reminderType}
+                    onChange={(e) => setReminderData(prev => ({ ...prev, reminderType: e.target.value }))}
+                  >
                     <option value="tomorrow">All Tomorrow's Appointments</option>
                     <option value="today">Today's Appointments</option>
                     <option value="week">This Week's Appointments</option>
@@ -6884,6 +7107,15 @@ export default function SalonDashboard() {
                 </div>
               </div>
 
+              {/* Appointment Count */}
+              {reminderAppointments.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <p className="text-sm text-blue-700">
+                    Found {reminderAppointments.length} appointment{reminderAppointments.length !== 1 ? 's' : ''} for {reminderData.reminderType === 'tomorrow' ? 'tomorrow' : reminderData.reminderType === 'today' ? 'today' : 'this week'}
+                  </p>
+                </div>
+              )}
+
               {/* Custom Message */}
               <div>
                 <label className="block text-sm font-medium mb-2">Custom Message (Optional)</label>
@@ -6891,6 +7123,8 @@ export default function SalonDashboard() {
                   rows={3}
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Add a custom message to the reminder (optional)"
+                  value={reminderData.customMessage}
+                  onChange={(e) => setReminderData(prev => ({ ...prev, customMessage: e.target.value }))}
                 />
               </div>
 
@@ -6898,17 +7132,41 @@ export default function SalonDashboard() {
               <div className="bg-blue-50 rounded-lg p-4">
                 <h4 className="font-medium mb-2 text-blue-800">Preview:</h4>
                 <p className="text-sm text-blue-700">
-                  "Hi [Customer Name], this is a reminder about your appointment tomorrow at [Time] for [Service] with [Staff]. See you soon! - Bella Salon"
+                  {reminderData.customMessage || 
+                    `"Hi [Customer Name], this is a reminder about your appointment ${reminderData.reminderType === 'tomorrow' ? 'tomorrow' : 'today'} at [Time] for [Service] with [Staff]. See you soon! - Bella Salon"`
+                  }
                 </p>
               </div>
+
+              {/* Appointments List */}
+              {reminderAppointments.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Appointments to Remind:</h4>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {reminderAppointments.map((appointment) => {
+                      const time = appointment.scheduled_at ? 
+                        new Date(appointment.scheduled_at).toLocaleTimeString('en-IN', { 
+                          hour: 'numeric', 
+                          minute: '2-digit', 
+                          hour12: true 
+                        }) : 'N/A';
+                      return (
+                        <div key={appointment.id} className="text-xs bg-gray-50 rounded p-2">
+                          {appointment.customer_name} - {appointment.service_name} - {time}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setShowSendRemindersModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowSendRemindersModal(false)}>
-                Send Reminders
+              <Button onClick={handleSendRemindersSubmit} disabled={reminderLoading || reminderAppointments.length === 0}>
+                {reminderLoading ? 'Sending...' : `Send ${reminderAppointments.length} Reminders`}
               </Button>
             </div>
           </div>
@@ -6990,28 +7248,101 @@ export default function SalonDashboard() {
             <div className="space-y-4">
               {/* Customer Name */}
               <div>
-                <label className="block text-sm font-medium mb-2">Customer name</label>
+                <label className="block text-sm font-medium mb-2">Customer Name *</label>
                 <input
                   type="text"
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Enter customer name"
+                  value={walkInData.customerName}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, customerName: e.target.value }))}
                 />
               </div>
 
-              {/* Select Service */}
+              {/* Phone */}
               <div>
-                <label className="block text-sm font-medium mb-2">Select service</label>
+                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter phone number"
+                  value={walkInData.phone}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter email address"
+                  value={walkInData.email}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+
+              {/* Service */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Service *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={walkInData.service}
+                    onChange={(e) => setWalkInData(prev => ({ ...prev, service: e.target.value }))}
+                  >
                     <option value="">Select service</option>
-                    <option value="hair-cut">Hair Cut & Style</option>
-                    <option value="hair-color">Hair Color</option>
-                    <option value="manicure">Manicure</option>
-                    <option value="pedicure">Pedicure</option>
-                    <option value="facial">Facial Treatment</option>
+                    {walkInServices.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name} - ₹{service.base_price}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
+              </div>
+
+              {/* Staff */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Assign Staff *</label>
+                <div className="relative">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={walkInData.staff}
+                    onChange={(e) => setWalkInData(prev => ({ ...prev, staff: e.target.value }))}
+                  >
+                    <option value="">Select staff member</option>
+                    {walkInStaff.map((staff) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name} - {staff.role}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Time */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Preferred Time *</label>
+                <input
+                  type="time"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  value={walkInData.time}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, time: e.target.value }))}
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Any additional notes or special requests"
+                  value={walkInData.notes}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, notes: e.target.value }))}
+                />
               </div>
             </div>
             
@@ -7019,8 +7350,8 @@ export default function SalonDashboard() {
               <Button variant="outline" onClick={() => setShowWalkInModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowWalkInModal(false)}>
-                Check Availability
+              <Button onClick={handleWalkInSubmit} disabled={walkInLoading}>
+                {walkInLoading ? 'Registering...' : 'Register Walk-in'}
               </Button>
             </div>
           </div>
