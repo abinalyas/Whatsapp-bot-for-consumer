@@ -2351,6 +2351,18 @@ function CalendarSection() {
 
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
+    
+    // Extract time from scheduled_at if time field is not available or in wrong format
+    let timeValue = appointment.time || "";
+    if (!timeValue && appointment.scheduled_at) {
+      const date = new Date(appointment.scheduled_at);
+      timeValue = date.toLocaleTimeString('en-IN', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+    }
+    
     setEditAppointment({
       customerName: appointment.customer_name || appointment.customer || "",
       phone: appointment.customer_phone || appointment.phone || "",
@@ -2358,7 +2370,7 @@ function CalendarSection() {
       service: appointment.service_name || appointment.service || "",
       staffMember: appointment.staff_name || appointment.staff || "",
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-      time: appointment.time || "",
+      time: timeValue,
       status: appointment.payment_status || appointment.status || "confirmed",
       notes: appointment.notes || ""
     });
@@ -2407,6 +2419,23 @@ function CalendarSection() {
         return;
       }
 
+      // Parse time properly - convert from 12-hour format to 24-hour format
+      let timeString = editAppointment.time;
+      if (timeString.includes(' AM') || timeString.includes(' PM')) {
+        // Convert 12-hour format to 24-hour format for API
+        const [timePart, ampm] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (ampm === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (ampm === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
+      
       // Create appointment data for API
       const appointmentData = {
         customer_name: editAppointment.customerName,
@@ -2414,9 +2443,9 @@ function CalendarSection() {
         customer_email: editAppointment.email,
         service_id: selectedService.id,
         staff_id: selectedStaff.id,
-        scheduled_at: new Date(`${editAppointment.date}T${editAppointment.time.replace(' AM', '').replace(' PM', '')}`).toISOString(),
-        duration_minutes: selectedService.duration || 60,
-        amount: selectedService.price || 0,
+        scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
+        duration_minutes: selectedService.duration_minutes || selectedService.duration || 60,
+        amount: selectedService.base_price || selectedService.price || 0,
         currency: 'INR',
         payment_status: editAppointment.status,
         notes: editAppointment.notes
@@ -5582,6 +5611,18 @@ export default function SalonDashboard() {
   // Edit appointment handlers
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
+    
+    // Extract time from scheduled_at if time field is not available or in wrong format
+    let timeValue = appointment.time || "";
+    if (!timeValue && appointment.scheduled_at) {
+      const date = new Date(appointment.scheduled_at);
+      timeValue = date.toLocaleTimeString('en-IN', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+    }
+    
     setEditAppointment({
       customerName: appointment.customer_name || appointment.customer || "",
       phone: appointment.customer_phone || appointment.phone || "",
@@ -5589,7 +5630,7 @@ export default function SalonDashboard() {
       service: appointment.service_name || appointment.service || "",
       staffMember: appointment.staff_name || appointment.staff || "",
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-      time: appointment.time || "",
+      time: timeValue,
       status: appointment.payment_status || appointment.status || "confirmed",
       notes: appointment.notes || ""
     });
@@ -5617,9 +5658,109 @@ export default function SalonDashboard() {
     
     setLoading(true);
     try {
-      // For now, just show a success message
-      alert('Edit appointment functionality will be implemented here!');
+      // Find the selected service and staff
+      const selectedService = services.find(s => s.name === editAppointment.service);
+      const selectedStaff = staff.find(s => s.name === editAppointment.staffMember);
+      
+      if (!selectedService) {
+        alert('Please select a service');
+        return;
+      }
+      
+      if (!selectedStaff) {
+        alert('Please select a staff member');
+        return;
+      }
+
+      // Parse time properly - convert from 12-hour format to 24-hour format
+      let timeString = editAppointment.time;
+      if (timeString.includes(' AM') || timeString.includes(' PM')) {
+        // Convert 12-hour format to 24-hour format for API
+        const [timePart, ampm] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (ampm === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (ampm === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        
+        timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
+      
+      // Create appointment data for API
+      const appointmentData = {
+        customer_name: editAppointment.customerName,
+        customer_phone: editAppointment.phone,
+        customer_email: editAppointment.email,
+        service_id: selectedService.id,
+        staff_id: selectedStaff.id,
+        scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
+        duration_minutes: selectedService.duration_minutes || selectedService.duration || 60,
+        amount: selectedService.base_price || selectedService.price || 0,
+        currency: 'INR',
+        payment_status: editAppointment.status,
+        notes: editAppointment.notes
+      };
+
+      console.log('💾 Saving edited appointment:', appointmentData);
+
+      // Update appointment via API
+      const response = await fetch(`/api/salon/appointments/${editingAppointment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': 'bella-salon' },
+        body: JSON.stringify(appointmentData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update appointment');
+      }
+
+      const updatedAppointment = await response.json();
+      console.log('✅ Appointment updated successfully:', updatedAppointment);
+
+      // Refresh appointments data
+      const [appointmentsData, servicesData, staffData] = await Promise.all([
+        salonApi.appointments.getAll(),
+        salonApi.services.getAll(),
+        staffApi.getAll()
+      ]);
+      
+      // Transform and enhance appointments
+      const transformedBookings = transformApiBookingsToUI(appointmentsData);
+      const enhancedAppointments = transformedBookings.map(apt => {
+        const appointmentDateTime = new Date(apt.scheduled_at || '');
+        const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-IN', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        
+        return {
+          ...apt,
+          customer: apt.customer_name,
+          service: apt.service_name || apt.service || 'Service',
+          staff: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
+          duration: apt.duration_minutes || apt.duration || 60,
+          time: timeString,
+          status: apt.payment_status || apt.status || 'confirmed',
+          amount: parseFloat(apt.amount || 0),
+          customer_name: apt.customer_name,
+          service_name: apt.service_name || 'Service',
+          staff_name: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
+          duration_minutes: apt.duration_minutes || apt.duration || 60,
+          phone: apt.customer_phone,
+          email: apt.customer_email
+        };
+      });
+      
+      setAppointments(enhancedAppointments);
+      
+      // Close modal
       handleCloseEditModal();
+      alert('Appointment updated successfully!');
+      
     } catch (error) {
       console.error('❌ Error updating appointment:', error);
       alert('Failed to update appointment. Please try again.');
