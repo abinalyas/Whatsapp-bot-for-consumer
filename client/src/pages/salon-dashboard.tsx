@@ -2755,80 +2755,78 @@ function CalendarSection() {
                 
                 return (
                 <div key={appointment.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    {/* Left Section - Time and Customer Info */}
-                    <div className="flex items-start gap-4">
-                      {/* Time Circle */}
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">
-                          {appointment.time}
+                  <div className="flex items-center justify-between">
+                    {/* Left Section - Customer Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="font-semibold text-lg">{appointment.customer}</h3>
+                        <Badge 
+                          variant={appointment.status === "confirmed" ? "default" : 
+                                 appointment.status === "pending" ? "secondary" : "destructive"}
+                          className="text-xs"
+                        >
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                      
+                      {/* Service, Staff, Duration, Price in one row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                        {/* Service */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Service</p>
+                            <p className="text-sm font-medium">{appointment.service}</p>
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 text-center">
-                          {endTime}
+                        
+                        {/* Staff */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Staff</p>
+                            <p className="text-sm font-medium">{appointment.staff}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Duration */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Duration</p>
+                            <p className="text-sm font-medium">{appointment.duration} mins</p>
+                          </div>
+                        </div>
+                        
+                        {/* Price */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Price</p>
+                            <p className="text-sm font-semibold text-green-600">{formattedPrice}</p>
+                          </div>
                         </div>
                       </div>
                       
-                      {/* Customer and Service Details */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{appointment.customer}</h3>
-                          <Badge 
-                            variant={appointment.status === "confirmed" ? "default" : 
-                                   appointment.status === "pending" ? "secondary" : "destructive"}
-                            className="text-xs"
-                          >
-                            {appointment.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          {/* Service Information */}
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <span className="text-sm font-medium">Service</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground ml-4">{appointment.service}</p>
-                          </div>
-                          
-                          {/* Staff Information */}
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-sm font-medium">Staff</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground ml-4">{appointment.staff}</p>
-                          </div>
-                          
-                          {/* Duration */}
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              <span className="text-sm font-medium">Duration</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground ml-4">{appointment.duration} minutes</p>
-                          </div>
-                          
-                          {/* Price */}
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                              <span className="text-sm font-medium">Price</span>
-                            </div>
-                            <p className="text-sm font-semibold text-green-600 ml-4">{formattedPrice}</p>
-                          </div>
-                        </div>
-                        
-                        {/* Additional Info */}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>📅 {new Date().toLocaleDateString('en-IN', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}</span>
-                          <span>⏰ {startTime} - {endTime}</span>
-                        </div>
+                      {/* Additional Info */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>📅 {new Date().toLocaleDateString('en-IN', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}</span>
+                        <span>⏰ {startTime} - {endTime}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Center Section - Time Circle */}
+                    <div className="flex flex-col items-center mx-6">
+                      <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">
+                        {appointment.time}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 text-center">
+                        {endTime}
                       </div>
                     </div>
                     
