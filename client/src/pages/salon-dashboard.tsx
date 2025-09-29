@@ -2476,8 +2476,11 @@ function CalendarSection() {
       return `${hour24.toString().padStart(2, '0')}:${minutes}`;
     };
 
-    // Extract time from scheduled_at if time field is not available or in wrong format
+    // Use the existing time field from appointment data (already in correct format)
     let timeValue = appointment.time || "";
+    console.log('🕐 Calendar: Using existing time field:', timeValue);
+    
+    // Only extract from scheduled_at if time field is not available
     if (!timeValue && appointment.scheduled_at) {
       const date = new Date(appointment.scheduled_at);
       // Convert to 12-hour format for time dropdown (matches timeSlots format)
@@ -2487,28 +2490,10 @@ function CalendarSection() {
         hour12: true 
       });
       console.log('🕐 Calendar: Extracted time from scheduled_at (12-hour):', timeValue);
-    } else if (timeValue) {
-      // Ensure time is in 12-hour format for dropdown
-      if (/^\d{1,2}:\d{2}$/.test(timeValue)) {
-        // Convert 24-hour format to 12-hour format
-        const [hours, minutes] = timeValue.split(':');
-        const hour24 = parseInt(hours);
-        let hour12 = hour24;
-        let ampm = 'AM';
-        
-        if (hour24 === 0) {
-          hour12 = 12;
-        } else if (hour24 > 12) {
-          hour12 = hour24 - 12;
-          ampm = 'PM';
-        } else if (hour24 === 12) {
-          ampm = 'PM';
-        }
-        
-        timeValue = `${hour12}:${minutes} ${ampm}`;
-      }
-      console.log('🕐 Calendar: Converted time to 12-hour format:', timeValue);
     }
+    
+    // Ensure time is in correct format for dropdown (should already be correct from appointment.time)
+    console.log('🕐 Calendar: Final time value for dropdown:', timeValue);
 
     // Find service ID by service name (after services are loaded)
     let serviceId = appointment.offering_id || appointment.service_id || "";
