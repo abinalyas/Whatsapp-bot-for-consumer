@@ -822,6 +822,39 @@ function ServicesSection() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Toggle service availability
+  const toggleServiceAvailability = async (serviceId: string, currentStatus: boolean) => {
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/services/${serviceId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive: !currentStatus }),
+      });
+
+      if (response.ok) {
+        // Update the service in the local state
+        setServices(prevServices => 
+          prevServices.map(service => 
+            service.id === serviceId 
+              ? { ...service, is_active: !currentStatus }
+              : service
+          )
+        );
+      } else {
+        console.error('Failed to update service availability');
+        setError('Failed to update service availability');
+      }
+    } catch (error) {
+      console.error('Error updating service availability:', error);
+      setError('Error updating service availability');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Load services from API
   useEffect(() => {
     const loadServices = async () => {
@@ -1142,18 +1175,17 @@ function ServicesSection() {
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="flex items-center gap-2">
                   <Button
-                    variant={service.isAvailable ? "default" : "destructive"}
+                    variant={service.is_active ? "default" : "destructive"}
                     size="sm"
                     className="text-xs"
                   >
-                    {service.isAvailable ? "Available" : "Unavailable"}
+                    {service.is_active ? "Available" : "Unavailable"}
                   </Button>
                 </div>
                 <Switch
-                  checked={service.isAvailable}
-                  onCheckedChange={() => {
-                    // Handle availability toggle
-                  }}
+                  checked={service.is_active}
+                  onCheckedChange={() => toggleServiceAvailability(service.id, service.is_active)}
+                  disabled={saving}
                 />
               </div>
             </CardContent>
@@ -1178,11 +1210,11 @@ function ServicesSection() {
               <div className="text-sm text-muted-foreground">Total Services</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">{services.filter(s => s.isAvailable).length}</div>
+              <div className="text-2xl font-bold">{services.filter(s => s.is_active).length}</div>
               <div className="text-sm text-muted-foreground">Available</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">${services.reduce((sum, s) => sum + s.price, 0)}</div>
+              <div className="text-2xl font-bold">${services.reduce((sum, s) => sum + (s.base_price || 0), 0)}</div>
               <div className="text-sm text-muted-foreground">Total Value</div>
             </div>
           </div>
