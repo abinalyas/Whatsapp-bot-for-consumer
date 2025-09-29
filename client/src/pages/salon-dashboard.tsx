@@ -2224,8 +2224,8 @@ function CalendarSection() {
             ...apt,
             // Calendar display properties - use the transformed data
             customer: apt.customer_name,
-            service: apt.service_name || 'Service', // Use service_name from API
-            staff: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma', // Default to first staff member
+            service: apt.service_name || apt.service || 'Service', // Use service_name from API
+            staff: staff.find(s => s.id === apt.staff_id)?.name || staff.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned', // Use actual staff or default
             duration: apt.duration_minutes || apt.duration || 60,
             time: timeString,
             status: apt.payment_status || apt.status || 'confirmed',
@@ -2233,7 +2233,7 @@ function CalendarSection() {
             // Additional properties for calendar display
             customer_name: apt.customer_name,
             service_name: apt.service_name || 'Service', // Use service_name from API
-            staff_name: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma',
+            staff_name: staff.find(s => s.id === apt.staff_id)?.name || staff.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
             duration_minutes: apt.duration_minutes || apt.duration || 60,
             phone: apt.customer_phone,
             email: apt.customer_email
@@ -2339,14 +2339,14 @@ function CalendarSection() {
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
     setEditAppointment({
-      customerName: appointment.customer || "",
-      phone: appointment.phone || "",
-      email: appointment.email || "",
-      service: appointment.service || "",
-      staffMember: appointment.staff || "",
+      customerName: appointment.customer_name || appointment.customer || "",
+      phone: appointment.customer_phone || appointment.phone || "",
+      email: appointment.customer_email || appointment.email || "",
+      service: appointment.service_name || appointment.service || "",
+      staffMember: appointment.staff_name || appointment.staff || "",
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
       time: appointment.time || "",
-      status: appointment.status || "confirmed",
+      status: appointment.payment_status || appointment.status || "confirmed",
       notes: appointment.notes || ""
     });
     setShowEditAppointmentModal(true);
