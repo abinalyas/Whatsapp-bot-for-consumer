@@ -2229,13 +2229,17 @@ function CalendarSection() {
             customer: apt.customer_name,
             service: apt.service_name || 'Service', // Use service_name from API
             staff: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma', // Default to first staff member
-            duration: apt.duration || 60,
+            duration: apt.duration_minutes || apt.duration || 60,
             time: timeString,
-            status: apt.status || 'confirmed',
+            status: apt.payment_status || apt.status || 'confirmed',
+            amount: parseFloat(apt.amount || 0),
             // Additional properties for calendar display
             customer_name: apt.customer_name,
             service_name: apt.service_name || 'Service', // Use service_name from API
-            staff_name: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma'
+            staff_name: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma',
+            duration_minutes: apt.duration_minutes || apt.duration || 60,
+            phone: apt.customer_phone,
+            email: apt.customer_email
           };
         });
         
@@ -2623,54 +2627,84 @@ function CalendarSection() {
           {/* Daily Schedule */}
           <Card>
             <CardHeader>
-              <CardTitle>Daily Schedule</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Daily Schedule</CardTitle>
+                <Badge variant="outline" className="text-sm">
+                  {dayAppointments.length} appointment{dayAppointments.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {timeSlots.map((time, index) => {
-                  const appointment = dayAppointments.find(apt => {
-                    // Try exact match first
-                    if (apt.time === time) return true;
-                    // Try to match by converting both to same format
-                    const aptTime = apt.time || '';
-                    const timeMatch = aptTime.includes(time.split(' ')[0]) || time.includes(aptTime.split(' ')[0]);
-                    console.log('🕐 Time matching:', { time, aptTime, timeMatch });
-                    return timeMatch;
-                  });
-                  console.log('🕐 Time slot:', time, 'Found appointment:', appointment);
-                  if (appointment) {
-                    console.log('📋 Appointment details:', {
-                      customer: appointment.customer,
-                      service: appointment.service,
-                      staff: appointment.staff,
-                      duration: appointment.duration,
-                      time: appointment.time
-                    });
-                  }
-                  return (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{time}</span>
-                      </div>
-                      <div className="text-right">
-                        {appointment ? (
-                          <div className="space-y-1">
-                            <div className="font-medium">{appointment.customer}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {appointment.service} with {appointment.staff}
-                            </div>
-                            <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
-                              {appointment.status}
-                            </Badge>
+              <div className="space-y-3">
+                {dayAppointments.length > 0 ? (
+                  dayAppointments.map((appointment, index) => {
+                    // Get status color
+                    const getStatusColor = (status) => {
+                      switch (status) {
+                        case 'confirmed': return 'bg-green-500';
+                        case 'pending': return 'bg-yellow-500';
+                        case 'cancelled': return 'bg-red-500';
+                        default: return 'bg-gray-500';
+                      }
+                    };
+
+                    // Format price
+                    const formattedPrice = new Intl.NumberFormat('en-IN', {
+                      style: 'currency',
+                      currency: 'INR',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(appointment.amount || 0);
+
+                    return (
+                      <div key={appointment.id || index} className="flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                        {/* Status Indicator */}
+                        <div className={`w-1 h-16 rounded-full ${getStatusColor(appointment.status || 'confirmed')}`}></div>
+                        
+                        {/* Time */}
+                        <div className="flex-shrink-0">
+                          <div className="text-lg font-semibold text-gray-900">
+                            {appointment.time || 'N/A'}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">Available</span>
-                        )}
+                        </div>
+                        
+                        {/* Appointment Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 mb-1">
+                            {appointment.customer || appointment.customer_name || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-600 mb-1">
+                            {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff || 'Unassigned'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {appointment.duration || appointment.duration_minutes || 60} min • {formattedPrice}
+                          </div>
+                        </div>
+                        
+                        {/* Status Badge */}
+                        <div className="flex-shrink-0">
+                          <Badge 
+                            variant={appointment.status === "confirmed" ? "default" : 
+                                    appointment.status === "pending" ? "secondary" : "destructive"}
+                            className="text-xs"
+                          >
+                            {appointment.status || 'confirmed'}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No appointments today</h3>
+                    <p className="text-muted-foreground mb-4">Schedule appointments to see them here</p>
+                    <Button onClick={handleNewAppointment}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Schedule Appointment
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
