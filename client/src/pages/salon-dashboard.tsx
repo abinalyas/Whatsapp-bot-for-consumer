@@ -826,6 +826,8 @@ function ServicesSection() {
   const toggleServiceAvailability = async (serviceId: string, currentStatus: boolean) => {
     try {
       setSaving(true);
+      console.log(`Toggling service ${serviceId} from ${currentStatus} to ${!currentStatus}`);
+      
       const response = await fetch(`/api/services/${serviceId}`, {
         method: 'PATCH',
         headers: {
@@ -834,7 +836,12 @@ function ServicesSection() {
         body: JSON.stringify({ isActive: !currentStatus }),
       });
 
+      console.log(`Toggle response status: ${response.status}`);
+      
       if (response.ok) {
+        const updatedService = await response.json();
+        console.log('Updated service:', updatedService);
+        
         // Update the service in the local state
         setServices(prevServices => 
           prevServices.map(service => 
@@ -843,13 +850,15 @@ function ServicesSection() {
               : service
           )
         );
+        console.log(`Successfully toggled service ${serviceId}`);
       } else {
-        console.error('Failed to update service availability');
-        setError('Failed to update service availability');
+        const errorText = await response.text();
+        console.error('Failed to update service availability:', response.status, errorText);
+        setError(`Failed to update service availability: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error updating service availability:', error);
-      setError('Error updating service availability');
+      setError(`Error updating service availability: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -862,74 +871,91 @@ function ServicesSection() {
         setLoading(true);
         console.log('Loading services from API...');
         
-        // Always use mock data for now to avoid API issues
-        const mockServices = [
-          { 
-            id: 1, 
-            name: "Hair Cut & Style", 
-            category: "Hair", 
-            base_price: 45, 
-            currency: "USD", 
-            duration_minutes: 60, 
-            is_active: true,
-            addOns: ["Blow Dry", "Styling"]
-          },
-          { 
-            id: 2, 
-            name: "Hair Color", 
-            category: "Hair", 
-            base_price: 80, 
-            currency: "USD", 
-            duration_minutes: 120, 
-            is_active: true,
-            addOns: ["Color Treatment", "Conditioning"]
-          },
-          { 
-            id: 3, 
-            name: "Manicure", 
-            category: "Nails", 
-            base_price: 35, 
-            currency: "USD", 
-            duration_minutes: 45, 
-            is_active: true,
-            addOns: ["Nail Art", "Gel Polish"]
-          },
-          { 
-            id: 4, 
-            name: "Pedicure", 
-            category: "Nails", 
-            base_price: 45, 
-            currency: "USD", 
-            duration_minutes: 60, 
-            is_active: true,
-            addOns: ["Foot Massage", "Callus Treatment"]
-          },
-          { 
-            id: 5, 
-            name: "Facial Treatment", 
-            category: "Skincare", 
-            base_price: 75, 
-            currency: "USD", 
-            duration_minutes: 90, 
-            is_active: true,
-            addOns: ["Deep Cleansing", "Moisturizing"]
-          },
-        ];
-        
-        setServices(mockServices);
-        setError(null);
-        console.log('Using mock services data:', mockServices);
-        
-        // Try API call in background for future use
+        // Load real services from API
         try {
-          const data = await salonApi.services.getAll();
-          console.log('Services API response:', data);
-          if (Array.isArray(data) && data.length > 0) {
-            setServices(data);
-            console.log('Switched to API data');
+          const response = await fetch('/api/services');
+          if (!response.ok) {
+            throw new Error('Failed to load services from API');
           }
-        } catch (apiErr) {
-          console.log('API call failed, using mock data:', apiErr);
+          
+          const apiServices = await response.json();
+          console.log('Loaded services from API:', apiServices);
+          
+          // Transform API services to match expected format
+          const transformedServices = apiServices.map((service: any) => ({
+            id: service.id,
+            name: service.name,
+            category: service.category || 'General',
+            base_price: service.price || 0,
+            currency: 'USD',
+            duration_minutes: service.duration || 60,
+            is_active: service.isActive,
+            addOns: [] // API doesn't have addOns yet
+          }));
+          
+          setServices(transformedServices);
+          setError(null);
+          console.log('Using real API services data:', transformedServices);
+          
+        } catch (apiError) {
+          console.log('API call failed, using fallback mock data:', apiError);
+          
+          // Fallback to mock data if API fails
+          const mockServices = [
+            { 
+              id: 1, 
+              name: "Hair Cut & Style", 
+              category: "Hair", 
+              base_price: 45, 
+              currency: "USD", 
+              duration_minutes: 60, 
+              is_active: true,
+              addOns: ["Blow Dry", "Styling"]
+            },
+            { 
+              id: 2, 
+              name: "Hair Color", 
+              category: "Hair", 
+              base_price: 80, 
+              currency: "USD", 
+              duration_minutes: 120, 
+              is_active: true,
+              addOns: ["Color Treatment", "Conditioning"]
+            },
+            { 
+              id: 3, 
+              name: "Manicure", 
+              category: "Nails", 
+              base_price: 35, 
+              currency: "USD", 
+              duration_minutes: 45, 
+              is_active: true,
+              addOns: ["Nail Art", "Gel Polish"]
+            },
+            { 
+              id: 4, 
+              name: "Pedicure", 
+              category: "Nails", 
+              base_price: 45, 
+              currency: "USD", 
+              duration_minutes: 60, 
+              is_active: true,
+              addOns: ["Foot Massage", "Callus Treatment"]
+            },
+            { 
+              id: 5, 
+              name: "Facial Treatment", 
+              category: "Skincare", 
+              base_price: 75, 
+              currency: "USD", 
+              duration_minutes: 90, 
+              is_active: true,
+              addOns: ["Deep Cleansing", "Moisturizing"]
+            },
+          ];
+          
+          setServices(mockServices);
+          console.log('Using fallback mock services data:', mockServices);
         }
         
       } catch (err) {
