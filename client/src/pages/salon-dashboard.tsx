@@ -2528,7 +2528,20 @@ function CalendarSection() {
         customer_email: editAppointment.email,
         service_id: editAppointment.service,
         staff_id: editAppointment.staffMember,
-        scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
+        scheduled_at: (() => {
+          try {
+            const dateTimeString = `${editAppointment.date}T${timeString}:00`;
+            console.log('🕐 Creating scheduled_at:', dateTimeString);
+            const date = new Date(dateTimeString);
+            if (isNaN(date.getTime())) {
+              throw new Error('Invalid date/time combination');
+            }
+            return date.toISOString();
+          } catch (error) {
+            console.error('❌ Error creating scheduled_at:', error);
+            throw new Error('Invalid time format. Please enter a valid time.');
+          }
+        })(),
         duration_minutes: selectedService?.duration_minutes || 60,
         amount: selectedService?.base_price || 0,
         currency: 'INR',
@@ -6404,16 +6417,42 @@ export default function SalonDashboard() {
     
     // Extract time from scheduled_at if time field is not available or in wrong format
     let timeValue = appointment.time || "";
+    console.log('🕐 Initial time extraction:', {
+      appointmentTime: appointment.time,
+      scheduled_at: appointment.scheduled_at,
+      timeValue
+    });
+    
     if (!timeValue && appointment.scheduled_at) {
-      const date = new Date(appointment.scheduled_at);
-      timeValue = date.toLocaleTimeString('en-IN', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      try {
+        const date = new Date(appointment.scheduled_at);
+        if (!isNaN(date.getTime())) {
+          timeValue = date.toLocaleTimeString('en-IN', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          console.log('🕐 Extracted time from scheduled_at:', timeValue);
+        } else {
+          console.warn('⚠️ Invalid scheduled_at date:', appointment.scheduled_at);
+        }
+      } catch (error) {
+        console.error('❌ Error parsing scheduled_at:', error);
+      }
     }
     
-    console.log('🔍 Edit appointment data:', {
+    // If still no time, try to extract from other fields
+    if (!timeValue) {
+      if (appointment.appointmentTime) {
+        timeValue = appointment.appointmentTime;
+        console.log('🕐 Using appointmentTime:', timeValue);
+      } else if (appointment.appointment_time) {
+        timeValue = appointment.appointment_time;
+        console.log('🕐 Using appointment_time:', timeValue);
+      }
+    }
+    
+    console.log('🔍 Final edit appointment data:', {
       appointment,
       timeValue,
       scheduled_at: appointment.scheduled_at,
@@ -6427,7 +6466,7 @@ export default function SalonDashboard() {
       service: appointment.offering_id || appointment.service_id || "",
       staffMember: appointment.staff_id || "",
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-      time: timeValue,
+      time: timeValue || "10:00 AM", // Default time if none found
       status: appointment.payment_status || appointment.status || "confirmed",
       notes: appointment.notes || ""
     });
@@ -6494,7 +6533,20 @@ export default function SalonDashboard() {
         customer_email: editAppointment.email,
         service_id: editAppointment.service,
         staff_id: editAppointment.staffMember,
-        scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
+        scheduled_at: (() => {
+          try {
+            const dateTimeString = `${editAppointment.date}T${timeString}:00`;
+            console.log('🕐 Creating scheduled_at:', dateTimeString);
+            const date = new Date(dateTimeString);
+            if (isNaN(date.getTime())) {
+              throw new Error('Invalid date/time combination');
+            }
+            return date.toISOString();
+          } catch (error) {
+            console.error('❌ Error creating scheduled_at:', error);
+            throw new Error('Invalid time format. Please enter a valid time.');
+          }
+        })(),
         duration_minutes: selectedService?.duration_minutes || 60,
         amount: selectedService?.base_price || 0,
         currency: 'INR',
