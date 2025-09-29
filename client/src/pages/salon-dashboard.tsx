@@ -2266,14 +2266,14 @@ function CalendarSection() {
             ...apt,
             // Calendar display properties - use the transformed data
             customer: apt.customer_name,
-            service: apt.service, // This will be populated by service lookup
+            service: apt.service_name || 'Service', // Use service_name from API
             staff: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma', // Default to first staff member
             duration: apt.duration || 60,
             time: timeString,
             status: apt.status || 'confirmed',
             // Additional properties for calendar display
             customer_name: apt.customer_name,
-            service_name: apt.service, // Use transformed service name
+            service_name: apt.service_name || 'Service', // Use service_name from API
             staff_name: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma'
           };
         });
