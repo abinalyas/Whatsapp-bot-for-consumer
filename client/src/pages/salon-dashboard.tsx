@@ -5954,7 +5954,18 @@ export default function SalonDashboard() {
 
     setCheckInLoading(true);
     try {
-      // Update appointment status to checked-in
+      // First, get the current appointment data to preserve all fields
+      const appointmentResponse = await fetch(`/api/salon/appointments/${checkInData.appointmentId}`);
+      const appointmentResult = await appointmentResponse.json();
+      
+      if (!appointmentResult.success || !appointmentResult.data) {
+        alert('Failed to load appointment data');
+        return;
+      }
+
+      const appointment = appointmentResult.data;
+      
+      // Update appointment status to checked-in while preserving all existing data
       const response = await fetch(`/api/salon/appointments/${checkInData.appointmentId}`, {
         method: 'PUT',
         headers: {
@@ -5962,8 +5973,17 @@ export default function SalonDashboard() {
           'x-tenant-id': 'bella-salon'
         },
         body: JSON.stringify({
+          customer_name: appointment.customer_name,
+          customer_phone: appointment.customer_phone,
+          customer_email: appointment.customer_email,
+          service_id: appointment.offering_id,
+          staff_id: appointment.staff_id,
+          scheduled_at: appointment.scheduled_at,
+          duration_minutes: appointment.duration_minutes,
+          amount: appointment.amount,
+          currency: appointment.currency,
           payment_status: 'checked-in',
-          notes: `${checkInData.checkInNotes}\nSpecial Requests: ${checkInData.specialRequests}`.trim()
+          notes: `${appointment.notes || ''}\nCheck-in Notes: ${checkInData.checkInNotes}\nSpecial Requests: ${checkInData.specialRequests}`.trim()
         })
       });
 
@@ -6021,6 +6041,16 @@ export default function SalonDashboard() {
 
     setPaymentLoading(true);
     try {
+      // First, get the current appointment data to preserve all fields
+      const appointmentResponse = await fetch(`/api/salon/appointments/${paymentData.appointmentId}`);
+      const appointmentResult = await appointmentResponse.json();
+      
+      if (!appointmentResult.success || !appointmentResult.data) {
+        alert('Failed to load appointment data');
+        return;
+      }
+
+      const appointment = appointmentResult.data;
       const totalAmount = parseFloat(paymentData.amount) + parseFloat(paymentData.tip || 0);
       
       const response = await fetch(`/api/salon/appointments/${paymentData.appointmentId}`, {
@@ -6030,9 +6060,17 @@ export default function SalonDashboard() {
           'x-tenant-id': 'bella-salon'
         },
         body: JSON.stringify({
-          payment_status: 'completed',
+          customer_name: appointment.customer_name,
+          customer_phone: appointment.customer_phone,
+          customer_email: appointment.customer_email,
+          service_id: appointment.offering_id,
+          staff_id: appointment.staff_id,
+          scheduled_at: appointment.scheduled_at,
+          duration_minutes: appointment.duration_minutes,
           amount: totalAmount,
-          notes: `Payment processed via ${paymentData.paymentMethod}. Amount: ₹${paymentData.amount}, Tip: ₹${paymentData.tip || 0}`
+          currency: appointment.currency,
+          payment_status: 'completed',
+          notes: `${appointment.notes || ''}\nPayment processed via ${paymentData.paymentMethod}. Amount: ₹${paymentData.amount}, Tip: ₹${paymentData.tip || 0}`
         })
       });
 
