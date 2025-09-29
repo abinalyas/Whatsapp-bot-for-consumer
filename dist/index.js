@@ -3971,6 +3971,50 @@ router2.post("/appointments", async (req, res) => {
     });
   }
 });
+router2.get("/appointments/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
+    const result = await pool2.query(`
+      SELECT 
+        t.id, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
+        t.offering_id, t.staff_id, t.scheduled_at, t.duration_minutes,
+        t.amount, t.currency, t.notes, t.payment_status, t.transaction_type,
+        t.created_at, t.updated_at,
+        o.name as service_name, o.category as service_category,
+        s.name as staff_name
+      FROM transactions t
+      LEFT JOIN offerings o ON t.offering_id = o.id
+      LEFT JOIN staff s ON t.staff_id = s.id
+      WHERE t.id = $1 AND t.tenant_id = $2 AND t.transaction_type = 'booking'
+    `, [id, tenantId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Appointment not found"
+      });
+    }
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Error fetching appointment:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch appointment"
+    });
+  }
+});
 router2.put("/appointments/:id", async (req, res) => {
   try {
     const { id } = req.params;
