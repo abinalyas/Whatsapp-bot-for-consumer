@@ -2429,15 +2429,42 @@ function CalendarSection() {
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
     
+    // Helper function to convert time to 24-hour format for HTML time input
+    const convertTo24HourFormat = (timeString) => {
+      if (!timeString) return "";
+      
+      // If already in 24-hour format (HH:mm), return as is
+      if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM')) {
+        return timeString;
+      }
+      
+      // Convert 12-hour format to 24-hour format
+      const [time, period] = timeString.split(' ');
+      const [hours, minutes] = time.split(':');
+      let hour24 = parseInt(hours);
+      
+      if (period === 'PM' && hour24 !== 12) {
+        hour24 += 12;
+      } else if (period === 'AM' && hour24 === 12) {
+        hour24 = 0;
+      }
+      
+      return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+    };
+
     // Extract time from scheduled_at if time field is not available or in wrong format
     let timeValue = appointment.time || "";
     if (!timeValue && appointment.scheduled_at) {
       const date = new Date(appointment.scheduled_at);
-      timeValue = date.toLocaleTimeString('en-IN', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
+      // Convert to 24-hour format for HTML time input
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      timeValue = `${hours}:${minutes}`;
+      console.log('🕐 Calendar: Extracted time from scheduled_at (24-hour):', timeValue);
+    } else if (timeValue) {
+      // Convert existing time field to 24-hour format
+      timeValue = convertTo24HourFormat(timeValue);
+      console.log('🕐 Calendar: Converted existing time to 24-hour:', timeValue);
     }
     
     console.log('🔍 Edit appointment data:', {
