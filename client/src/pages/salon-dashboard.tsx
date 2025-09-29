@@ -2667,40 +2667,109 @@ function CalendarSection() {
             </CardContent>
           </Card>
 
-          {/* Staff Schedule */}
+          {/* Staff Schedule Overview */}
           <Card>
             <CardHeader>
-              <CardTitle>Staff Schedule</CardTitle>
+              <CardTitle className="text-xl">Staff Schedule Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {staffMembers.map((staff, index) => {
                   const staffAppointments = dayAppointments.filter(apt => apt.staff === staff);
+                  
+                  // Create hourly timeline (9 AM to 7 PM)
+                  const hours = Array.from({ length: 11 }, (_, i) => i + 9); // 9 to 19 (9 AM to 7 PM)
+                  
                   return (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium">{staff}</h4>
-                        <Badge variant="outline">{staffAppointments.length} appointments</Badge>
+                    <div key={index} className="space-y-3">
+                      {/* Staff Header */}
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-lg">{staff}</h4>
+                        <Badge variant="outline" className="text-sm">
+                          {staffAppointments.length} appointment{staffAppointments.length !== 1 ? 's' : ''}
+                        </Badge>
                       </div>
-                      <div className="space-y-2">
-                        {staffAppointments.map((appointment, aptIndex) => (
-                          <div key={aptIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                            <div>
-                              <div className="font-medium text-sm">{appointment.customer}</div>
-                              <div className="text-xs text-muted-foreground">{appointment.service}</div>
+                      
+                      {/* Timeline */}
+                      <div className="relative">
+                        {/* Hour labels */}
+                        <div className="flex mb-2">
+                          {hours.map((hour) => (
+                            <div key={hour} className="flex-1 text-center text-xs text-muted-foreground">
+                              {hour === 9 ? '9 AM' : hour === 12 ? '12 PM' : hour === 17 ? '5 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">{appointment.time}</div>
-                              <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"} className="text-xs">
-                                {appointment.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        
+                        {/* Timeline grid */}
+                        <div className="flex bg-gray-100 rounded-lg p-1">
+                          {hours.map((hour) => (
+                            <div key={hour} className="flex-1 h-8 bg-white rounded border border-gray-200 mr-1 last:mr-0"></div>
+                          ))}
+                        </div>
+                        
+                        {/* Appointment blocks */}
+                        <div className="absolute top-8 left-1 right-1">
+                          {staffAppointments.map((appointment, aptIndex) => {
+                            // Calculate position and width based on time
+                            const startTime = appointment.time || '9:00 AM';
+                            const [time, period] = startTime.split(' ');
+                            const [hours, minutes] = time.split(':');
+                            let hour24 = parseInt(hours);
+                            if (period === 'PM' && hour24 !== 12) hour24 += 12;
+                            if (period === 'AM' && hour24 === 12) hour24 = 0;
+                            
+                            const startHour = hour24;
+                            const duration = appointment.duration || 60;
+                            const endHour = startHour + Math.ceil(duration / 60);
+                            
+                            // Calculate position (0-10 for hours 9-19)
+                            const position = Math.max(0, startHour - 9);
+                            const width = Math.min(11 - position, Math.ceil(duration / 60));
+                            
+                            // Color based on service type or status
+                            const getBlockColor = (service: string, status: string) => {
+                              if (status === 'confirmed') return 'bg-green-500';
+                              if (status === 'pending') return 'bg-yellow-500';
+                              if (service?.toLowerCase().includes('hair')) return 'bg-blue-500';
+                              if (service?.toLowerCase().includes('nail')) return 'bg-purple-500';
+                              return 'bg-gray-500';
+                            };
+                            
+                            return (
+                              <div
+                                key={aptIndex}
+                                className={`absolute h-6 rounded text-white text-xs flex items-center px-2 font-medium ${getBlockColor(appointment.service, appointment.status)}`}
+                                style={{
+                                  left: `${(position / 11) * 100}%`,
+                                  width: `${(width / 11) * 100}%`,
+                                  top: `${aptIndex * 8}px`
+                                }}
+                              >
+                                <span className="truncate">
+                                  {appointment.customer?.split(' ')[0] || 'Customer'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
+                
+                {/* Empty state */}
+                {staffMembers.length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No staff members</h3>
+                    <p className="text-muted-foreground mb-4">Add staff members to see their schedules</p>
+                    <Button onClick={() => setShowStaffScheduler(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Staff
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
