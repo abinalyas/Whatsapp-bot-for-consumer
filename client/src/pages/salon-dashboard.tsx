@@ -6410,66 +6410,77 @@ export default function SalonDashboard() {
       }
       if (servicesResult.success) {
         setServices(servicesResult.data);
+        
+        // Now that services are loaded, find the service ID
+        let serviceId = appointment.offering_id || appointment.service_id || "";
+        if (!serviceId && appointment.service_name) {
+          const matchingService = servicesResult.data.find(s => s.name === appointment.service_name);
+          if (matchingService) {
+            serviceId = matchingService.id;
+            console.log('🔍 Found service ID by name:', { serviceName: appointment.service_name, serviceId });
+          }
+        }
+        
+        // Extract time from scheduled_at if time field is not available or in wrong format
+        let timeValue = appointment.time || "";
+        console.log('🕐 Initial time extraction:', {
+          appointmentTime: appointment.time,
+          scheduled_at: appointment.scheduled_at,
+          timeValue
+        });
+        
+        if (!timeValue && appointment.scheduled_at) {
+          try {
+            const date = new Date(appointment.scheduled_at);
+            if (!isNaN(date.getTime())) {
+              timeValue = date.toLocaleTimeString('en-IN', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+              });
+              console.log('🕐 Extracted time from scheduled_at:', timeValue);
+            } else {
+              console.warn('⚠️ Invalid scheduled_at date:', appointment.scheduled_at);
+            }
+          } catch (error) {
+            console.error('❌ Error parsing scheduled_at:', error);
+          }
+        }
+        
+        // If still no time, try to extract from other fields
+        if (!timeValue) {
+          if (appointment.appointmentTime) {
+            timeValue = appointment.appointmentTime;
+            console.log('🕐 Using appointmentTime:', timeValue);
+          } else if (appointment.appointment_time) {
+            timeValue = appointment.appointment_time;
+            console.log('🕐 Using appointment_time:', timeValue);
+          }
+        }
+        
+        // Find staff ID (this should already be correct)
+        let staffId = appointment.staff_id || "";
+        console.log('🔍 Staff ID from appointment:', staffId);
+        
+        // Set the edit appointment data
+        const editData = {
+          customerName: appointment.customer_name || appointment.customer || "",
+          phone: appointment.customer_phone || appointment.phone || "",
+          email: appointment.customer_email || appointment.email || "",
+          service: serviceId,
+          staffMember: staffId,
+          date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
+          time: timeValue || "10:00 AM", // Default time if none found
+          status: appointment.payment_status || appointment.status || "confirmed",
+          notes: appointment.notes || ""
+        };
+        
+        console.log('🔍 Setting edit appointment data:', editData);
+        setEditAppointment(editData);
       }
     } catch (error) {
       console.error('Error loading data for edit modal:', error);
     }
-    
-    // Extract time from scheduled_at if time field is not available or in wrong format
-    let timeValue = appointment.time || "";
-    console.log('🕐 Initial time extraction:', {
-      appointmentTime: appointment.time,
-      scheduled_at: appointment.scheduled_at,
-      timeValue
-    });
-    
-    if (!timeValue && appointment.scheduled_at) {
-      try {
-        const date = new Date(appointment.scheduled_at);
-        if (!isNaN(date.getTime())) {
-          timeValue = date.toLocaleTimeString('en-IN', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-          });
-          console.log('🕐 Extracted time from scheduled_at:', timeValue);
-        } else {
-          console.warn('⚠️ Invalid scheduled_at date:', appointment.scheduled_at);
-        }
-      } catch (error) {
-        console.error('❌ Error parsing scheduled_at:', error);
-      }
-    }
-    
-    // If still no time, try to extract from other fields
-    if (!timeValue) {
-      if (appointment.appointmentTime) {
-        timeValue = appointment.appointmentTime;
-        console.log('🕐 Using appointmentTime:', timeValue);
-      } else if (appointment.appointment_time) {
-        timeValue = appointment.appointment_time;
-        console.log('🕐 Using appointment_time:', timeValue);
-      }
-    }
-    
-    console.log('🔍 Final edit appointment data:', {
-      appointment,
-      timeValue,
-      scheduled_at: appointment.scheduled_at,
-      time: appointment.time
-    });
-    
-    setEditAppointment({
-      customerName: appointment.customer_name || appointment.customer || "",
-      phone: appointment.customer_phone || appointment.phone || "",
-      email: appointment.customer_email || appointment.email || "",
-      service: appointment.offering_id || appointment.service_id || "",
-      staffMember: appointment.staff_id || "",
-      date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-      time: timeValue || "10:00 AM", // Default time if none found
-      status: appointment.payment_status || appointment.status || "confirmed",
-      notes: appointment.notes || ""
-    });
     setShowEditAppointmentModal(true);
   };
 
