@@ -1175,7 +1175,7 @@ function ServicesSection() {
                 <div>
                   <CardTitle className="text-lg">{service.name}</CardTitle>
                   <Badge variant="secondary" className="mt-2">
-                    {service.category.charAt(0).toUpperCase() + service.category.slice(1)}
+                    {(service.category || 'Service').charAt(0).toUpperCase() + (service.category || 'Service').slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -2522,7 +2522,7 @@ function CalendarSection() {
         return false;
       }
       
-      const aptDate = new Date(apt.scheduled_at || apt.date);
+      const aptDate = new Date(apt.scheduled_at || apt.date || '');
       console.log('🔍 Checking appointment:', apt.id, 'scheduled_at:', apt.scheduled_at, 'parsed date:', aptDate);
       
       if (isNaN(aptDate.getTime())) {
@@ -3378,7 +3378,7 @@ function PaymentsSection() {
                   <div key={index} className="flex flex-col items-center space-y-2">
                     <div 
                       className="bg-primary rounded-t-sm w-8"
-                      style={{ height: `${(item.revenue / 1200) * 180}px` }}
+                      style={{ height: `${Math.min((item.revenue / 100000) * 180, 180)}px` }}
                     ></div>
                     <span className="text-xs text-muted-foreground">{item.day}</span>
                     <span className="text-xs font-medium">₹{item.revenue}</span>
