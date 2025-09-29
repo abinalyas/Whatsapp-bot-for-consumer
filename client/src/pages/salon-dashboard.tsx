@@ -5533,6 +5533,22 @@ function SettingsSection() {
 export default function SalonDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Edit appointment modal state
+  const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [editAppointment, setEditAppointment] = useState({
+    customerName: "",
+    phone: "",
+    email: "",
+    service: "",
+    staffMember: "",
+    date: "",
+    time: "",
+    status: "confirmed",
+    notes: ""
+  });
+  const [loading, setLoading] = useState(false);
 
   const getCurrentSectionName = () => {
     const sectionNames = {
@@ -5550,6 +5566,55 @@ export default function SalonDashboard() {
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  // Edit appointment handlers
+  const handleEditAppointment = (appointment) => {
+    setEditingAppointment(appointment);
+    setEditAppointment({
+      customerName: appointment.customer_name || appointment.customer || "",
+      phone: appointment.customer_phone || appointment.phone || "",
+      email: appointment.customer_email || appointment.email || "",
+      service: appointment.service_name || appointment.service || "",
+      staffMember: appointment.staff_name || appointment.staff || "",
+      date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
+      time: appointment.time || "",
+      status: appointment.payment_status || appointment.status || "confirmed",
+      notes: appointment.notes || ""
+    });
+    setShowEditAppointmentModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditAppointmentModal(false);
+    setEditingAppointment(null);
+    setEditAppointment({
+      customerName: "",
+      phone: "",
+      email: "",
+      service: "",
+      staffMember: "",
+      date: "",
+      time: "",
+      status: "confirmed",
+      notes: ""
+    });
+  };
+
+  const handleSaveEditAppointment = async () => {
+    if (!editingAppointment) return;
+    
+    setLoading(true);
+    try {
+      // For now, just show a success message
+      alert('Edit appointment functionality will be implemented here!');
+      handleCloseEditModal();
+    } catch (error) {
+      console.error('❌ Error updating appointment:', error);
+      alert('Failed to update appointment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderSection = () => {
@@ -5627,6 +5692,155 @@ export default function SalonDashboard() {
           </div>
         </main>
       </div>
+      
+      {/* Edit Appointment Modal */}
+      {showEditAppointmentModal && editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Edit Appointment</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleCloseEditModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Original Appointment Info */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Original Appointment</h4>
+              <p className="text-sm text-gray-600">
+                {editingAppointment.customer_name || editingAppointment.customer} - {editingAppointment.service_name || editingAppointment.service}
+              </p>
+              <p className="text-sm text-gray-600">
+                {editingAppointment.scheduled_at ? new Date(editingAppointment.scheduled_at).toLocaleDateString('en-IN') : ''} at {editingAppointment.time} with {editingAppointment.staff_name || editingAppointment.staff}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name *</label>
+                <input
+                  type="text"
+                  value={editAppointment.customerName}
+                  onChange={(e) => setEditAppointment({...editAppointment, customerName: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <input
+                  type="tel"
+                  value={editAppointment.phone}
+                  onChange={(e) => setEditAppointment({...editAppointment, phone: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter phone number"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  value={editAppointment.email}
+                  onChange={(e) => setEditAppointment({...editAppointment, email: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter email address"
+                />
+              </div>
+
+              {/* Service */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Service *</label>
+                <input
+                  type="text"
+                  value={editAppointment.service}
+                  onChange={(e) => setEditAppointment({...editAppointment, service: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter service name"
+                />
+              </div>
+
+              {/* Staff */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Staff Member</label>
+                <input
+                  type="text"
+                  value={editAppointment.staffMember}
+                  onChange={(e) => setEditAppointment({...editAppointment, staffMember: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter staff member name"
+                />
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date *</label>
+                  <input
+                    type="date"
+                    value={editAppointment.date}
+                    onChange={(e) => setEditAppointment({...editAppointment, date: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Time *</label>
+                  <input
+                    type="time"
+                    value={editAppointment.time}
+                    onChange={(e) => setEditAppointment({...editAppointment, time: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background"
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Status</label>
+                <select
+                  value={editAppointment.status}
+                  onChange={(e) => setEditAppointment({...editAppointment, status: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                >
+                  <option value="confirmed">Confirmed</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              {/* Additional Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Any special requirements or notes"
+                  value={editAppointment.notes}
+                  onChange={(e) => setEditAppointment({...editAppointment, notes: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseEditModal}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEditAppointment} disabled={loading}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarProvider>
   );
 }
