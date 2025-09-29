@@ -453,10 +453,7 @@ function OverviewSection() {
     loadData();
   }, []);
 
-  const handleEditAppointment = (appointment) => {
-    setEditingAppointment(appointment);
-    setShowEditModal(true);
-  };
+  // Removed duplicate - using the one in CalendarSection
 
   const handleCancelAppointment = (appointment) => {
     setCancellingAppointment(appointment);
@@ -2378,6 +2375,76 @@ function CalendarSection() {
     });
   };
 
+  const handleSaveEditAppointment = async () => {
+    if (!editingAppointment) return;
+    
+    setLoading(true);
+    try {
+      // Find the selected service
+      const selectedService = services.find(s => s.name === editAppointment.service);
+      const selectedStaff = staff.find(s => s.name === editAppointment.staffMember);
+      
+      if (!selectedService) {
+        alert('Please select a service');
+        return;
+      }
+      
+      if (!selectedStaff) {
+        alert('Please select a staff member');
+        return;
+      }
+
+      // Create appointment data for API
+      const appointmentData = {
+        customer_name: editAppointment.customerName,
+        customer_phone: editAppointment.phone,
+        customer_email: editAppointment.email,
+        service_id: selectedService.id,
+        staff_id: selectedStaff.id,
+        scheduled_at: new Date(`${editAppointment.date}T${editAppointment.time.replace(' AM', '').replace(' PM', '')}`).toISOString(),
+        duration_minutes: selectedService.duration || 60,
+        amount: selectedService.price || 0,
+        currency: 'INR',
+        payment_status: editAppointment.status,
+        notes: editAppointment.notes
+      };
+
+      console.log('💾 Saving edited appointment:', appointmentData);
+
+      // Update appointment via API
+      const response = await fetch(`/api/salon/appointments/${editingAppointment.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify(appointmentData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update appointment');
+      }
+
+      const updatedAppointment = await response.json();
+      console.log('✅ Appointment updated successfully:', updatedAppointment);
+
+      // Refresh appointments data
+      await loadAppointments();
+      
+      // Close modal
+      handleCloseEditModal();
+      
+      // Show success message
+      alert('Appointment updated successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error updating appointment:', error);
+      alert('Failed to update appointment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCloseCancelModal = () => {
     setShowCancelAppointmentModal(false);
     setCancellingAppointment(null);
@@ -2635,54 +2702,75 @@ function CalendarSection() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {dayAppointments.length > 0 ? (
-                  dayAppointments.map((appointment, index) => {
-                    // Get status color
-                    const getStatusColor = (status) => {
-                      switch (status) {
-                        case 'confirmed': return 'bg-green-500';
-                        case 'pending': return 'bg-yellow-500';
-                        case 'cancelled': return 'bg-red-500';
-                        default: return 'bg-gray-500';
-                      }
-                    };
+              <div className="space-y-2">
+                {timeSlots.map((time, index) => {
+                  const appointment = dayAppointments.find(apt => {
+                    // Try exact match first
+                    if (apt.time === time) return true;
+                    // Try to match by converting both to same format
+                    const aptTime = apt.time || '';
+                    const timeMatch = aptTime.includes(time.split(' ')[0]) || time.includes(aptTime.split(' ')[0]);
+                    return timeMatch;
+                  });
 
-                    // Format price
-                    const formattedPrice = new Intl.NumberFormat('en-IN', {
-                      style: 'currency',
-                      currency: 'INR',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0,
-                    }).format(appointment.amount || 0);
+                  // Get status color for appointment
+                  const getStatusColor = (status) => {
+                    switch (status) {
+                      case 'confirmed': return 'bg-green-500';
+                      case 'pending': return 'bg-yellow-500';
+                      case 'cancelled': return 'bg-red-500';
+                      default: return 'bg-gray-500';
+                    }
+                  };
 
-                    return (
-                      <div key={appointment.id || index} className="flex items-center gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow">
-                        {/* Status Indicator */}
-                        <div className={`w-1 h-16 rounded-full ${getStatusColor(appointment.status || 'confirmed')}`}></div>
-                        
-                        {/* Time */}
-                        <div className="flex-shrink-0">
-                          <div className="text-lg font-semibold text-gray-900">
-                            {appointment.time || 'N/A'}
-                          </div>
+                  return (
+                    <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
+                      {/* Time */}
+                      <div className="flex-shrink-0 w-20">
+                        <div className="text-sm font-medium text-gray-900">
+                          {time}
                         </div>
-                        
-                        {/* Appointment Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 mb-1">
-                            {appointment.customer || appointment.customer_name || 'N/A'}
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      <div className="flex-shrink-0">
+                        {appointment ? (
+                          <div className={`w-1 h-12 rounded-full ${getStatusColor(appointment.status || 'confirmed')}`}></div>
+                        ) : (
+                          <div className="w-1 h-12 rounded-full bg-gray-200"></div>
+                        )}
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {appointment ? (
+                          <div className="space-y-1">
+                            <div className="font-semibold text-gray-900">
+                              {appointment.customer || appointment.customer_name || 'N/A'}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff || 'Unassigned'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {appointment.duration || appointment.duration_minutes || 60} min • {new Intl.NumberFormat('en-IN', {
+                                style: 'currency',
+                                currency: 'INR',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              }).format(appointment.amount || 0)}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600 mb-1">
-                            {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff || 'Unassigned'}
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-sm text-gray-500">Available</span>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {appointment.duration || appointment.duration_minutes || 60} min • {formattedPrice}
-                          </div>
-                        </div>
-                        
-                        {/* Status Badge */}
-                        <div className="flex-shrink-0">
+                        )}
+                      </div>
+                      
+                      {/* Status Badge */}
+                      <div className="flex-shrink-0">
+                        {appointment ? (
                           <Badge 
                             variant={appointment.status === "confirmed" ? "default" : 
                                     appointment.status === "pending" ? "secondary" : "destructive"}
@@ -2690,21 +2778,13 @@ function CalendarSection() {
                           >
                             {appointment.status || 'confirmed'}
                           </Badge>
-                        </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Free</span>
+                        )}
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No appointments today</h3>
-                    <p className="text-muted-foreground mb-4">Schedule appointments to see them here</p>
-                    <Button onClick={handleNewAppointment}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Schedule Appointment
-                    </Button>
-                  </div>
-                )}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -3679,7 +3759,7 @@ function CalendarSection() {
               <Button variant="outline" onClick={handleCloseEditModal}>
                 Cancel
               </Button>
-              <Button onClick={() => {/* TODO: Implement save edit */}} disabled={loading}>
+              <Button onClick={handleSaveEditAppointment} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </Button>
