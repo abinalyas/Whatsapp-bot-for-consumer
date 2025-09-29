@@ -29,7 +29,9 @@ import {
   type UIBooking,
   formatCurrency,
   formatTime,
-  formatDate
+  formatDate,
+  formatIndianPhoneNumber,
+  validateIndianPhoneNumber
 } from "@/lib/data-transformers";
 
 const menuItems = [
@@ -254,9 +256,9 @@ const recentTransactions = [
 ];
 
 const paymentMethods = [
-  { method: "Credit Card", amount: 4250, percentage: 62 },
-  { method: "UPI Payments", amount: 1890, percentage: 27 },
-  { method: "Cash", amount: 760, percentage: 11 }
+  { method: "UPI Payments", amount: 42500, percentage: 65 },
+  { method: "Credit Card", amount: 18900, percentage: 29 },
+  { method: "Cash", amount: 3800, percentage: 6 }
 ];
 
 const customerKPIs = {
@@ -465,7 +467,7 @@ const paymentSettings = {
   acceptCash: true,
   acceptCards: true,
   acceptUPI: true,
-  upiId: "bellasalon@paytm",
+  upiId: "salon@paytm",
   bankAccount: "****1234",
   paymentGateway: "Stripe",
   enableOnlinePayments: true
@@ -910,8 +912,8 @@ function ServicesSection() {
               id: 1, 
               name: "Hair Cut & Style", 
               category: "Hair", 
-              base_price: 45, 
-              currency: "USD", 
+              base_price: 500, 
+              currency: "INR", 
               duration_minutes: 60, 
               is_active: true,
               addOns: ["Blow Dry", "Styling"]
@@ -920,8 +922,8 @@ function ServicesSection() {
               id: 2, 
               name: "Hair Color", 
               category: "Hair", 
-              base_price: 80, 
-              currency: "USD", 
+              base_price: 1500, 
+              currency: "INR", 
               duration_minutes: 120, 
               is_active: true,
               addOns: ["Color Treatment", "Conditioning"]
@@ -930,8 +932,8 @@ function ServicesSection() {
               id: 3, 
               name: "Manicure", 
               category: "Nails", 
-              base_price: 35, 
-              currency: "USD", 
+              base_price: 300, 
+              currency: "INR", 
               duration_minutes: 45, 
               is_active: true,
               addOns: ["Nail Art", "Gel Polish"]
@@ -940,8 +942,8 @@ function ServicesSection() {
               id: 4, 
               name: "Pedicure", 
               category: "Nails", 
-              base_price: 45, 
-              currency: "USD", 
+              base_price: 400, 
+              currency: "INR", 
               duration_minutes: 60, 
               is_active: true,
               addOns: ["Foot Massage", "Callus Treatment"]
@@ -950,8 +952,8 @@ function ServicesSection() {
               id: 5, 
               name: "Facial Treatment", 
               category: "Skincare", 
-              base_price: 75, 
-              currency: "USD", 
+              base_price: 800, 
+              currency: "INR", 
               duration_minutes: 90, 
               is_active: true,
               addOns: ["Deep Cleansing", "Moisturizing"]
@@ -998,7 +1000,7 @@ function ServicesSection() {
         description: formData.get('description'),
         category: formData.get('category'),
         base_price: parseFloat(formData.get('base_price') || '0'),
-        currency: 'USD', // Default currency
+        currency: 'INR', // Default currency for India
         duration_minutes: parseInt(formData.get('duration_minutes') || '60'),
         is_active: true,
         addOns: [] // Default empty addOns array
@@ -1305,7 +1307,7 @@ function ServicesSection() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Price ($)</label>
+                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
                   <input
                     name="price"
                     type="number"
@@ -1395,7 +1397,7 @@ function ServicesSection() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Price ($)</label>
+                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
                   <input
                     type="number"
                     name="base_price"
@@ -2425,7 +2427,7 @@ function CalendarSection() {
         scheduled_at: appointmentDateTime.toISOString(),
         duration_minutes: selectedService?.duration_minutes || 60,
         amount: selectedService?.base_price || 0,
-        currency: 'USD',
+        currency: 'INR',
         notes: newAppointment.notes
       };
 
@@ -3418,8 +3420,13 @@ function PaymentsSection() {
           <div className="flex items-center gap-2">
             <select className="text-sm border border-input rounded-md px-2 py-1">
               <option>All Methods</option>
-              <option>Credit Card</option>
               <option>UPI</option>
+              <option>Paytm</option>
+              <option>PhonePe</option>
+              <option>GPay</option>
+              <option>Credit Card</option>
+              <option>Debit Card</option>
+              <option>Net Banking</option>
               <option>Cash</option>
             </select>
           </div>

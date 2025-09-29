@@ -86,7 +86,7 @@ export function transformApiServiceToUI(apiService: ApiService): UIService {
     icon: apiService.icon,
     category: apiService.category,
     duration_minutes: 60,                   // default duration
-    currency: 'USD',                        // default currency
+    currency: 'INR',                        // default currency for India
     addOns: [],                             // default empty addOns
     createdAt: apiService.createdAt,
     updatedAt: apiService.updatedAt,
@@ -207,11 +207,22 @@ export function transformApiBookingsToUI(apiBookings: ApiBooking[]): UIBooking[]
 /**
  * Format currency amount for display
  */
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
+export function formatCurrency(amount: number, currency: string = 'INR'): string {
+  if (currency === 'INR') {
+    // For INR, amount is already in rupees (not paise)
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+  
+  // For other currencies, convert from cents
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-  }).format(amount / 100); // Convert from cents to dollars
+  }).format(amount / 100);
 }
 
 /**
@@ -250,10 +261,11 @@ export function formatDate(dateString: string): string {
   if (!dateString) return '';
   
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone: 'Asia/Kolkata',
   });
 }
 
@@ -264,12 +276,63 @@ export function formatDateTime(dateString: string): string {
   if (!dateString) return '';
   
   const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString('en-IN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'Asia/Kolkata',
   });
+}
+
+/**
+ * Format Indian phone number for display
+ */
+export function formatIndianPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return '';
+  
+  // Remove any non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Handle different formats
+  if (cleaned.length === 10) {
+    // Format as: 98765 43210
+    return `${cleaned.slice(0, 5)} ${cleaned.slice(5)}`;
+  } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
+    // Format as: +91 98765 43210
+    return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`;
+  } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+    // Format as: 098765 43210
+    return `${cleaned.slice(0, 6)} ${cleaned.slice(6)}`;
+  }
+  
+  return phoneNumber; // Return original if format is not recognized
+}
+
+/**
+ * Validate Indian phone number
+ */
+export function validateIndianPhoneNumber(phoneNumber: string): boolean {
+  if (!phoneNumber) return false;
+  
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Indian mobile numbers: 10 digits starting with 6, 7, 8, or 9
+  if (cleaned.length === 10) {
+    return /^[6-9]\d{9}$/.test(cleaned);
+  }
+  
+  // With country code +91
+  if (cleaned.length === 12 && cleaned.startsWith('91')) {
+    return /^91[6-9]\d{9}$/.test(cleaned);
+  }
+  
+  // With leading 0
+  if (cleaned.length === 11 && cleaned.startsWith('0')) {
+    return /^0[6-9]\d{9}$/.test(cleaned);
+  }
+  
+  return false;
 }
