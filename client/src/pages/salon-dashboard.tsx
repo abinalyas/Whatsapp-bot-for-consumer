@@ -417,7 +417,7 @@ const paymentSettings = {
   enableOnlinePayments: true
 };
 
-function OverviewSection() {
+function OverviewSection({ onEditAppointment, onCancelAppointment }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
@@ -547,8 +547,8 @@ function OverviewSection() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEditAppointment(appointment)}>Edit</Button>
-                          <Button size="sm" variant="outline" onClick={() => handleCancelAppointment(appointment)}>Cancel</Button>
+                          <Button size="sm" variant="outline" onClick={() => onEditAppointment(appointment)}>Edit</Button>
+                          <Button size="sm" variant="outline" onClick={() => onCancelAppointment(appointment)}>Cancel</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -5620,7 +5620,10 @@ export default function SalonDashboard() {
   const renderSection = () => {
     switch (activeSection) {
       case "overview":
-        return <OverviewSection />;
+        return <OverviewSection 
+          onEditAppointment={handleEditAppointment}
+          onCancelAppointment={() => alert('Cancel appointment functionality will be implemented here!')}
+        />;
       case "services":
         return <ServicesSection />;
       case "staff":
