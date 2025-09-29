@@ -166,11 +166,59 @@ const getFilterOptions = (staff: any[], services: any[]) => ({
   status: ["All Status", "Confirmed", "Pending", "Cancelled", "Completed"]
 });
 
-const revenueData = {
-  today: { amount: 63750, transactions: 8 }, // ₹63,750 (850 * 75)
-  week: { amount: 517500, change: "+12%", period: "from last week" }, // ₹5,17,500 (6900 * 75)
-  month: { amount: 1387500, transactions: 156 }, // ₹13,87,500 (18500 * 75)
-  average: { amount: 9975, period: "This week average" } // ₹9,975 (133 * 75)
+// Helper function to format currency with commas
+const formatCurrencyWithCommas = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount).replace('₹', '₹');
+};
+
+// Helper function to calculate revenue from appointments
+const calculateRevenueFromAppointments = (appointments: any[], period: 'today' | 'week' | 'month' | 'year') => {
+  if (!appointments || appointments.length === 0) return 0;
+  
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  let filteredAppointments = appointments;
+  
+  switch (period) {
+    case 'today':
+      filteredAppointments = appointments.filter(apt => {
+        const aptDate = new Date(apt.scheduled_at);
+        return aptDate >= today && aptDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      });
+      break;
+    case 'week':
+      const weekStart = new Date(today.getTime() - (today.getDay() * 24 * 60 * 60 * 1000));
+      filteredAppointments = appointments.filter(apt => {
+        const aptDate = new Date(apt.scheduled_at);
+        return aptDate >= weekStart && aptDate < today;
+      });
+      break;
+    case 'month':
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      filteredAppointments = appointments.filter(apt => {
+        const aptDate = new Date(apt.scheduled_at);
+        return aptDate >= monthStart && aptDate < today;
+      });
+      break;
+    case 'year':
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+      filteredAppointments = appointments.filter(apt => {
+        const aptDate = new Date(apt.scheduled_at);
+        return aptDate >= yearStart && aptDate < today;
+      });
+      break;
+  }
+  
+  return filteredAppointments.reduce((total, apt) => {
+    const amount = parseFloat(apt.amount) || 0;
+    return total + amount;
+  }, 0);
 };
 
 const revenueTrend = [
@@ -433,6 +481,7 @@ function OverviewSection({
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]); // Store all appointments for revenue calculation
   const [stats, setStats] = useState({ todayAppointments: 0, todayRevenue: 0, totalServices: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -442,14 +491,17 @@ function OverviewSection({
     const loadData = async () => {
       try {
         setLoading(true);
-        const [appointmentsData, statsData, staffData] = await Promise.all([
+        
+        // Get all appointments for revenue calculation (not just today's)
+        const [todayAppointmentsData, allAppointmentsData, statsData, staffData] = await Promise.all([
           salonApi.appointments.getAll({ date: new Date().toISOString().split('T')[0] }),
+          salonApi.appointments.getAll(), // Get all appointments for revenue calculation
           salonApi.stats.getStats(),
           staffApi.getAll()
         ]);
         
         // Transform appointments data to include staff names
-        const transformedAppointments = appointmentsData.map(apt => {
+        const transformedTodayAppointments = todayAppointmentsData.map(apt => {
           const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
           return {
             ...apt,
@@ -457,14 +509,33 @@ function OverviewSection({
           };
         });
         
-        setAppointments(transformedAppointments);
-        setStats(statsData);
+        const transformedAllAppointments = allAppointmentsData.map(apt => {
+          const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
+          return {
+            ...apt,
+            staff_name: staffName
+          };
+        });
+        
+        setAppointments(transformedTodayAppointments);
+        setAllAppointments(transformedAllAppointments);
+        
+        // Calculate real stats from data
+        const todayRevenue = calculateRevenueFromAppointments(transformedAllAppointments, 'today');
+        const realStats = {
+          todayAppointments: transformedTodayAppointments.length,
+          todayRevenue: todayRevenue,
+          totalServices: statsData?.totalServices || 0
+        };
+        
+        setStats(realStats);
         setError(null);
       } catch (err) {
         console.error('Error loading overview data:', err);
         setError('Failed to load overview data');
         // Fallback to mock data
         setAppointments(todaysAppointments);
+        setAllAppointments(todaysAppointments); // Fallback for revenue calculation
         setStats({ todayAppointments: 5, todayRevenue: 450, totalServices: 8 });
       } finally {
         setLoading(false);
@@ -491,16 +562,18 @@ function OverviewSection({
   return (
     <div className="space-y-6">
       {/* Revenue Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Today's Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">₹{stats.todayRevenue}</div>
+            <div className="text-2xl">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'today'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +12% from yesterday
+              From today's appointments
             </p>
           </CardContent>
         </Card>
@@ -511,9 +584,11 @@ function OverviewSection({
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">₹{revenueData.week.amount}</div>
+            <div className="text-2xl">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'week'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +8% from last week
+              From this week's appointments
             </p>
           </CardContent>
         </Card>
@@ -524,9 +599,26 @@ function OverviewSection({
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">₹{revenueData.month.amount}</div>
+            <div className="text-2xl">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'month'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              From this month's appointments
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>This Year</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'year'))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              From this year's appointments
             </p>
           </CardContent>
         </Card>
@@ -936,60 +1028,60 @@ function ServicesSection() {
           console.log('API call failed, using fallback mock data:', apiError);
           
           // Fallback to mock data if API fails
-          const mockServices = [
-            { 
-              id: 1, 
-              name: "Hair Cut & Style", 
-              category: "Hair", 
+        const mockServices = [
+          { 
+            id: 1, 
+            name: "Hair Cut & Style", 
+            category: "Hair", 
               base_price: 500, 
               currency: "INR", 
-              duration_minutes: 60, 
-              is_active: true,
-              addOns: ["Blow Dry", "Styling"]
-            },
-            { 
-              id: 2, 
-              name: "Hair Color", 
-              category: "Hair", 
+            duration_minutes: 60, 
+            is_active: true,
+            addOns: ["Blow Dry", "Styling"]
+          },
+          { 
+            id: 2, 
+            name: "Hair Color", 
+            category: "Hair", 
               base_price: 1500, 
               currency: "INR", 
-              duration_minutes: 120, 
-              is_active: true,
-              addOns: ["Color Treatment", "Conditioning"]
-            },
-            { 
-              id: 3, 
-              name: "Manicure", 
-              category: "Nails", 
+            duration_minutes: 120, 
+            is_active: true,
+            addOns: ["Color Treatment", "Conditioning"]
+          },
+          { 
+            id: 3, 
+            name: "Manicure", 
+            category: "Nails", 
               base_price: 300, 
               currency: "INR", 
-              duration_minutes: 45, 
-              is_active: true,
-              addOns: ["Nail Art", "Gel Polish"]
-            },
-            { 
-              id: 4, 
-              name: "Pedicure", 
-              category: "Nails", 
+            duration_minutes: 45, 
+            is_active: true,
+            addOns: ["Nail Art", "Gel Polish"]
+          },
+          { 
+            id: 4, 
+            name: "Pedicure", 
+            category: "Nails", 
               base_price: 400, 
               currency: "INR", 
-              duration_minutes: 60, 
-              is_active: true,
-              addOns: ["Foot Massage", "Callus Treatment"]
-            },
-            { 
-              id: 5, 
-              name: "Facial Treatment", 
-              category: "Skincare", 
+            duration_minutes: 60, 
+            is_active: true,
+            addOns: ["Foot Massage", "Callus Treatment"]
+          },
+          { 
+            id: 5, 
+            name: "Facial Treatment", 
+            category: "Skincare", 
               base_price: 800, 
               currency: "INR", 
-              duration_minutes: 90, 
-              is_active: true,
-              addOns: ["Deep Cleansing", "Moisturizing"]
-            },
-          ];
-          
-          setServices(mockServices);
+            duration_minutes: 90, 
+            is_active: true,
+            addOns: ["Deep Cleansing", "Moisturizing"]
+          },
+        ];
+        
+        setServices(mockServices);
           console.log('Using fallback mock services data:', mockServices);
         }
         
@@ -2946,7 +3038,7 @@ function CalendarSection() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Daily Schedule</CardTitle>
+              <CardTitle>Daily Schedule</CardTitle>
                 <Badge variant="outline" className="text-sm">
                   {dayAppointments.length} appointment{dayAppointments.length !== 1 ? 's' : ''}
                 </Badge>
@@ -2980,7 +3072,7 @@ function CalendarSection() {
                       <div className="flex-shrink-0 w-20">
                         <div className="text-sm font-medium text-gray-900">
                           {time}
-                        </div>
+                      </div>
                       </div>
                       
                       {/* Status Indicator */}
@@ -3060,8 +3152,8 @@ function CalendarSection() {
                         <h4 className="font-semibold text-lg">{staff}</h4>
                         <Badge variant="outline" className="text-sm">
                           {staffAppointments.length} appointment{staffAppointments.length !== 1 ? 's' : ''}
-                        </Badge>
-                      </div>
+                              </Badge>
+                            </div>
                       
                       {/* Timeline */}
                       <div className="relative">
@@ -3070,9 +3162,9 @@ function CalendarSection() {
                           {hours.map((hour) => (
                             <div key={hour} className="flex-1 text-center text-xs text-muted-foreground">
                               {hour === 9 ? '9 AM' : hour === 12 ? '12 PM' : hour === 17 ? '5 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
-                            </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
+                      </div>
                         
                         {/* Timeline grid */}
                         <div className="flex bg-gray-100 rounded-lg p-1">
@@ -3122,9 +3214,9 @@ function CalendarSection() {
                                 <span className="truncate">
                                   {appointment.customer?.split(' ')[0] || 'Customer'}
                                 </span>
-                              </div>
-                            );
-                          })}
+                    </div>
+                  );
+                })}
                         </div>
                       </div>
                     </div>
@@ -3209,18 +3301,18 @@ function CalendarSection() {
                         >
                           {appointment.status}
                         </Badge>
-                      </div>
+                    </div>
                       
                       {/* Service, Staff, Duration, Price in one row */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                         {/* Service */}
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <div>
+                    <div>
                             <p className="text-xs text-muted-foreground">Service</p>
                             <p className="text-sm font-medium">{appointment.service}</p>
-                          </div>
-                        </div>
+                      </div>
+                    </div>
                         
                         {/* Staff */}
                         <div className="flex items-center gap-2">
@@ -3228,11 +3320,11 @@ function CalendarSection() {
                           <div>
                             <p className="text-xs text-muted-foreground">Staff</p>
                             <p className="text-sm font-medium">{appointment.staff}</p>
-                          </div>
+                  </div>
                         </div>
                         
                         {/* Duration */}
-                        <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                           <div>
                             <p className="text-xs text-muted-foreground">Duration</p>
@@ -4125,6 +4217,26 @@ function CalendarSection() {
 function PaymentsSection() {
   const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
   const [markingTransaction, setMarkingTransaction] = useState(null);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load all appointments for revenue calculation
+  useEffect(() => {
+    const loadAppointments = async () => {
+      try {
+        setLoading(true);
+        const appointmentsData = await salonApi.appointments.getAll();
+        setAllAppointments(appointmentsData);
+      } catch (error) {
+        console.error('Error loading appointments for payments:', error);
+        setAllAppointments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAppointments();
+  }, []);
 
   const handleMarkPaid = (transaction) => {
     setMarkingTransaction(transaction);
@@ -4164,9 +4276,11 @@ function PaymentsSection() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{revenueData.today.amount}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'today'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {revenueData.today.transactions} transactions
+              From today's appointments
             </p>
           </CardContent>
         </Card>
@@ -4177,9 +4291,11 @@ function PaymentsSection() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{revenueData.week.amount}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'week'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {revenueData.week.change} {revenueData.week.period}
+              From this week's appointments
             </p>
           </CardContent>
         </Card>
@@ -4190,22 +4306,26 @@ function PaymentsSection() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{revenueData.month.amount}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'month'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {revenueData.month.transactions} transactions
+              From this month's appointments
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle>Avg. Transaction</CardTitle>
+            <CardTitle>This Year</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{revenueData.average.amount}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'year'))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {revenueData.average.period}
+              From this year's appointments
             </p>
           </CardContent>
         </Card>
