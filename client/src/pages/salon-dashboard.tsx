@@ -5709,6 +5709,32 @@ export default function SalonDashboard() {
     staffPerformance: []
   });
   const [dailySummaryLoading, setDailySummaryLoading] = useState(false);
+  
+  // Check In modal state
+  const [checkInData, setCheckInData] = useState({
+    appointmentId: '',
+    checkInNotes: '',
+    specialRequests: ''
+  });
+  const [availableAppointments, setAvailableAppointments] = useState([]);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  
+  // Process Payment modal state
+  const [paymentData, setPaymentData] = useState({
+    appointmentId: '',
+    amount: '',
+    tip: '',
+    paymentMethod: 'cash'
+  });
+  const [paymentAppointments, setPaymentAppointments] = useState([]);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  // View Schedule modal state
+  const [scheduleData, setScheduleData] = useState({
+    staffSchedules: [],
+    appointments: []
+  });
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   // Load data for Quick Book modal
   const loadQuickBookData = async () => {
@@ -5827,7 +5853,10 @@ export default function SalonDashboard() {
         const totalAppointments = appointments.length;
         const completedAppointments = appointments.filter(apt => apt.payment_status === 'completed').length;
         const pendingAppointments = appointments.filter(apt => apt.payment_status === 'pending').length;
-        const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.amount || 0), 0);
+        const totalRevenue = appointments.reduce((sum, apt) => {
+          const amount = parseFloat(apt.amount) || 0;
+          return sum + amount;
+        }, 0);
         
         // Calculate top services
         const serviceCounts = {};
@@ -5869,11 +5898,198 @@ export default function SalonDashboard() {
     }
   };
 
-  // Other Quick Actions modal handlers
-  const handleOpenCheckIn = () => setShowCheckInModal(true);
-  const handleOpenProcessPayment = () => setShowProcessPaymentModal(true);
+  // Load Check In data
+  const loadCheckInData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        // Filter for pending appointments that can be checked in
+        const pendingAppointments = result.data.filter(apt => 
+          apt.payment_status === 'pending' || apt.payment_status === 'confirmed'
+        );
+        setAvailableAppointments(pendingAppointments);
+      }
+    } catch (error) {
+      console.error('Error loading check-in appointments:', error);
+    }
+  };
+
+  // Check In handlers
+  const handleOpenCheckIn = async () => {
+    await loadCheckInData();
+    setShowCheckInModal(true);
+  };
+
+  const handleCheckInSubmit = async () => {
+    if (!checkInData.appointmentId) {
+      alert('Please select an appointment to check in');
+      return;
+    }
+
+    setCheckInLoading(true);
+    try {
+      // Update appointment status to checked-in
+      const response = await fetch(`/api/salon/appointments/${checkInData.appointmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify({
+          payment_status: 'checked-in',
+          notes: `${checkInData.checkInNotes}\nSpecial Requests: ${checkInData.specialRequests}`.trim()
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Customer checked in successfully!');
+        setShowCheckInModal(false);
+        setCheckInData({
+          appointmentId: '',
+          checkInNotes: '',
+          specialRequests: ''
+        });
+        // Refresh appointments data
+        window.location.reload();
+      } else {
+        alert('Failed to check in customer: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error checking in customer:', error);
+      alert('Failed to check in customer. Please try again.');
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
+  // Load Process Payment data
+  const loadPaymentData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        // Filter for appointments that need payment
+        const pendingAppointments = result.data.filter(apt => 
+          apt.payment_status === 'pending' || apt.payment_status === 'checked-in'
+        );
+        setPaymentAppointments(pendingAppointments);
+      }
+    } catch (error) {
+      console.error('Error loading payment appointments:', error);
+    }
+  };
+
+  // Process Payment handlers
+  const handleOpenProcessPayment = async () => {
+    await loadPaymentData();
+    setShowProcessPaymentModal(true);
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentData.appointmentId || !paymentData.amount) {
+      alert('Please select an appointment and enter amount');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      const totalAmount = parseFloat(paymentData.amount) + parseFloat(paymentData.tip || 0);
+      
+      const response = await fetch(`/api/salon/appointments/${paymentData.appointmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify({
+          payment_status: 'completed',
+          amount: totalAmount,
+          notes: `Payment processed via ${paymentData.paymentMethod}. Amount: ₹${paymentData.amount}, Tip: ₹${paymentData.tip || 0}`
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Payment processed successfully!');
+        setShowProcessPaymentModal(false);
+        setPaymentData({
+          appointmentId: '',
+          amount: '',
+          tip: '',
+          paymentMethod: 'cash'
+        });
+        // Refresh appointments data
+        window.location.reload();
+      } else {
+        alert('Failed to process payment: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Failed to process payment. Please try again.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
   const handleOpenSendReminders = () => setShowSendRemindersModal(true);
-  const handleOpenViewSchedule = () => setShowViewScheduleModal(true);
+  // Load View Schedule data
+  const loadScheduleData = async () => {
+    setScheduleLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const [staffResponse, appointmentsResponse] = await Promise.all([
+        fetch('/api/staff/staff'),
+        fetch(`/api/salon/appointments?date=${today}`)
+      ]);
+      
+      const staffResult = await staffResponse.json();
+      const appointmentsResult = await appointmentsResponse.json();
+      
+      if (staffResult.success && appointmentsResult.success) {
+        const staff = staffResult.data;
+        const appointments = appointmentsResult.data;
+        
+        // Create staff schedule data
+        const staffSchedules = staff.map(staffMember => {
+          const staffAppointments = appointments.filter(apt => apt.staff_id === staffMember.id);
+          return {
+            ...staffMember,
+            appointments: staffAppointments.map(apt => ({
+              id: apt.id,
+              customer_name: apt.customer_name,
+              service_name: apt.service_name,
+              time: apt.scheduled_at ? 
+                new Date(apt.scheduled_at).toLocaleTimeString('en-IN', { 
+                  hour: 'numeric', 
+                  minute: '2-digit', 
+                  hour12: true 
+                }) : 'N/A',
+              status: apt.payment_status
+            }))
+          };
+        });
+        
+        setScheduleData({
+          staffSchedules,
+          appointments
+        });
+      }
+    } catch (error) {
+      console.error('Error loading schedule data:', error);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  // View Schedule handlers
+  const handleOpenViewSchedule = async () => {
+    await loadScheduleData();
+    setShowViewScheduleModal(true);
+  };
   const handleOpenWalkIn = () => setShowWalkInModal(true);
   const handleOpenDailySummary = async () => {
     await loadDailySummaryData();
@@ -6459,11 +6675,25 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Select Appointment *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={checkInData.appointmentId}
+                    onChange={(e) => setCheckInData(prev => ({ ...prev, appointmentId: e.target.value }))}
+                  >
                     <option value="">Select appointment to check in</option>
-                    <option value="1">Sarah Johnson - Hair Cut & Style - 9:00 AM</option>
-                    <option value="2">Mike Chen - Beard Trim - 10:30 AM</option>
-                    <option value="3">Lisa Rodriguez - Manicure - 12:00 PM</option>
+                    {availableAppointments.map((appointment) => {
+                      const time = appointment.scheduled_at ? 
+                        new Date(appointment.scheduled_at).toLocaleTimeString('en-IN', { 
+                          hour: 'numeric', 
+                          minute: '2-digit', 
+                          hour12: true 
+                        }) : 'N/A';
+                      return (
+                        <option key={appointment.id} value={appointment.id}>
+                          {appointment.customer_name || 'Unknown'} - {appointment.service_name || 'Service'} - {time}
+                        </option>
+                      );
+                    })}
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
@@ -6476,6 +6706,8 @@ export default function SalonDashboard() {
                   rows={3}
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Any additional notes about the customer's arrival"
+                  value={checkInData.checkInNotes}
+                  onChange={(e) => setCheckInData(prev => ({ ...prev, checkInNotes: e.target.value }))}
                 />
               </div>
 
@@ -6486,6 +6718,8 @@ export default function SalonDashboard() {
                   rows={3}
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Any special requests or preferences"
+                  value={checkInData.specialRequests}
+                  onChange={(e) => setCheckInData(prev => ({ ...prev, specialRequests: e.target.value }))}
                 />
               </div>
             </div>
@@ -6494,8 +6728,8 @@ export default function SalonDashboard() {
               <Button variant="outline" onClick={() => setShowCheckInModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowCheckInModal(false)}>
-                Check In Customer
+              <Button onClick={handleCheckInSubmit} disabled={checkInLoading}>
+                {checkInLoading ? 'Checking In...' : 'Check In Customer'}
               </Button>
             </div>
           </div>
@@ -6521,11 +6755,25 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Select Appointment *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={paymentData.appointmentId}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, appointmentId: e.target.value }))}
+                  >
                     <option value="">Select appointment for payment</option>
-                    <option value="1">Sarah Johnson - Hair Cut & Style - ₹500</option>
-                    <option value="2">Mike Chen - Beard Trim - ₹300</option>
-                    <option value="3">Lisa Rodriguez - Manicure - ₹400</option>
+                    {paymentAppointments.map((appointment) => {
+                      const time = appointment.scheduled_at ? 
+                        new Date(appointment.scheduled_at).toLocaleTimeString('en-IN', { 
+                          hour: 'numeric', 
+                          minute: '2-digit', 
+                          hour12: true 
+                        }) : 'N/A';
+                      return (
+                        <option key={appointment.id} value={appointment.id}>
+                          {appointment.customer_name || 'Unknown'} - {appointment.service_name || 'Service'} - ₹{appointment.amount || 0}
+                        </option>
+                      );
+                    })}
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
@@ -6538,7 +6786,9 @@ export default function SalonDashboard() {
                   type="number"
                   step="0.01"
                   className="w-full p-3 border border-input rounded-md bg-background"
-                  defaultValue="0.00"
+                  placeholder="Enter amount"
+                  value={paymentData.amount}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, amount: e.target.value }))}
                 />
               </div>
 
@@ -6549,7 +6799,9 @@ export default function SalonDashboard() {
                   type="number"
                   step="0.01"
                   className="w-full p-3 border border-input rounded-md bg-background"
-                  defaultValue="0.00"
+                  placeholder="Enter tip amount"
+                  value={paymentData.tip}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, tip: e.target.value }))}
                 />
               </div>
 
@@ -6557,7 +6809,11 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Payment Method *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={paymentData.paymentMethod}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  >
                     <option value="cash">Cash</option>
                     <option value="card">Credit Card</option>
                     <option value="upi">UPI</option>
@@ -6573,15 +6829,15 @@ export default function SalonDashboard() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Service Amount:</span>
-                    <span>₹0.00</span>
+                    <span>₹{paymentData.amount || '0.00'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tip:</span>
-                    <span>₹0.00</span>
+                    <span>₹{paymentData.tip || '0.00'}</span>
                   </div>
                   <div className="flex justify-between font-semibold border-t pt-1">
                     <span>Total:</span>
-                    <span>₹0.00</span>
+                    <span>₹{(parseFloat(paymentData.amount || 0) + parseFloat(paymentData.tip || 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -6591,8 +6847,8 @@ export default function SalonDashboard() {
               <Button variant="outline" onClick={() => setShowProcessPaymentModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowProcessPaymentModal(false)}>
-                Process Payment
+              <Button onClick={handlePaymentSubmit} disabled={paymentLoading}>
+                {paymentLoading ? 'Processing...' : 'Process Payment'}
               </Button>
             </div>
           </div>
@@ -6673,55 +6929,38 @@ export default function SalonDashboard() {
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Emma's Schedule */}
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold text-lg mb-3">Emma</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">9:00 AM - Sarah Johnson</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">2:30 PM - John Smith</span>
-                  </div>
-                </div>
+            {scheduleLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-gray-500">Loading staff schedules...</div>
               </div>
-
-              {/* David's Schedule */}
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold text-lg mb-3">David</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span className="text-sm">10:30 AM - Mike Chen</span>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {scheduleData.staffSchedules.map((staff, index) => (
+                  <div key={staff.id} className="border rounded-lg p-4">
+                    <h4 className="font-semibold text-lg mb-3">{staff.name}</h4>
+                    <div className="space-y-2">
+                      {staff.appointments.length > 0 ? (
+                        staff.appointments.map((appointment) => {
+                          const statusColor = appointment.status === 'completed' ? 'bg-green-500' : 
+                                            appointment.status === 'checked-in' ? 'bg-blue-500' : 
+                                            'bg-orange-500';
+                          return (
+                            <div key={appointment.id} className="flex items-center gap-2">
+                              <div className={`w-2 h-2 ${statusColor} rounded-full`}></div>
+                              <span className="text-sm">
+                                {appointment.time} - {appointment.customer_name} ({appointment.service_name})
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-sm text-gray-500">No appointments today</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-
-              {/* Anna's Schedule */}
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold text-lg mb-3">Anna</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span className="text-sm">12:00 PM - Lisa Rodriguez</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sofia's Schedule */}
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold text-lg mb-3">Sofia</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span className="text-sm">4:00 PM - Amanda White</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
             
             <div className="flex justify-end mt-6">
               <Button onClick={() => setShowViewScheduleModal(false)}>
