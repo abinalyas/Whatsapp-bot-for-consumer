@@ -5683,15 +5683,202 @@ export default function SalonDashboard() {
   const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
   const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [showDailySummaryModal, setShowDailySummaryModal] = useState(false);
+  
+  // Quick Book modal state
+  const [quickBookData, setQuickBookData] = useState({
+    customerName: '',
+    phone: '',
+    email: '',
+    service: '',
+    staff: '',
+    date: '',
+    time: '',
+    notes: ''
+  });
+  const [availableServices, setAvailableServices] = useState([]);
+  const [availableStaff, setAvailableStaff] = useState([]);
+  const [quickBookLoading, setQuickBookLoading] = useState(false);
+  
+  // Daily Summary modal state
+  const [dailySummaryData, setDailySummaryData] = useState({
+    appointments: 0,
+    revenue: 0,
+    completedAppointments: 0,
+    pendingAppointments: 0,
+    topServices: [],
+    staffPerformance: []
+  });
+  const [dailySummaryLoading, setDailySummaryLoading] = useState(false);
 
-  // Quick Actions modal handlers
-  const handleOpenQuickBook = () => setShowQuickBookModal(true);
+  // Load data for Quick Book modal
+  const loadQuickBookData = async () => {
+    try {
+      const [servicesResponse, staffResponse] = await Promise.all([
+        fetch('/api/salon/services'),
+        fetch('/api/staff/staff')
+      ]);
+      
+      const servicesData = await servicesResponse.json();
+      const staffData = await staffResponse.json();
+      
+      if (servicesData.success) {
+        setAvailableServices(servicesData.data);
+      }
+      if (staffData.success) {
+        setAvailableStaff(staffData.data);
+      }
+    } catch (error) {
+      console.error('Error loading Quick Book data:', error);
+    }
+  };
+
+  // Quick Book handlers
+  const handleOpenQuickBook = async () => {
+    await loadQuickBookData();
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    setQuickBookData(prev => ({ ...prev, date: today }));
+    setShowQuickBookModal(true);
+  };
+
+  const handleQuickBookSubmit = async () => {
+    if (!quickBookData.customerName || !quickBookData.service || !quickBookData.staff || !quickBookData.date || !quickBookData.time) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setQuickBookLoading(true);
+    try {
+      // Convert time to 24-hour format
+      let timeString = quickBookData.time;
+      if (timeString.includes(' AM') || timeString.includes(' PM')) {
+        const [timePart, ampm] = timeString.split(' ');
+        const [hours, minutes] = timePart.split(':');
+        let hour24 = parseInt(hours);
+        
+        if (ampm === 'PM' && hour24 !== 12) {
+          hour24 += 12;
+        } else if (ampm === 'AM' && hour24 === 12) {
+          hour24 = 0;
+        }
+        timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+      }
+
+      const scheduled_at = new Date(`${quickBookData.date}T${timeString}:00`).toISOString();
+      
+      const response = await fetch('/api/salon/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify({
+          customer_name: quickBookData.customerName,
+          customer_phone: quickBookData.phone,
+          customer_email: quickBookData.email,
+          service_id: quickBookData.service,
+          staff_id: quickBookData.staff,
+          scheduled_at: scheduled_at,
+          duration_minutes: 60, // Default duration
+          amount: 0, // Will be calculated from service
+          currency: 'INR',
+          notes: quickBookData.notes,
+          payment_status: 'pending'
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Appointment booked successfully!');
+        setShowQuickBookModal(false);
+        setQuickBookData({
+          customerName: '',
+          phone: '',
+          email: '',
+          service: '',
+          staff: '',
+          date: '',
+          time: '',
+          notes: ''
+        });
+        // Refresh appointments data
+        window.location.reload();
+      } else {
+        alert('Failed to book appointment: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error booking appointment:', error);
+      alert('Failed to book appointment. Please try again.');
+    } finally {
+      setQuickBookLoading(false);
+    }
+  };
+
+  // Load Daily Summary data
+  const loadDailySummaryData = async () => {
+    setDailySummaryLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const appointments = result.data;
+        const totalAppointments = appointments.length;
+        const completedAppointments = appointments.filter(apt => apt.payment_status === 'completed').length;
+        const pendingAppointments = appointments.filter(apt => apt.payment_status === 'pending').length;
+        const totalRevenue = appointments.reduce((sum, apt) => sum + (apt.amount || 0), 0);
+        
+        // Calculate top services
+        const serviceCounts = {};
+        appointments.forEach(apt => {
+          if (apt.service_name) {
+            serviceCounts[apt.service_name] = (serviceCounts[apt.service_name] || 0) + 1;
+          }
+        });
+        const topServices = Object.entries(serviceCounts)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 3)
+          .map(([service, count]) => ({ service, count }));
+        
+        // Calculate staff performance
+        const staffCounts = {};
+        appointments.forEach(apt => {
+          if (apt.staff_name) {
+            staffCounts[apt.staff_name] = (staffCounts[apt.staff_name] || 0) + 1;
+          }
+        });
+        const staffPerformance = Object.entries(staffCounts)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 3)
+          .map(([staff, count]) => ({ staff, count }));
+        
+        setDailySummaryData({
+          appointments: totalAppointments,
+          revenue: totalRevenue,
+          completedAppointments,
+          pendingAppointments,
+          topServices,
+          staffPerformance
+        });
+      }
+    } catch (error) {
+      console.error('Error loading daily summary:', error);
+    } finally {
+      setDailySummaryLoading(false);
+    }
+  };
+
+  // Other Quick Actions modal handlers
   const handleOpenCheckIn = () => setShowCheckInModal(true);
   const handleOpenProcessPayment = () => setShowProcessPaymentModal(true);
   const handleOpenSendReminders = () => setShowSendRemindersModal(true);
   const handleOpenViewSchedule = () => setShowViewScheduleModal(true);
   const handleOpenWalkIn = () => setShowWalkInModal(true);
-  const handleOpenDailySummary = () => setShowDailySummaryModal(true);
+  const handleOpenDailySummary = async () => {
+    await loadDailySummaryData();
+    setShowDailySummaryModal(true);
+  };
 
   const getCurrentSectionName = () => {
     const sectionNames = {
@@ -6131,6 +6318,8 @@ export default function SalonDashboard() {
                   type="text"
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Enter customer name"
+                  value={quickBookData.customerName}
+                  onChange={(e) => setQuickBookData(prev => ({ ...prev, customerName: e.target.value }))}
                 />
               </div>
 
@@ -6141,6 +6330,20 @@ export default function SalonDashboard() {
                   type="tel"
                   className="w-full p-3 border border-input rounded-md bg-background"
                   placeholder="Customer phone number"
+                  value={quickBookData.phone}
+                  onChange={(e) => setQuickBookData(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Customer email"
+                  value={quickBookData.email}
+                  onChange={(e) => setQuickBookData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
 
@@ -6148,13 +6351,17 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Service *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={quickBookData.service}
+                    onChange={(e) => setQuickBookData(prev => ({ ...prev, service: e.target.value }))}
+                  >
                     <option value="">Select service</option>
-                    <option value="hair-cut">Hair Cut & Style</option>
-                    <option value="hair-color">Hair Color</option>
-                    <option value="manicure">Manicure</option>
-                    <option value="pedicure">Pedicure</option>
-                    <option value="facial">Facial Treatment</option>
+                    {availableServices.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name} - ₹{service.base_price}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
@@ -6164,12 +6371,17 @@ export default function SalonDashboard() {
               <div>
                 <label className="block text-sm font-medium mb-2">Staff Member *</label>
                 <div className="relative">
-                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                  <select 
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    value={quickBookData.staff}
+                    onChange={(e) => setQuickBookData(prev => ({ ...prev, staff: e.target.value }))}
+                  >
                     <option value="">Select staff</option>
-                    <option value="priya">Priya Sharma</option>
-                    <option value="rajesh">Rajesh Kumar</option>
-                    <option value="anita">Anita Singh</option>
-                    <option value="vikram">Vikram Patel</option>
+                    {availableStaff.map((staff) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name} - {staff.role}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                 </div>
@@ -6178,27 +6390,41 @@ export default function SalonDashboard() {
               {/* Date and Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <label className="block text-sm font-medium mb-2">Date *</label>
                   <div className="relative">
                     <input
                       type="date"
                       className="w-full p-3 border border-input rounded-md bg-background"
-                      defaultValue="2025-09-29"
+                      value={quickBookData.date}
+                      onChange={(e) => setQuickBookData(prev => ({ ...prev, date: e.target.value }))}
                     />
                     <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Time</label>
+                  <label className="block text-sm font-medium mb-2">Time *</label>
                   <div className="relative">
                     <input
                       type="time"
                       className="w-full p-3 border border-input rounded-md bg-background pr-10"
-                      placeholder="--:-- --"
+                      value={quickBookData.time}
+                      onChange={(e) => setQuickBookData(prev => ({ ...prev, time: e.target.value }))}
                     />
                     <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Any special requests or notes"
+                  value={quickBookData.notes}
+                  onChange={(e) => setQuickBookData(prev => ({ ...prev, notes: e.target.value }))}
+                />
               </div>
             </div>
             
@@ -6206,8 +6432,8 @@ export default function SalonDashboard() {
               <Button variant="outline" onClick={() => setShowQuickBookModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setShowQuickBookModal(false)}>
-                Book Appointment
+              <Button onClick={handleQuickBookSubmit} disabled={quickBookLoading}>
+                {quickBookLoading ? 'Booking...' : 'Book Appointment'}
               </Button>
             </div>
           </div>
@@ -6576,16 +6802,63 @@ export default function SalonDashboard() {
               </Button>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-gray-900">5</div>
-                <div className="text-sm text-gray-600">Appointments</div>
+            {dailySummaryLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-gray-500">Loading daily summary...</div>
               </div>
-              <div className="bg-white border rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-gray-900">₹850</div>
-                <div className="text-sm text-gray-600">Revenue</div>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white border rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-gray-900">{dailySummaryData.appointments}</div>
+                    <div className="text-sm text-gray-600">Total Appointments</div>
+                  </div>
+                  <div className="bg-white border rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-gray-900">₹{dailySummaryData.revenue.toLocaleString()}</div>
+                    <div className="text-sm text-gray-600">Total Revenue</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">{dailySummaryData.completedAppointments}</div>
+                    <div className="text-sm text-green-600">Completed</div>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{dailySummaryData.pendingAppointments}</div>
+                    <div className="text-sm text-yellow-600">Pending</div>
+                  </div>
+                </div>
+
+                {dailySummaryData.topServices.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Top Services Today</h4>
+                    <div className="space-y-2">
+                      {dailySummaryData.topServices.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+                          <span className="font-medium">{item.service}</span>
+                          <span className="text-sm text-gray-600">{item.count} appointments</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {dailySummaryData.staffPerformance.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Staff Performance</h4>
+                    <div className="space-y-2">
+                      {dailySummaryData.staffPerformance.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+                          <span className="font-medium">{item.staff}</span>
+                          <span className="text-sm text-gray-600">{item.count} appointments</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             
             <div className="flex justify-center">
               <Button onClick={() => setShowDailySummaryModal(false)}>
