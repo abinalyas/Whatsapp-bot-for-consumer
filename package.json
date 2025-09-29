@@ -20,7 +20,10 @@
     "test:tenant-isolation": "vitest run --reporter=verbose tests/tenant-isolation.test.ts",
     "test:deployed": "node test-simple.js",
     "test:automation": "node test-automation.js",
-    "test:ui": "node test-ui-automation.js"
+    "test:ui": "node test-ui-automation.js",
+    "test:comprehensive": "node test-comprehensive.js",
+    "test:scenarios": "node test-ui-scenarios.js",
+    "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

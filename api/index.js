@@ -3681,6 +3681,7 @@ router2.get("/services", async (req, res) => {
     `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
     const tenantId = tenantResult.rows[0]?.id;
     if (!tenantId) {
+      console.log("Tenant not found for services:", req.headers["x-tenant-id"] || "bella-salon");
       return res.status(404).json({
         success: false,
         error: "Tenant not found"
@@ -3942,10 +3943,42 @@ router2.post("/appointments", async (req, res) => {
       notes,
       payment_status = "pending"
     } = req.body;
-    if (!customer_name || !customer_phone || !service_id || !scheduled_at || !amount) {
+    if (!customer_name || !customer_phone || !service_id || !scheduled_at || amount === void 0 || amount === null) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields: customer_name, customer_phone, service_id, scheduled_at, amount"
+      });
+    }
+    if (typeof customer_name !== "string" || typeof customer_phone !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid data types: customer_name and customer_phone must be strings"
+      });
+    }
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid amount: must be a positive number"
+      });
+    }
+    const scheduledDate = new Date(scheduled_at);
+    if (isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid scheduled_at: must be a valid date"
+      });
+    }
+    if (customer_name.length > 200) {
+      return res.status(400).json({
+        success: false,
+        error: "Customer name too long: maximum 200 characters"
+      });
+    }
+    if (customer_phone.length > 20) {
+      return res.status(400).json({
+        success: false,
+        error: "Customer phone too long: maximum 20 characters"
       });
     }
     let finalAmount = amount;
