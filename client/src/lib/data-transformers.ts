@@ -18,20 +18,32 @@ export interface ApiService {
 
 export interface ApiBooking {
   id: string;
-  conversationId: string;
-  serviceId: string;
-  phoneNumber: string;
+  conversationId?: string;
+  serviceId?: string;
+  phoneNumber?: string;
   customerName?: string | null;
+  customer_name?: string | null;    // From salon API
+  customer_phone?: string | null;   // From salon API
+  customer_email?: string | null;   // From salon API
+  service_name?: string | null;     // From salon API
+  service_category?: string | null; // From salon API
+  staff_id?: string | null;         // From salon API
   amount: number;          // integer from DB
   status: string;
+  payment_status?: string | null;   // From salon API
   paymentMethod?: string | null;
+  payment_method?: string | null;   // From salon API
   paymentReference?: string | null;
   appointmentDate?: string | null;  // ISO string or null
   appointmentTime?: string | null;  // "11:30 AM" format or null
   scheduled_at?: string | null;     // ISO string from salon API
+  duration_minutes?: number | null; // From salon API
+  currency?: string | null;         // From salon API
   notes?: string | null;
-  createdAt: string;       // ISO string
-  updatedAt: string;       // ISO string
+  createdAt?: string;       // ISO string
+  updatedAt?: string;       // ISO string
+  created_at?: string;      // From salon API
+  updated_at?: string;      // From salon API
 }
 
 // ===== UI Component Types (what components expect) =====
@@ -70,6 +82,16 @@ export interface UIBooking {
   staff?: string;          // staff name for display
   duration?: number;       // duration in minutes for display
   time?: string;           // formatted time for display
+  // Salon API specific fields
+  service_name?: string;
+  service_category?: string;
+  staff_id?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  duration_minutes?: number;
+  currency?: string;
+  payment_status?: string;
+  payment_method?: string;
 }
 
 // ===== Transformation Functions =====
@@ -137,22 +159,32 @@ export function transformApiBookingToUI(apiBooking: ApiBooking): UIBooking {
     id: apiBooking.id,
     conversationId: apiBooking.conversationId,
     serviceId: apiBooking.serviceId,
-    phoneNumber: apiBooking.phoneNumber,
-    customer_name: apiBooking.customerName || undefined,  // customerName -> customer_name
+    phoneNumber: apiBooking.phoneNumber || apiBooking.customer_phone,
+    customer_name: apiBooking.customer_name || apiBooking.customerName || undefined,  // Handle both formats
     amount: apiBooking.amount,
-    status: apiBooking.status,
-    paymentMethod: apiBooking.paymentMethod || undefined,
+    status: apiBooking.payment_status || apiBooking.status,  // Handle both formats
+    paymentMethod: apiBooking.payment_method || apiBooking.paymentMethod || undefined,
     paymentReference: apiBooking.paymentReference || undefined,
     scheduled_at: scheduled_at,              // appointmentDate -> scheduled_at
     appointmentTime: apiBooking.appointmentTime || undefined,
     notes: apiBooking.notes || undefined,
-    createdAt: apiBooking.createdAt,
-    updatedAt: apiBooking.updatedAt,
-    // Additional UI fields
-    service: undefined,                      // will be populated by service lookup
+    createdAt: apiBooking.created_at || apiBooking.createdAt,
+    updatedAt: apiBooking.updated_at || apiBooking.updatedAt,
+    // Additional UI fields - include salon API fields
+    service: apiBooking.service_name,        // Use service_name from salon API
     staff: undefined,                        // will be populated by staff lookup
-    duration: 60,                           // default duration
+    duration: apiBooking.duration_minutes || 60,  // Use duration_minutes from salon API
     time: time,                             // formatted time
+    // Include all salon API fields for calendar display
+    service_name: apiBooking.service_name,
+    service_category: apiBooking.service_category,
+    staff_id: apiBooking.staff_id,
+    customer_phone: apiBooking.customer_phone,
+    customer_email: apiBooking.customer_email,
+    duration_minutes: apiBooking.duration_minutes,
+    currency: apiBooking.currency,
+    payment_status: apiBooking.payment_status,
+    payment_method: apiBooking.payment_method,
   };
 }
 
