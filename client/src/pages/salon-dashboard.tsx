@@ -2489,16 +2489,13 @@ function CalendarSection() {
     
     setLoading(true);
     try {
-      // Find the selected service
-      const selectedService = services.find(s => s.name === editAppointment.service);
-      const selectedStaff = staff.find(s => s.name === editAppointment.staffMember);
-      
-      if (!selectedService) {
+      // Validate required fields
+      if (!editAppointment.service) {
         alert('Please select a service');
         return;
       }
       
-      if (!selectedStaff) {
+      if (!editAppointment.staffMember) {
         alert('Please select a staff member');
         return;
       }
@@ -2520,16 +2517,20 @@ function CalendarSection() {
         timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
       }
       
+      // Find service and staff details for duration and price
+      const selectedService = services.find(s => s.id === editAppointment.service);
+      const selectedStaff = staff.find(s => s.id === editAppointment.staffMember);
+      
       // Create appointment data for API
       const appointmentData = {
         customer_name: editAppointment.customerName,
         customer_phone: editAppointment.phone,
         customer_email: editAppointment.email,
-        service_id: selectedService.id,
-        staff_id: selectedStaff.id,
+        service_id: editAppointment.service,
+        staff_id: editAppointment.staffMember,
         scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
-        duration_minutes: selectedService.duration_minutes || selectedService.duration || 60,
-        amount: selectedService.base_price || selectedService.price || 0,
+        duration_minutes: selectedService?.duration_minutes || 60,
+        amount: selectedService?.base_price || 0,
         currency: 'INR',
         payment_status: editAppointment.status,
         notes: editAppointment.notes
@@ -6372,8 +6373,32 @@ export default function SalonDashboard() {
   };
 
   // Edit appointment handlers
-  const handleEditAppointment = (appointment) => {
+  const handleEditAppointment = async (appointment) => {
     setEditingAppointment(appointment);
+    
+    // Load staff and services data for dropdowns
+    try {
+      const [staffResponse, servicesResponse] = await Promise.all([
+        fetch('/api/staff/staff', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/salon/services', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        })
+      ]);
+      
+      const staffResult = await staffResponse.json();
+      const servicesResult = await servicesResponse.json();
+      
+      if (staffResult.success) {
+        setStaff(staffResult.data);
+      }
+      if (servicesResult.success) {
+        setServices(servicesResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading data for edit modal:', error);
+    }
     
     // Extract time from scheduled_at if time field is not available or in wrong format
     let timeValue = appointment.time || "";
@@ -6386,12 +6411,19 @@ export default function SalonDashboard() {
       });
     }
     
+    console.log('🔍 Edit appointment data:', {
+      appointment,
+      timeValue,
+      scheduled_at: appointment.scheduled_at,
+      time: appointment.time
+    });
+    
     setEditAppointment({
       customerName: appointment.customer_name || appointment.customer || "",
       phone: appointment.customer_phone || appointment.phone || "",
       email: appointment.customer_email || appointment.email || "",
-      service: appointment.service_name || appointment.service || "",
-      staffMember: appointment.staff_name || appointment.staff || "",
+      service: appointment.offering_id || appointment.service_id || "",
+      staffMember: appointment.staff_id || "",
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
       time: timeValue,
       status: appointment.payment_status || appointment.status || "confirmed",
@@ -6421,16 +6453,13 @@ export default function SalonDashboard() {
     
     setLoading(true);
     try {
-      // Find the selected service and staff
-      const selectedService = services.find(s => s.name === editAppointment.service);
-      const selectedStaff = staff.find(s => s.name === editAppointment.staffMember);
-      
-      if (!selectedService) {
+      // Validate required fields
+      if (!editAppointment.service) {
         alert('Please select a service');
         return;
       }
       
-      if (!selectedStaff) {
+      if (!editAppointment.staffMember) {
         alert('Please select a staff member');
         return;
       }
@@ -6452,16 +6481,20 @@ export default function SalonDashboard() {
         timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
       }
       
+      // Find service and staff details for duration and price
+      const selectedService = services.find(s => s.id === editAppointment.service);
+      const selectedStaff = staff.find(s => s.id === editAppointment.staffMember);
+      
       // Create appointment data for API
       const appointmentData = {
         customer_name: editAppointment.customerName,
         customer_phone: editAppointment.phone,
         customer_email: editAppointment.email,
-        service_id: selectedService.id,
-        staff_id: selectedStaff.id,
+        service_id: editAppointment.service,
+        staff_id: editAppointment.staffMember,
         scheduled_at: new Date(`${editAppointment.date}T${timeString}:00`).toISOString(),
-        duration_minutes: selectedService.duration_minutes || selectedService.duration || 60,
-        amount: selectedService.base_price || selectedService.price || 0,
+        duration_minutes: selectedService?.duration_minutes || 60,
+        amount: selectedService?.base_price || 0,
         currency: 'INR',
         payment_status: editAppointment.status,
         notes: editAppointment.notes
@@ -6683,25 +6716,35 @@ export default function SalonDashboard() {
               {/* Service */}
               <div>
                 <label className="block text-sm font-medium mb-2">Service *</label>
-                <input
-                  type="text"
+                <select
                   value={editAppointment.service}
                   onChange={(e) => setEditAppointment({...editAppointment, service: e.target.value})}
                   className="w-full p-3 border border-input rounded-md bg-background"
-                  placeholder="Enter service name"
-                />
+                >
+                  <option value="">Select a service</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name} - ₹{service.base_price}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Staff */}
               <div>
                 <label className="block text-sm font-medium mb-2">Staff Member</label>
-                <input
-                  type="text"
+                <select
                   value={editAppointment.staffMember}
                   onChange={(e) => setEditAppointment({...editAppointment, staffMember: e.target.value})}
                   className="w-full p-3 border border-input rounded-md bg-background"
-                  placeholder="Enter staff member name"
-                />
+                >
+                  <option value="">Select a staff member</option>
+                  {staff.map((staffMember) => (
+                    <option key={staffMember.id} value={staffMember.id}>
+                      {staffMember.name} - {staffMember.role}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Date and Time */}
