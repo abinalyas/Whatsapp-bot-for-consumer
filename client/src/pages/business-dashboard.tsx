@@ -75,7 +75,7 @@ export const BusinessDashboardPage: React.FC = () => {
       // Mock dashboard data
       setStats({
         totalTransactions: 156,
-        totalRevenue: 8450.00,
+        totalRevenue: 633750.00, // ₹6,33,750 (8450 * 75)
         activeCustomers: 89,
         pendingBookings: 12,
         completionRate: 94.2,
@@ -85,36 +85,36 @@ export const BusinessDashboardPage: React.FC = () => {
       setRecentTransactions([
         {
           id: '1',
-          customerName: 'Sarah Johnson',
+          customerName: 'Priya Sharma',
           offeringName: 'Haircut & Style (Long Hair)',
-          amount: 60.00,
+          amount: 4500.00, // ₹4,500 (60 * 75)
           status: 'confirmed',
           scheduledDate: '2024-02-15',
           createdAt: '2024-02-10T10:00:00Z'
         },
         {
           id: '2',
-          customerName: 'Mike Chen',
+          customerName: 'Rajesh Kumar',
           offeringName: 'Hair Color (Highlights)',
-          amount: 150.00,
+          amount: 11250.00, // ₹11,250 (150 * 75)
           status: 'pending',
           scheduledDate: '2024-02-20',
           createdAt: '2024-02-12T14:00:00Z'
         },
         {
           id: '3',
-          customerName: 'Emma Davis',
+          customerName: 'Sunita Patel',
           offeringName: 'Manicure',
-          amount: 25.00,
+          amount: 1875.00, // ₹1,875 (25 * 75)
           status: 'completed',
           scheduledDate: '2024-02-08',
           createdAt: '2024-02-05T09:00:00Z'
         },
         {
           id: '4',
-          customerName: 'John Smith',
+          customerName: 'Amit Singh',
           offeringName: 'Facial Treatment',
-          amount: 65.00,
+          amount: 4875.00, // ₹4,875 (65 * 75)
           status: 'in_progress',
           scheduledDate: '2024-02-14',
           createdAt: '2024-02-08T16:00:00Z'
@@ -145,7 +145,7 @@ export const BusinessDashboardPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-IN', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'

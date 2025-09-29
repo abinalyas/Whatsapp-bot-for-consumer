@@ -145,56 +145,56 @@ const services = [
 const staffMembers = [
   {
     id: 1,
-    name: "Emma Johnson",
+    name: "Priya Sharma",
     role: "Senior Hair Stylist",
-    initials: "EJ",
-    email: "emma@bellasalon.com",
-    phone: "+1 (555) 123-4567",
+    initials: "PS",
+    email: "priya.sharma@bellasalon.com",
+    phone: "+91 98765 43210",
     workingHours: "9:00 AM - 6:00 PM",
     specialties: ["Hair Cut", "Hair Color", "Styling"],
-    workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    working_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
     rating: 4.9,
     appointments: 156,
     isAvailable: true,
   },
   {
     id: 2,
-    name: "David Rodriguez",
+    name: "Rajesh Kumar",
     role: "Barber",
-    initials: "DR",
-    email: "david@bellasalon.com",
-    phone: "+1 (555) 234-5678",
+    initials: "RK",
+    email: "rajesh.kumar@bellasalon.com",
+    phone: "+91 87654 32109",
     workingHours: "10:00 AM - 7:00 PM",
     specialties: ["Hair Cut", "Beard Trim", "Shaving"],
-    workingDays: ["Tue", "Wed", "Thu", "Fri", "Sat"],
+    working_days: ["Tue", "Wed", "Thu", "Fri", "Sat"],
     rating: 4.8,
     appointments: 89,
     isAvailable: true,
   },
   {
     id: 3,
-    name: "Anna Thompson",
+    name: "Sunita Patel",
     role: "Nail Technician",
-    initials: "AT",
-    email: "anna@bellasalon.com",
-    phone: "+1 (555) 345-6789",
+    initials: "SP",
+    email: "sunita.patel@bellasalon.com",
+    phone: "+91 76543 21098",
     workingHours: "9:00 AM - 5:00 PM",
     specialties: ["Manicure", "Pedicure", "Nail Art"],
-    workingDays: ["Mon", "Wed", "Thu", "Fri", "Sat"],
+    working_days: ["Mon", "Wed", "Thu", "Fri", "Sat"],
     rating: 4.7,
     appointments: 134,
     isAvailable: true,
   },
   {
     id: 4,
-    name: "Sofia Martinez",
+    name: "Amit Singh",
     role: "Esthetician",
-    initials: "SM",
-    email: "sofia@bellasalon.com",
-    phone: "+1 (555) 456-7890",
+    initials: "AS",
+    email: "amit.singh@bellasalon.com",
+    phone: "+91 65432 10987",
     workingHours: "11:00 AM - 8:00 PM",
     specialties: ["Facial Treatment", "Skincare", "Eyebrow Shaping"],
-    workingDays: ["Mon", "Tue", "Thu", "Fri", "Sat"],
+    working_days: ["Mon", "Tue", "Thu", "Fri", "Sat"],
     rating: 4.9,
     appointments: 98,
     isAvailable: false,
@@ -217,34 +217,34 @@ const timeSlots = [
 ];
 
 const filterOptions = {
-  staffMembers: ["All Staff", "Emma Johnson", "David Rodriguez", "Anna Thompson", "Sofia Martinez"],
+  staffMembers: ["All Staff", "Priya Sharma", "Rajesh Kumar", "Sunita Patel", "Amit Singh"],
   services: ["All Services", "Hair Cut", "Hair Color", "Beard Trim", "Manicure", "Pedicure", "Facial Treatment"],
   status: ["All Status", "Confirmed", "Pending", "Cancelled", "Completed"]
 };
 
 const revenueData = {
-  today: { amount: 850, transactions: 8 },
-  week: { amount: 6900, change: "+12%", period: "from last week" },
-  month: { amount: 18500, transactions: 156 },
-  average: { amount: 133, period: "This week average" }
+  today: { amount: 63750, transactions: 8 }, // ₹63,750 (850 * 75)
+  week: { amount: 517500, change: "+12%", period: "from last week" }, // ₹5,17,500 (6900 * 75)
+  month: { amount: 1387500, transactions: 156 }, // ₹13,87,500 (18500 * 75)
+  average: { amount: 9975, period: "This week average" } // ₹9,975 (133 * 75)
 };
 
 const revenueTrend = [
-  { day: "Mon", revenue: 450 },
-  { day: "Tue", revenue: 620 },
-  { day: "Wed", revenue: 580 },
-  { day: "Thu", revenue: 750 },
-  { day: "Fri", revenue: 920 },
-  { day: "Sat", revenue: 1100 },
-  { day: "Sun", revenue: 480 }
+  { day: "Mon", revenue: 33750 }, // ₹33,750 (450 * 75)
+  { day: "Tue", revenue: 46500 }, // ₹46,500 (620 * 75)
+  { day: "Wed", revenue: 43500 }, // ₹43,500 (580 * 75)
+  { day: "Thu", revenue: 56250 }, // ₹56,250 (750 * 75)
+  { day: "Fri", revenue: 69000 }, // ₹69,000 (920 * 75)
+  { day: "Sat", revenue: 82500 }, // ₹82,500 (1100 * 75)
+  { day: "Sun", revenue: 36000 }  // ₹36,000 (480 * 75)
 ];
 
 const revenueByService = [
-  { service: "Hair Cut", percentage: 35, amount: 6475, color: "bg-blue-500" },
-  { service: "Hair Color", percentage: 25, amount: 4625, color: "bg-green-500" },
-  { service: "Manicure", percentage: 20, amount: 3700, color: "bg-yellow-500" },
-  { service: "Facial", percentage: 12, amount: 2220, color: "bg-orange-500" },
-  { service: "Pedicure", percentage: 8, amount: 1480, color: "bg-purple-500" }
+  { service: "Hair Cut", percentage: 35, amount: 485625, color: "bg-blue-500" }, // ₹4,85,625 (6475 * 75)
+  { service: "Hair Color", percentage: 25, amount: 346875, color: "bg-green-500" }, // ₹3,46,875 (4625 * 75)
+  { service: "Manicure", percentage: 20, amount: 277500, color: "bg-yellow-500" }, // ₹2,77,500 (3700 * 75)
+  { service: "Facial", percentage: 12, amount: 166500, color: "bg-orange-500" }, // ₹1,66,500 (2220 * 75)
+  { service: "Pedicure", percentage: 8, amount: 111000, color: "bg-purple-500" } // ₹1,11,000 (1480 * 75)
 ];
 
 const recentTransactions = [
@@ -595,7 +595,7 @@ function OverviewSection() {
                 <TableBody>
                   {(appointments || []).map((appointment) => (
                     <TableRow key={appointment.id}>
-                      <TableCell>{new Date(appointment.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</TableCell>
+                      <TableCell>{new Date(appointment.scheduled_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}</TableCell>
                       <TableCell>{appointment.customer_name}</TableCell>
                       <TableCell>{appointment.service_name}</TableCell>
                       <TableCell>{appointment.staff_name || 'Unassigned'}</TableCell>
@@ -2256,7 +2256,7 @@ function CalendarSection() {
         const enhancedAppointments = transformedBookings.map(apt => {
           const appointmentDateTime = new Date(apt.scheduled_at || '');
           // Format time to match timeSlots format (e.g., "9:00 AM")
-          const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-US', { 
+          const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-IN', { 
             hour: 'numeric', 
             minute: '2-digit', 
             hour12: true 
@@ -2267,14 +2267,14 @@ function CalendarSection() {
             // Calendar display properties - use the transformed data
             customer: apt.customer_name,
             service: apt.service, // This will be populated by service lookup
-            staff: 'Unassigned', // No staff data in API response
+            staff: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma', // Default to first staff member
             duration: apt.duration || 60,
             time: timeString,
             status: apt.status || 'confirmed',
             // Additional properties for calendar display
             customer_name: apt.customer_name,
             service_name: apt.service, // Use transformed service name
-            staff_name: 'Unassigned'
+            staff_name: staff.find(s => s.name === 'Priya Sharma')?.name || 'Priya Sharma'
           };
         });
         
@@ -2295,9 +2295,9 @@ function CalendarSection() {
         const mockAppointments = [
           { 
             id: 1, 
-            customer_name: "Sarah Johnson", 
+            customer_name: "Priya Sharma", 
             service_name: "Hair Cut & Color", 
-            staff_name: "Emma", 
+            staff_name: "Priya Sharma", 
             scheduled_at: new Date().toISOString(), 
             duration_minutes: 120, 
             amount: 180, 
@@ -2307,14 +2307,14 @@ function CalendarSection() {
             service: "Hair Cut & Color",
             staff: "Emma",
             duration: 120,
-            time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            time: new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
             status: 'confirmed'
           },
           { 
             id: 2, 
-            customer_name: "Mike Chen", 
+            customer_name: "Rajesh Kumar", 
             service_name: "Beard Trim", 
-            staff_name: "David", 
+            staff_name: "Rajesh Kumar", 
             scheduled_at: new Date().toISOString(), 
             duration_minutes: 30, 
             amount: 35, 
@@ -2324,7 +2324,7 @@ function CalendarSection() {
             service: "Beard Trim",
             staff: "David",
             duration: 30,
-            time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            time: new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
             status: 'confirmed'
           }
         ];
@@ -2450,7 +2450,7 @@ function CalendarSection() {
         service: selectedService?.name || 'Service',
         staff: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
         duration: response.duration_minutes,
-        time: responseDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        time: responseDateTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
         status: 'confirmed'
       };
       setAppointments(prev => [...prev, newAppointmentData]);
@@ -2496,7 +2496,7 @@ function CalendarSection() {
         service: services.find(s => s.id === newAppointment.service)?.name || 'Service',
         staff: staff.find(s => s.id === newAppointment.staffMember)?.name || 'Staff',
         duration: 60,
-        time: fallbackDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+        time: fallbackDateTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
         status: 'confirmed'
       };
       setAppointments(prev => [...prev, newApt]);
@@ -2583,7 +2583,7 @@ function CalendarSection() {
     console.log('📅 Current date:', currentDate);
     const dayAppointments = getAppointmentsForDate(currentDate);
     console.log('📅 Day appointments for current date:', dayAppointments);
-    const dateString = currentDate.toLocaleDateString('en-US', { 
+    const dateString = currentDate.toLocaleDateString('en-IN', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -2751,7 +2751,7 @@ function CalendarSection() {
     const weekStart = new Date(currentDate);
     weekStart.setDate(currentDate.getDate() - currentDate.getDay());
     const weekAppointments = getAppointmentsForWeek(weekStart);
-    const weekRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    const weekRange = `${weekStart.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - ${new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
     const navigateWeek = (direction) => {
       const newDate = new Date(currentDate);
@@ -2784,8 +2784,8 @@ function CalendarSection() {
               {weekAppointments.map((day, index) => (
                 <div key={index} className="border rounded-lg p-4">
                   <div className="text-center mb-4">
-                    <div className="font-medium">{day.date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                    <div className="text-sm text-muted-foreground">{day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                    <div className="font-medium">{day.date.toLocaleDateString('en-IN', { weekday: 'short' })}</div>
+                    <div className="text-sm text-muted-foreground">{day.date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}</div>
                     <div className="text-xs text-muted-foreground">({day.appointments.length} appointments)</div>
                   </div>
                   <div className="space-y-2">
@@ -2830,7 +2830,7 @@ function CalendarSection() {
                     <th className="text-left p-2">Time</th>
                     {weekAppointments.map((day, index) => (
                       <th key={index} className="text-center p-2">
-                        {day.date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })}
+                        {day.date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' })}
                       </th>
                     ))}
                   </tr>
@@ -2891,7 +2891,7 @@ function CalendarSection() {
     }
     
     const monthAppointments = getAppointmentsForMonth(currentDate);
-    const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const monthName = currentDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     const totalAppointments = (appointments || []).filter(apt => {
       if (!apt) return false;
       const aptDate = new Date(apt.scheduled_at || apt.date);
