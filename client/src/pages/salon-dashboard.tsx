@@ -2210,6 +2210,10 @@ function CalendarSection() {
         // Transform API bookings to UI format using utility
         const transformedBookings = transformApiBookingsToUI(appointmentsData);
         
+        // Set services and staff first
+        setServices(servicesData);
+        setStaff(staffData);
+        
         // Enhance appointments with calendar display properties
         const enhancedAppointments = transformedBookings.map(apt => {
           const appointmentDateTime = new Date(apt.scheduled_at || '');
@@ -2225,7 +2229,7 @@ function CalendarSection() {
             // Calendar display properties - use the transformed data
             customer: apt.customer_name,
             service: apt.service_name || apt.service || 'Service', // Use service_name from API
-            staff: staff.find(s => s.id === apt.staff_id)?.name || staff.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned', // Use actual staff or default
+            staff: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned', // Use actual staff or default
             duration: apt.duration_minutes || apt.duration || 60,
             time: timeString,
             status: apt.payment_status || apt.status || 'confirmed',
@@ -2233,7 +2237,7 @@ function CalendarSection() {
             // Additional properties for calendar display
             customer_name: apt.customer_name,
             service_name: apt.service_name || 'Service', // Use service_name from API
-            staff_name: staff.find(s => s.id === apt.staff_id)?.name || staff.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
+            staff_name: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
             duration_minutes: apt.duration_minutes || apt.duration || 60,
             phone: apt.customer_phone,
             email: apt.customer_email
@@ -2247,8 +2251,6 @@ function CalendarSection() {
         console.log('🔧 Setting appointments state with:', enhancedAppointments.length, 'appointments');
         
         setAppointments(enhancedAppointments);
-        setServices(servicesData);
-        setStaff(staffData);
         setError(null);
       } catch (err) {
         console.error('Error loading calendar data:', err);
@@ -2429,7 +2431,41 @@ function CalendarSection() {
       console.log('✅ Appointment updated successfully:', updatedAppointment);
 
       // Refresh appointments data
-      await loadAppointments();
+      const [appointmentsData, servicesData, staffData] = await Promise.all([
+        salonApi.appointments.getAll(),
+        salonApi.services.getAll(),
+        staffApi.getAll()
+      ]);
+      
+      // Transform and enhance appointments
+      const transformedBookings = transformApiBookingsToUI(appointmentsData);
+      const enhancedAppointments = transformedBookings.map(apt => {
+        const appointmentDateTime = new Date(apt.scheduled_at || '');
+        const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-IN', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        
+        return {
+          ...apt,
+          customer: apt.customer_name,
+          service: apt.service_name || apt.service || 'Service',
+          staff: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
+          duration: apt.duration_minutes || apt.duration || 60,
+          time: timeString,
+          status: apt.payment_status || apt.status || 'confirmed',
+          amount: parseFloat(apt.amount || 0),
+          customer_name: apt.customer_name,
+          service_name: apt.service_name || 'Service',
+          staff_name: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
+          duration_minutes: apt.duration_minutes || apt.duration || 60,
+          phone: apt.customer_phone,
+          email: apt.customer_email
+        };
+      });
+      
+      setAppointments(enhancedAppointments);
       
       // Close modal
       handleCloseEditModal();
