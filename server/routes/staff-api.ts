@@ -27,7 +27,7 @@ router.get('/staff', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         s.id, s.name, s.email, s.phone, s.role, s.specializations,
-        s.working_hours, s.hourly_rate, s.commission_rate, s.is_active,
+        s.working_hours, s.working_days, s.hourly_rate, s.commission_rate, s.is_active,
         s.hire_date, s.notes, s.avatar_url, s.created_at, s.updated_at,
         COUNT(t.id) as total_appointments,
         COUNT(CASE WHEN t.scheduled_at >= CURRENT_DATE THEN t.id END) as upcoming_appointments
@@ -35,7 +35,7 @@ router.get('/staff', async (req, res) => {
       LEFT JOIN transactions t ON s.id = t.staff_id AND t.transaction_type = 'booking'
       WHERE s.tenant_id = $1
       GROUP BY s.id, s.name, s.email, s.phone, s.role, s.specializations,
-               s.working_hours, s.hourly_rate, s.commission_rate, s.is_active,
+               s.working_hours, s.working_days, s.hourly_rate, s.commission_rate, s.is_active,
                s.hire_date, s.notes, s.avatar_url, s.created_at, s.updated_at
       ORDER BY s.name
     `, [tenantId]);
@@ -121,7 +121,7 @@ router.put('/staff/:id', async (req, res) => {
 
     const { id } = req.params;
     const {
-      name, email, phone, role, specializations, working_hours,
+      name, email, phone, role, specializations, working_hours, working_days,
       hourly_rate, commission_rate, is_active, notes, avatar_url
     } = req.body;
     
@@ -129,15 +129,20 @@ router.put('/staff/:id', async (req, res) => {
     const formattedSpecializations = Array.isArray(specializations) ? specializations : [];
     const formattedWorkingHours = typeof working_hours === 'object' ? working_hours : {};
     
+    // Handle working_days - store as JSON array in a separate column or merge with working_hours
+    // For now, we'll store it as a separate JSONB field
+    const formattedWorkingDays = Array.isArray(working_days) ? working_days : [];
+    
     const result = await pool.query(`
       UPDATE staff SET
         name = $2, email = $3, phone = $4, role = $5, specializations = $6,
-        working_hours = $7, hourly_rate = $8, commission_rate = $9,
-        is_active = $10, notes = $11, avatar_url = $12, updated_at = NOW()
-      WHERE id = $1 AND tenant_id = $13
+        working_hours = $7, working_days = $8, hourly_rate = $9, commission_rate = $10,
+        is_active = $11, notes = $12, avatar_url = $13, updated_at = NOW()
+      WHERE id = $1 AND tenant_id = $14
       RETURNING *
     `, [
-      id, name, email, phone, role, JSON.stringify(formattedSpecializations), JSON.stringify(formattedWorkingHours),
+      id, name, email, phone, role, JSON.stringify(formattedSpecializations), 
+      JSON.stringify(formattedWorkingHours), JSON.stringify(formattedWorkingDays),
       hourly_rate, commission_rate, is_active, notes, avatar_url, tenantId
     ]);
     
@@ -154,9 +159,13 @@ router.put('/staff/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating staff:', error);
+    console.error('Error details:', error.message);
+    console.error('Request body:', req.body);
+    console.error('Staff ID:', req.params.id);
     res.status(500).json({
       success: false,
-      error: 'Failed to update staff member'
+      error: 'Failed to update staff member',
+      details: error.message
     });
   }
 });

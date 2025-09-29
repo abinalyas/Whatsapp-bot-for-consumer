@@ -121,6 +121,9 @@ router.put('/services/:id', async (req, res) => {
       is_active, display_order, tags, images
     } = req.body;
     
+    // Handle images field - ensure it's properly formatted JSON
+    const formattedImages = Array.isArray(images) ? images : (images ? [images] : []);
+    
     const result = await pool.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -132,7 +135,7 @@ router.put('/services/:id', async (req, res) => {
     `, [
       id, name, description, category, subcategory,
       base_price, currency, duration_minutes, is_active,
-      display_order, tags, images, tenantId
+      display_order, tags, JSON.stringify(formattedImages), tenantId
     ]);
     
     if (result.rows.length === 0) {
@@ -148,9 +151,13 @@ router.put('/services/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating service:', error);
+    console.error('Error details:', error.message);
+    console.error('Request body:', req.body);
+    console.error('Service ID:', req.params.id);
     res.status(500).json({
       success: false,
-      error: 'Failed to update service'
+      error: 'Failed to update service',
+      details: error.message
     });
   }
 });
