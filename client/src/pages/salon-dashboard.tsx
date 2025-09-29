@@ -47,18 +47,18 @@ const menuItems = [
 
 // Mock data
 const todaysAppointments = [
-  { id: 1, time: "9:00 AM", customer: "Sarah Johnson", service: "Hair Cut & Color", staff: "Emma", status: "confirmed" },
-  { id: 2, time: "10:30 AM", customer: "Mike Chen", service: "Beard Trim", staff: "David", status: "confirmed" },
-  { id: 3, time: "12:00 PM", customer: "Lisa Rodriguez", service: "Manicure", staff: "Anna", status: "pending" },
-  { id: 4, time: "2:30 PM", customer: "John Smith", service: "Hair Wash & Style", staff: "Emma", status: "confirmed" },
-  { id: 5, time: "4:00 PM", customer: "Amanda White", service: "Facial Treatment", staff: "Sofia", status: "confirmed" },
+  { id: 1, time: "9:00 AM", customer: "Priya Sharma", service: "Hair Cut & Color", staff: "Emma", status: "confirmed" },
+  { id: 2, time: "10:30 AM", customer: "Rajesh Kumar", service: "Beard Trim", staff: "David", status: "confirmed" },
+  { id: 3, time: "12:00 PM", customer: "Sunita Patel", service: "Manicure", staff: "Anna", status: "pending" },
+  { id: 4, time: "2:30 PM", customer: "Amit Singh", service: "Hair Wash & Style", staff: "Emma", status: "confirmed" },
+  { id: 5, time: "4:00 PM", customer: "Kavita Reddy", service: "Facial Treatment", staff: "Sofia", status: "confirmed" },
 ];
 
 
 const notifications = [
-  { id: 1, type: "cancellation", message: "John Doe cancelled 3:00 PM appointment", time: "10 mins ago" },
-  { id: 2, type: "booking", message: "New booking: Emily Parker for Hair Color", time: "25 mins ago" },
-  { id: 3, type: "review", message: "5-star review from Sarah Johnson", time: "1 hour ago" },
+  { id: 1, type: "cancellation", message: "Arjun Gupta cancelled 3:00 PM appointment", time: "10 mins ago" },
+  { id: 2, type: "booking", message: "New booking: Deepika Sharma for Hair Color", time: "25 mins ago" },
+  { id: 3, type: "review", message: "5-star review from Priya Sharma", time: "1 hour ago" },
 ];
 
 const feedbackSummary = {
@@ -248,11 +248,11 @@ const revenueByService = [
 ];
 
 const recentTransactions = [
-  { date: "12/26/2024 2:30 PM", customer: "Sarah Johnson", service: "Hair Cut & Color", staff: "Emma", amount: 125, method: "Credit Card", status: "paid" },
-  { date: "12/26/2024 1:15 PM", customer: "Mike Chen", service: "Beard Trim", staff: "David", amount: 25, method: "Cash", status: "paid" },
-  { date: "12/26/2024 12:00 PM", customer: "Lisa Rodriguez", service: "Manicure", staff: "Anna", amount: 35, method: "UPI", status: "pending" },
-  { date: "12/25/2024 4:45 PM", customer: "John Smith", service: "Hair Wash & Style", staff: "Emma", amount: 65, method: "Credit Card", status: "paid" },
-  { date: "12/25/2024 3:20 PM", customer: "Amanda White", service: "Facial Treatment", staff: "Sofia", amount: 75, method: "UPI", status: "paid" }
+  { date: "26/12/2024 2:30 PM", customer: "Priya Sharma", service: "Hair Cut & Color", staff: "Emma", amount: 1500, method: "UPI", status: "paid" },
+  { date: "26/12/2024 1:15 PM", customer: "Rajesh Kumar", service: "Beard Trim", staff: "David", amount: 300, method: "Cash", status: "paid" },
+  { date: "26/12/2024 12:00 PM", customer: "Sunita Patel", service: "Manicure", staff: "Anna", amount: 300, method: "Paytm", status: "pending" },
+  { date: "25/12/2024 4:45 PM", customer: "Amit Singh", service: "Hair Wash & Style", staff: "Emma", amount: 500, method: "PhonePe", status: "paid" },
+  { date: "25/12/2024 3:20 PM", customer: "Kavita Reddy", service: "Facial Treatment", staff: "Sofia", amount: 800, method: "UPI", status: "paid" }
 ];
 
 const paymentMethods = [
@@ -273,26 +273,26 @@ const customerKPIs = {
 const customers = [
   {
     id: 1,
-    name: "Sarah Johnson",
-    initials: "SJ",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
+    name: "Priya Sharma",
+    initials: "PS",
+    email: "priya.sharma@email.com",
+    phone: "+91 98765 43210",
     preferredStaff: "Emma",
     visits: 24,
-    spent: 1850,
+    spent: 18500,
     lastVisit: "12/20/2024",
     rating: 5,
     tags: ["VIP", "Regular"]
   },
   {
     id: 2,
-    name: "Mike Chen",
-    initials: "MC",
-    email: "mike.chen@email.com",
-    phone: "+1 (555) 234-5678",
+    name: "Rajesh Kumar",
+    initials: "RK",
+    email: "rajesh.kumar@email.com",
+    phone: "+91 87654 32109",
     preferredStaff: "David",
     visits: 12,
-    spent: 420,
+    spent: 4200,
     lastVisit: "12/26/2024",
     rating: 5,
     tags: ["Regular"]
@@ -536,7 +536,7 @@ function OverviewSection() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${stats.todayRevenue}</div>
+            <div className="text-2xl">₹{stats.todayRevenue}</div>
             <p className="text-xs text-muted-foreground">
               +12% from yesterday
             </p>
@@ -549,7 +549,7 @@ function OverviewSection() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.week.amount}</div>
+            <div className="text-2xl">₹{revenueData.week.amount}</div>
             <p className="text-xs text-muted-foreground">
               +8% from last week
             </p>
@@ -562,7 +562,7 @@ function OverviewSection() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${revenueData.month.amount}</div>
+            <div className="text-2xl">₹{revenueData.month.amount}</div>
             <p className="text-xs text-muted-foreground">
               +15% from last month
             </p>
@@ -1186,7 +1186,7 @@ function ServicesSection() {
               
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-2xl font-bold">${service.base_price}</span>
+                  <span className="text-2xl font-bold">₹{service.base_price}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {service.duration_minutes} mins
@@ -1251,7 +1251,7 @@ function ServicesSection() {
               <div className="text-sm text-muted-foreground">Available</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">${services.reduce((sum, s) => sum + (s.base_price || 0), 0)}</div>
+              <div className="text-2xl font-bold">₹{services.reduce((sum, s) => sum + (s.base_price || 0), 0)}</div>
               <div className="text-sm text-muted-foreground">Total Value</div>
             </div>
           </div>
@@ -2994,7 +2994,7 @@ function CalendarSection() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">${totalAppointments.reduce((sum, apt) => sum + apt.price, 0)}</div>
+              <div className="text-2xl font-bold">₹{totalAppointments.reduce((sum, apt) => sum + apt.price, 0)}</div>
               <div className="text-sm text-muted-foreground">Revenue</div>
             </CardContent>
           </Card>
@@ -3317,7 +3317,7 @@ function PaymentsSection() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueData.today.amount}</div>
+            <div className="text-2xl font-bold">₹{revenueData.today.amount}</div>
             <p className="text-xs text-muted-foreground">
               {revenueData.today.transactions} transactions
             </p>
@@ -3330,7 +3330,7 @@ function PaymentsSection() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueData.week.amount}</div>
+            <div className="text-2xl font-bold">₹{revenueData.week.amount}</div>
             <p className="text-xs text-muted-foreground">
               {revenueData.week.change} {revenueData.week.period}
             </p>
@@ -3343,7 +3343,7 @@ function PaymentsSection() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueData.month.amount}</div>
+            <div className="text-2xl font-bold">₹{revenueData.month.amount}</div>
             <p className="text-xs text-muted-foreground">
               {revenueData.month.transactions} transactions
             </p>
@@ -3356,7 +3356,7 @@ function PaymentsSection() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueData.average.amount}</div>
+            <div className="text-2xl font-bold">₹{revenueData.average.amount}</div>
             <p className="text-xs text-muted-foreground">
               {revenueData.average.period}
             </p>
@@ -3381,7 +3381,7 @@ function PaymentsSection() {
                       style={{ height: `${(item.revenue / 1200) * 180}px` }}
                     ></div>
                     <span className="text-xs text-muted-foreground">{item.day}</span>
-                    <span className="text-xs font-medium">${item.revenue}</span>
+                    <span className="text-xs font-medium">₹{item.revenue}</span>
                   </div>
                 ))}
               </div>
@@ -3404,7 +3404,7 @@ function PaymentsSection() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold">{item.percentage}%</div>
-                    <div className="text-xs text-muted-foreground">${item.amount}</div>
+                    <div className="text-xs text-muted-foreground">₹{item.amount}</div>
                   </div>
                 </div>
               ))}
@@ -3452,7 +3452,7 @@ function PaymentsSection() {
                   <TableCell>{transaction.customer}</TableCell>
                   <TableCell>{transaction.service}</TableCell>
                   <TableCell>{transaction.staff}</TableCell>
-                  <TableCell>${transaction.amount}</TableCell>
+                  <TableCell>₹{transaction.amount}</TableCell>
                   <TableCell>{transaction.method}</TableCell>
                   <TableCell>
                     <Badge variant={transaction.status === "paid" ? "default" : "secondary"}>
@@ -3484,7 +3484,7 @@ function PaymentsSection() {
               <CardTitle className="text-lg">{method.method}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${method.amount.toLocaleString()}</div>
+              <div className="text-2xl font-bold">₹{method.amount.toLocaleString()}</div>
               <p className="text-sm text-muted-foreground">
                 {method.percentage}% of total revenue
               </p>
@@ -3542,7 +3542,7 @@ function PaymentsSection() {
                 <div className="space-y-2">
                   <div><strong>Customer:</strong> {markingTransaction.customer}</div>
                   <div><strong>Service:</strong> {markingTransaction.service}</div>
-                  <div><strong>Amount:</strong> ${markingTransaction.amount}</div>
+                  <div><strong>Amount:</strong> ₹{markingTransaction.amount}</div>
                   <div><strong>Method:</strong> {markingTransaction.method}</div>
                   <div><strong>Staff:</strong> {markingTransaction.staff}</div>
                 </div>
@@ -3647,7 +3647,7 @@ function CustomersSection() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">${customerKPIs.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₹{customerKPIs.revenue.toLocaleString()}</div>
             <div className="text-sm text-muted-foreground">Total Revenue</div>
           </CardContent>
         </Card>
@@ -3714,7 +3714,7 @@ function CustomersSection() {
                     </div>
                   </TableCell>
                   <TableCell>{customer.visits}</TableCell>
-                  <TableCell>${customer.spent.toLocaleString()}</TableCell>
+                  <TableCell>₹{customer.spent.toLocaleString()}</TableCell>
                   <TableCell>{customer.lastVisit}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
