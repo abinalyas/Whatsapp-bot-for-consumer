@@ -6387,6 +6387,29 @@ export default function SalonDashboard() {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  // Helper function to convert 12-hour format to 24-hour format
+  const convertTo24HourFormat = (timeString) => {
+    if (!timeString) return "10:00";
+    
+    // If already in 24-hour format (HH:mm), return as is
+    if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM')) {
+      return timeString;
+    }
+    
+    // Convert 12-hour format to 24-hour format
+    const [time, period] = timeString.split(' ');
+    const [hours, minutes] = time.split(':');
+    let hour24 = parseInt(hours);
+    
+    if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    
+    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+  };
+
   // Edit appointment handlers
   const handleEditAppointment = async (appointment) => {
     setEditingAppointment(appointment);
@@ -6433,12 +6456,11 @@ export default function SalonDashboard() {
           try {
             const date = new Date(appointment.scheduled_at);
             if (!isNaN(date.getTime())) {
-              timeValue = date.toLocaleTimeString('en-IN', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-              });
-              console.log('🕐 Extracted time from scheduled_at:', timeValue);
+              // Convert to 24-hour format for HTML time input
+              const hours = date.getHours().toString().padStart(2, '0');
+              const minutes = date.getMinutes().toString().padStart(2, '0');
+              timeValue = `${hours}:${minutes}`;
+              console.log('🕐 Extracted time from scheduled_at (24-hour):', timeValue);
             } else {
               console.warn('⚠️ Invalid scheduled_at date:', appointment.scheduled_at);
             }
@@ -6450,11 +6472,13 @@ export default function SalonDashboard() {
         // If still no time, try to extract from other fields
         if (!timeValue) {
           if (appointment.appointmentTime) {
-            timeValue = appointment.appointmentTime;
-            console.log('🕐 Using appointmentTime:', timeValue);
+            // Convert 12-hour format to 24-hour format if needed
+            timeValue = convertTo24HourFormat(appointment.appointmentTime);
+            console.log('🕐 Using appointmentTime (converted):', timeValue);
           } else if (appointment.appointment_time) {
-            timeValue = appointment.appointment_time;
-            console.log('🕐 Using appointment_time:', timeValue);
+            // Convert 12-hour format to 24-hour format if needed
+            timeValue = convertTo24HourFormat(appointment.appointment_time);
+            console.log('🕐 Using appointment_time (converted):', timeValue);
           }
         }
         
@@ -6470,7 +6494,7 @@ export default function SalonDashboard() {
           service: serviceId,
           staffMember: staffId,
           date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-          time: timeValue || "10:00 AM", // Default time if none found
+          time: timeValue || "10:00", // Default time if none found (24-hour format)
           status: appointment.payment_status || appointment.status || "confirmed",
           notes: appointment.notes || ""
         };
