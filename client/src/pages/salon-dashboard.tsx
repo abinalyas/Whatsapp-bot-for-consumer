@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Header } from "@/components/header";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle, AlertTriangle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -2162,6 +2162,10 @@ function CalendarSection() {
     status: "All Status"
   });
   const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
+  const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
+  const [showCancelAppointmentModal, setShowCancelAppointmentModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [newAppointment, setNewAppointment] = useState({
     customerName: "",
     phone: "",
@@ -2172,6 +2176,19 @@ function CalendarSection() {
     time: "",
     notes: ""
   });
+  const [editAppointment, setEditAppointment] = useState({
+    customerName: "",
+    phone: "",
+    email: "",
+    service: "",
+    staffMember: "",
+    date: "",
+    time: "",
+    status: "confirmed",
+    notes: ""
+  });
+  const [cancelReason, setCancelReason] = useState("");
+  const [sendNotification, setSendNotification] = useState(true);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [services, setServices] = useState<UIService[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
@@ -2316,6 +2333,52 @@ function CalendarSection() {
       time: "",
       notes: ""
     });
+  };
+
+  const handleEditAppointment = (appointment) => {
+    setEditingAppointment(appointment);
+    setEditAppointment({
+      customerName: appointment.customer || "",
+      phone: appointment.phone || "",
+      email: appointment.email || "",
+      service: appointment.service || "",
+      staffMember: appointment.staff || "",
+      date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
+      time: appointment.time || "",
+      status: appointment.status || "confirmed",
+      notes: appointment.notes || ""
+    });
+    setShowEditAppointmentModal(true);
+  };
+
+  const handleCancelAppointment = (appointment) => {
+    setCancellingAppointment(appointment);
+    setCancelReason("");
+    setSendNotification(true);
+    setShowCancelAppointmentModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditAppointmentModal(false);
+    setEditingAppointment(null);
+    setEditAppointment({
+      customerName: "",
+      phone: "",
+      email: "",
+      service: "",
+      staffMember: "",
+      date: "",
+      time: "",
+      status: "confirmed",
+      notes: ""
+    });
+  };
+
+  const handleCloseCancelModal = () => {
+    setShowCancelAppointmentModal(false);
+    setCancellingAppointment(null);
+    setCancelReason("");
+    setSendNotification(true);
   };
 
   const handleBookAppointment = async () => {
@@ -2846,11 +2909,21 @@ function CalendarSection() {
                     
                     {/* Right Section - Actions */}
                     <div className="flex flex-col gap-2">
-                      <Button size="sm" variant="outline" className="w-full">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => handleEditAppointment(appointment)}
+                      >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => handleCancelAppointment(appointment)}
+                      >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
@@ -3401,6 +3474,280 @@ function CalendarSection() {
               </Button>
               <Button onClick={handleBookAppointment} disabled={loading}>
                 {loading ? "Booking..." : "Book Appointment"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {showEditAppointmentModal && editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Edit Appointment</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleCloseEditModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Original Appointment Info */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Original Appointment</h4>
+              <p className="text-sm text-gray-600">
+                {editingAppointment.customer} - {editingAppointment.service}
+              </p>
+              <p className="text-sm text-gray-600">
+                {editingAppointment.scheduled_at ? new Date(editingAppointment.scheduled_at).toLocaleDateString('en-IN') : ''} at {editingAppointment.time} with {editingAppointment.staff}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name *</label>
+                <input
+                  type="text"
+                  value={editAppointment.customerName}
+                  onChange={(e) => setEditAppointment({...editAppointment, customerName: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <input
+                  type="tel"
+                  value={editAppointment.phone}
+                  onChange={(e) => setEditAppointment({...editAppointment, phone: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter phone number"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  value={editAppointment.email}
+                  onChange={(e) => setEditAppointment({...editAppointment, email: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter email address"
+                />
+              </div>
+
+              {/* Service and Staff */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Service *</label>
+                  <div className="relative">
+                    <select
+                      value={editAppointment.service}
+                      onChange={(e) => setEditAppointment({...editAppointment, service: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select service</option>
+                      {(services || []).map((service) => (
+                        <option key={service.id} value={service.name}>{service.name} ({service.duration || 60} mins)</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Staff Member *</label>
+                  <div className="relative">
+                    <select
+                      value={editAppointment.staffMember}
+                      onChange={(e) => setEditAppointment({...editAppointment, staffMember: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select staff</option>
+                      {(staff || []).map((staffMember) => (
+                        <option key={staffMember.id} value={staffMember.name}>{staffMember.name} - {staffMember.role}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date *</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={editAppointment.date}
+                      onChange={(e) => setEditAppointment({...editAppointment, date: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Time *</label>
+                  <div className="relative">
+                    <select
+                      value={editAppointment.time}
+                      onChange={(e) => setEditAppointment({...editAppointment, time: e.target.value})}
+                      className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                    >
+                      <option value="">Select time</option>
+                      {timeSlots.map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Status</label>
+                <div className="relative">
+                  <select
+                    value={editAppointment.status}
+                    onChange={(e) => setEditAppointment({...editAppointment, status: e.target.value})}
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                  >
+                    <option value="confirmed">Confirmed</option>
+                    <option value="pending">Pending</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Any special requirements or notes"
+                  value={editAppointment.notes}
+                  onChange={(e) => setEditAppointment({...editAppointment, notes: e.target.value})}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseEditModal}>
+                Cancel
+              </Button>
+              <Button onClick={() => {/* TODO: Implement save edit */}} disabled={loading}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Appointment Modal */}
+      {showCancelAppointmentModal && cancellingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <h3 className="text-xl font-semibold">Cancel Appointment</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleCloseCancelModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to cancel the appointment for <strong>{cancellingAppointment.customer}</strong>?
+              </p>
+              
+              {/* Appointment Details */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Service:</span>
+                    <p>{cancellingAppointment.service}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Date & Time:</span>
+                    <p>{cancellingAppointment.scheduled_at ? new Date(cancellingAppointment.scheduled_at).toLocaleDateString('en-IN') : ''} at {cancellingAppointment.time}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Staff:</span>
+                    <p>{cancellingAppointment.staff}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Duration:</span>
+                    <p>{cancellingAppointment.duration || 60} minutes</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Price:</span>
+                    <p>₹{cancellingAppointment.amount || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancellation Reason */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Cancellation Reason (Optional)</label>
+                <textarea
+                  rows={3}
+                  placeholder="Reason for cancellation (will be logged for records)"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                />
+              </div>
+
+              {/* Notification Option */}
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="sendNotification"
+                  checked={sendNotification}
+                  onChange={(e) => setSendNotification(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="sendNotification" className="text-sm">
+                  Send cancellation notification to customer
+                </label>
+              </div>
+
+              {/* Warning Note */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for booking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={handleCloseCancelModal}>
+                Keep Appointment
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {/* TODO: Implement cancel appointment */}}
+                disabled={loading}
+              >
+                Cancel Appointment
               </Button>
             </div>
           </div>
