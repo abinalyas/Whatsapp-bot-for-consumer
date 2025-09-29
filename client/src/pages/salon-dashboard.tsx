@@ -142,64 +142,7 @@ const services = [
   },
 ];
 
-const staffMembers = [
-  {
-    id: 1,
-    name: "Priya Sharma",
-    role: "Senior Hair Stylist",
-    initials: "PS",
-    email: "priya.sharma@bellasalon.com",
-    phone: "+91 98765 43210",
-    workingHours: "9:00 AM - 6:00 PM",
-    specialties: ["Hair Cut", "Hair Color", "Styling"],
-    working_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
-    rating: 4.9,
-    appointments: 156,
-    isAvailable: true,
-  },
-  {
-    id: 2,
-    name: "Rajesh Kumar",
-    role: "Barber",
-    initials: "RK",
-    email: "rajesh.kumar@bellasalon.com",
-    phone: "+91 87654 32109",
-    workingHours: "10:00 AM - 7:00 PM",
-    specialties: ["Hair Cut", "Beard Trim", "Shaving"],
-    working_days: ["Tue", "Wed", "Thu", "Fri", "Sat"],
-    rating: 4.8,
-    appointments: 89,
-    isAvailable: true,
-  },
-  {
-    id: 3,
-    name: "Sunita Patel",
-    role: "Nail Technician",
-    initials: "SP",
-    email: "sunita.patel@bellasalon.com",
-    phone: "+91 76543 21098",
-    workingHours: "9:00 AM - 5:00 PM",
-    specialties: ["Manicure", "Pedicure", "Nail Art"],
-    working_days: ["Mon", "Wed", "Thu", "Fri", "Sat"],
-    rating: 4.7,
-    appointments: 134,
-    isAvailable: true,
-  },
-  {
-    id: 4,
-    name: "Amit Singh",
-    role: "Esthetician",
-    initials: "AS",
-    email: "amit.singh@bellasalon.com",
-    phone: "+91 65432 10987",
-    workingHours: "11:00 AM - 8:00 PM",
-    specialties: ["Facial Treatment", "Skincare", "Eyebrow Shaping"],
-    working_days: ["Mon", "Tue", "Thu", "Fri", "Sat"],
-    rating: 4.9,
-    appointments: 98,
-    isAvailable: false,
-  },
-];
+// Staff members will be loaded from API dynamically
 
 const todaysStaffSchedule = [
   { time: "9:00 AM", staff: "Emma Johnson", customer: "Sarah Johnson", service: "Hair Cut" },
@@ -216,11 +159,12 @@ const timeSlots = [
   "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM"
 ];
 
-const filterOptions = {
-  staffMembers: ["All Staff", "Priya Sharma", "Rajesh Kumar", "Sunita Patel", "Amit Singh"],
-  services: ["All Services", "Hair Cut", "Hair Color", "Beard Trim", "Manicure", "Pedicure", "Facial Treatment"],
+// Filter options will be populated dynamically from API data
+const getFilterOptions = (staff: any[], services: any[]) => ({
+  staffMembers: ["All Staff", ...staff.map(s => s.name)],
+  services: ["All Services", ...services.map(s => s.name)],
   status: ["All Status", "Confirmed", "Pending", "Cancelled", "Completed"]
-};
+});
 
 const revenueData = {
   today: { amount: 63750, transactions: 8 }, // ₹63,750 (850 * 75)
@@ -2353,7 +2297,8 @@ function CalendarSection() {
     "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM"
   ];
 
-  const staffMembers = ["Emma", "David", "Anna", "Sofia"];
+  // Use real staff data from API
+  const staffMembers = staff.map(s => s.name);
 
   const handleNewAppointment = () => {
     setShowNewAppointmentModal(true);
@@ -3247,10 +3192,9 @@ function CalendarSection() {
                   className="w-full p-2 border border-input rounded-md bg-background"
                 >
                   <option value="All Staff">All Staff</option>
-                  <option value="Emma">Emma</option>
-                  <option value="David">David</option>
-                  <option value="Anna">Anna</option>
-                  <option value="Sofia">Sofia</option>
+                  {(staff || []).map((staffMember) => (
+                    <option key={staffMember.id} value={staffMember.name}>{staffMember.name}</option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-2 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
               </div>
