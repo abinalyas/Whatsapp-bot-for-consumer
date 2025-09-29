@@ -3934,17 +3934,37 @@ router2.post("/appointments", async (req, res) => {
       customer_phone,
       customer_email,
       service_id,
+      staff_id,
       scheduled_at,
       duration_minutes,
       amount,
-      currency,
-      notes
+      currency = "INR",
+      notes,
+      payment_status = "pending"
     } = req.body;
+    if (!customer_name || !customer_phone || !service_id || !scheduled_at || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: customer_name, customer_phone, service_id, scheduled_at, amount"
+      });
+    }
+    let finalAmount = amount;
+    let finalDuration = duration_minutes;
+    if (service_id) {
+      const serviceResult = await pool2.query(`
+        SELECT base_price, duration_minutes FROM offerings WHERE id = $1 AND tenant_id = $2
+      `, [service_id, tenantId]);
+      if (serviceResult.rows.length > 0) {
+        finalAmount = serviceResult.rows[0].base_price;
+        finalDuration = serviceResult.rows[0].duration_minutes;
+      }
+    }
     const result = await pool2.query(`
       INSERT INTO transactions (
         tenant_id, transaction_type, customer_name, customer_phone, customer_email,
-        offering_id, scheduled_at, duration_minutes, amount, currency, notes
-      ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        offering_id, staff_id, scheduled_at, duration_minutes,
+        amount, currency, notes, payment_status
+      ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
       tenantId,
@@ -3952,13 +3972,15 @@ router2.post("/appointments", async (req, res) => {
       customer_phone,
       customer_email,
       service_id,
+      staff_id,
       scheduled_at,
-      duration_minutes,
-      amount,
+      finalDuration,
+      finalAmount,
       currency,
-      notes
+      notes,
+      payment_status
     ]);
-    res.json({
+    res.status(201).json({
       success: true,
       data: result.rows[0]
     });

@@ -276,24 +276,46 @@ router.post('/appointments', async (req, res) => {
 
     const {
       customer_name, customer_phone, customer_email,
-      service_id, scheduled_at, duration_minutes,
-      amount, currency, notes
+      service_id, staff_id, scheduled_at, duration_minutes,
+      amount, currency = 'INR', notes, payment_status = 'pending'
     } = req.body;
+    
+    // Validate required fields
+    if (!customer_name || !customer_phone || !service_id || !scheduled_at || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: customer_name, customer_phone, service_id, scheduled_at, amount'
+      });
+    }
+    
+    // Fetch service details to get actual amount and duration if not provided
+    let finalAmount = amount;
+    let finalDuration = duration_minutes;
+    if (service_id) {
+      const serviceResult = await pool.query(`
+        SELECT base_price, duration_minutes FROM offerings WHERE id = $1 AND tenant_id = $2
+      `, [service_id, tenantId]);
+      if (serviceResult.rows.length > 0) {
+        finalAmount = serviceResult.rows[0].base_price;
+        finalDuration = serviceResult.rows[0].duration_minutes;
+      }
+    }
     
     const result = await pool.query(`
       INSERT INTO transactions (
         tenant_id, transaction_type, customer_name, customer_phone, customer_email,
-        offering_id, scheduled_at, duration_minutes, amount, currency, notes
-      ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        offering_id, staff_id, scheduled_at, duration_minutes,
+        amount, currency, notes, payment_status
+      ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `, [
       tenantId,
       customer_name, customer_phone, customer_email,
-      service_id, scheduled_at, duration_minutes,
-      amount, currency, notes
+      service_id, staff_id, scheduled_at, finalDuration,
+      finalAmount, currency, notes, payment_status
     ]);
     
-    res.json({
+    res.status(201).json({
       success: true,
       data: result.rows[0]
     });

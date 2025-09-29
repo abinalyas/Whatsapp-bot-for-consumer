@@ -17,7 +17,10 @@
     "db:migrate:status": "npm run migrate status",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:tenant-isolation": "vitest run --reporter=verbose tests/tenant-isolation.test.ts"
+    "test:tenant-isolation": "vitest run --reporter=verbose tests/tenant-isolation.test.ts",
+    "test:deployed": "node test-simple.js",
+    "test:automation": "node test-automation.js",
+    "test:ui": "node test-ui-automation.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
