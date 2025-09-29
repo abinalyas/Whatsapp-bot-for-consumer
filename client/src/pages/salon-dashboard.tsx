@@ -18,6 +18,19 @@ import { staffApi } from "@/lib/staff-api";
 import { AvailabilityManager } from "@/components/availability-manager";
 import { TimeSlotSelector } from "@/components/time-slot-selector";
 import { StaffScheduler } from "@/components/staff-scheduler";
+import { 
+  transformApiServicesToUI, 
+  transformApiBookingsToUI,
+  transformUIServiceToAPI,
+  transformUIBookingToAPI,
+  type ApiService,
+  type ApiBooking,
+  type UIService,
+  type UIBooking,
+  formatCurrency,
+  formatTime,
+  formatDate
+} from "@/lib/data-transformers";
 
 const menuItems = [
   { id: "overview", title: "Overview", icon: Home },
@@ -463,10 +476,10 @@ function OverviewSection() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [stats, setStats] = useState({ todayAppointments: 0, todayRevenue: 0, totalServices: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Load appointments and stats from API
   useEffect(() => {
@@ -817,9 +830,9 @@ function ServicesSection() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [deletingService, setDeletingService] = useState(null);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState<UIService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Toggle service availability
@@ -878,20 +891,11 @@ function ServicesSection() {
             throw new Error('Failed to load services from API');
           }
           
-          const apiServices = await response.json();
+          const apiServices: ApiService[] = await response.json();
           console.log('Loaded services from API:', apiServices);
           
-          // Transform API services to match expected format
-          const transformedServices = apiServices.map((service: any) => ({
-            id: service.id,
-            name: service.name,
-            category: service.category || 'General',
-            base_price: service.price || 0,
-            currency: 'USD',
-            duration_minutes: service.duration || 60,
-            is_active: service.isActive,
-            addOns: [] // API doesn't have addOns yet
-          }));
+          // Transform API services to UI format using utility
+          const transformedServices = transformApiServicesToUI(apiServices);
           
           setServices(transformedServices);
           setError(null);
@@ -993,14 +997,11 @@ function ServicesSection() {
         name: formData.get('name'),
         description: formData.get('description'),
         category: formData.get('category'),
-        subcategory: '', // Default empty subcategory
-        base_price: parseFloat(formData.get('base_price')),
+        base_price: parseFloat(formData.get('base_price') || '0'),
         currency: 'USD', // Default currency
-        duration_minutes: parseInt(formData.get('duration_minutes')),
+        duration_minutes: parseInt(formData.get('duration_minutes') || '60'),
         is_active: true,
-        display_order: 0, // Default display order
-        tags: [], // Default empty tags array
-        images: [] // Default empty images array
+        addOns: [] // Default empty addOns array
       };
       
       await salonApi.services.update(editingService.id, serviceData);
@@ -1058,9 +1059,17 @@ function ServicesSection() {
   const handleAddService = async (formData) => {
     try {
       setSaving(true);
-      const newService = await salonApi.services.create(formData);
-      console.log('New service created:', newService);
-      setServices(prev => [...prev, newService]);
+      
+      // Transform UI form data to API format
+      const apiServiceData = transformUIServiceToAPI(formData);
+      
+      const newApiService = await salonApi.services.create(apiServiceData);
+      console.log('New service created:', newApiService);
+      
+      // Transform API response back to UI format
+      const newUIService = transformApiServicesToUI([newApiService])[0];
+      
+      setServices(prev => [...prev, newUIService]);
       setShowAddModal(false);
     } catch (err) {
       console.error('Error adding service:', err);
@@ -1264,11 +1273,11 @@ function ServicesSection() {
               const serviceData = {
                 name: formData.get('name'),
                 category: formData.get('category'),
-                base_price: parseFloat(formData.get('price')),
-                duration_minutes: parseInt(formData.get('duration')),
+                base_price: parseFloat(formData.get('price') || '0'),
+                duration_minutes: parseInt(formData.get('duration') || '60'),
                 description: formData.get('description'),
                 is_active: formData.get('is_active') === 'on',
-                offering_type: 'service'
+                addOns: []
               };
               await handleAddService(serviceData);
             }} className="space-y-4">
@@ -1482,9 +1491,9 @@ function StaffSection() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
   const [selectedDays, setSelectedDays] = useState(["Mon", "Tue", "Wed", "Thu", "Fri"]);
-  const [staff, setStaff] = useState([]);
+  const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAvailabilityManager, setShowAvailabilityManager] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
@@ -2217,11 +2226,11 @@ function CalendarSection() {
     time: "",
     notes: ""
   });
-  const [appointments, setAppointments] = useState([]);
-  const [services, setServices] = useState([]);
-  const [staff, setStaff] = useState([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [services, setServices] = useState<UIService[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Load data from API
   useEffect(() => {
@@ -2238,11 +2247,14 @@ function CalendarSection() {
         console.log('📊 Appointments:', appointmentsData);
         console.log('📊 Services:', servicesData);
         console.log('📊 Staff:', staffData);
+        // Transform API bookings to UI format using utility
+        const transformedBookings = transformApiBookingsToUI(appointmentsData);
+        
         // Enhance appointments with calendar display properties
-        const enhancedAppointments = appointmentsData.map(apt => {
-          const appointmentDateTime = new Date(apt.scheduled_at);
+        const enhancedAppointments = transformedBookings.map(apt => {
+          const appointmentDateTime = new Date(apt.scheduled_at || '');
           // Format time to match timeSlots format (e.g., "9:00 AM")
-          const timeString = appointmentDateTime.toLocaleTimeString('en-US', { 
+          const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit', 
             hour12: true 
@@ -2250,16 +2262,16 @@ function CalendarSection() {
           
           return {
             ...apt,
-            // Calendar display properties - use the actual API data
+            // Calendar display properties - use the transformed data
             customer: apt.customer_name,
-            service: apt.service_name,
+            service: apt.service, // This will be populated by service lookup
             staff: 'Unassigned', // No staff data in API response
-            duration: apt.duration_minutes,
+            duration: apt.duration || 60,
             time: timeString,
-            status: 'confirmed',
+            status: apt.status || 'confirmed',
             // Additional properties for calendar display
             customer_name: apt.customer_name,
-            service_name: apt.service_name,
+            service_name: apt.service, // Use transformed service name
             staff_name: 'Unassigned'
           };
         });
