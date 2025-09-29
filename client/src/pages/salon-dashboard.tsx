@@ -3393,7 +3393,7 @@ function CalendarSection() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold">₹{totalAppointments.reduce((sum, apt) => sum + apt.price, 0)}</div>
+              <div className="text-2xl font-bold">₹{totalAppointments.reduce((sum, apt) => sum + (apt.amount || 0), 0)}</div>
               <div className="text-sm text-muted-foreground">Revenue</div>
             </CardContent>
           </Card>
@@ -3744,7 +3744,7 @@ function CalendarSection() {
                     >
                       <option value="">Select service</option>
                       {(services || []).map((service) => (
-                        <option key={service.id} value={service.name}>{service.name} ({service.duration || 60} mins)</option>
+                        <option key={service.id} value={service.name}>{service.name} ({service.duration_minutes || 60} mins)</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -3880,7 +3880,7 @@ function CalendarSection() {
                   </div>
                   <div>
                     <span className="font-medium">Duration:</span>
-                    <p>{cancellingAppointment.duration || 60} minutes</p>
+                    <p>{cancellingAppointment.duration_minutes || cancellingAppointment.duration || 60} minutes</p>
                   </div>
                   <div>
                     <span className="font-medium">Price:</span>
