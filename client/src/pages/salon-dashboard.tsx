@@ -2426,9 +2426,33 @@ function CalendarSection() {
     });
   };
 
-  const handleEditAppointment = (appointment) => {
+  const handleEditAppointment = async (appointment) => {
     setEditingAppointment(appointment);
     
+    // Load staff and services data for dropdowns
+    let servicesData = [];
+    let staffData = [];
+    try {
+      const [staffResponse, servicesResponse] = await Promise.all([
+        fetch('/api/staff/staff', { headers: { 'x-tenant-id': 'bella-salon' } }),
+        fetch('/api/salon/services', { headers: { 'x-tenant-id': 'bella-salon' } })
+      ]);
+      
+      const staffResult = await staffResponse.json();
+      const servicesResult = await servicesResponse.json();
+      
+      if (staffResult.success) {
+        staffData = staffResult.data;
+        setStaff(staffResult.data);
+      }
+      if (servicesResult.success) {
+        servicesData = servicesResult.data;
+        setServices(servicesResult.data);
+      }
+    } catch (error) {
+      console.error('Error loading data for edit modal:', error);
+    }
+
     // Helper function to convert time to 24-hour format for HTML time input
     const convertTo24HourFormat = (timeString) => {
       if (!timeString) return "";
@@ -2466,10 +2490,32 @@ function CalendarSection() {
       timeValue = convertTo24HourFormat(timeValue);
       console.log('🕐 Calendar: Converted existing time to 24-hour:', timeValue);
     }
+
+    // Find service ID by service name (after services are loaded)
+    let serviceId = appointment.offering_id || appointment.service_id || "";
+    if (!serviceId && appointment.service_name && servicesData.length > 0) {
+      const matchingService = servicesData.find(s => s.name === appointment.service_name);
+      if (matchingService) {
+        serviceId = matchingService.id;
+        console.log('🔍 Calendar: Found service ID by name:', { serviceName: appointment.service_name, serviceId });
+      }
+    }
+
+    // Find staff ID by staff name (after staff are loaded)
+    let staffId = appointment.staff_id || "";
+    if (!staffId && appointment.staff_name && staffData.length > 0) {
+      const matchingStaff = staffData.find(s => s.name === appointment.staff_name);
+      if (matchingStaff) {
+        staffId = matchingStaff.id;
+        console.log('🔍 Calendar: Found staff ID by name:', { staffName: appointment.staff_name, staffId });
+      }
+    }
     
-    console.log('🔍 Edit appointment data:', {
+    console.log('🔍 Calendar: Edit appointment data:', {
       appointment,
       timeValue,
+      serviceId,
+      staffId,
       scheduled_at: appointment.scheduled_at,
       time: appointment.time
     });
@@ -2478,8 +2524,8 @@ function CalendarSection() {
       customerName: appointment.customer_name || appointment.customer || "",
       phone: appointment.customer_phone || appointment.phone || "",
       email: appointment.customer_email || appointment.email || "",
-      service: appointment.service_name || appointment.service || "",
-      staffMember: appointment.staff_name || appointment.staff || "",
+      service: serviceId, // Use service ID instead of service name
+      staffMember: staffId, // Use staff ID instead of staff name
       date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
       time: timeValue,
       status: appointment.payment_status || appointment.status || "confirmed",
