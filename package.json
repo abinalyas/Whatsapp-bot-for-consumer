@@ -23,7 +23,11 @@
     "test:ui": "node test-ui-automation.js",
     "test:comprehensive": "node test-comprehensive.js",
     "test:scenarios": "node test-ui-scenarios.js",
-    "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios"
+    "test:api-comprehensive": "node test-comprehensive-api.js",
+    "test:schema": "node test-database-schema.js",
+    "test:integration": "node test-integration-workflows.js",
+    "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios",
+    "test:master": "node test-master-suite.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -74,6 +78,7 @@
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
     "next-themes": "^0.4.6",
+    "node-fetch": "^3.3.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "react": "^18.3.1",
