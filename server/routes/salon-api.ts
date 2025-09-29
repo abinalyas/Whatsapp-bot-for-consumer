@@ -312,23 +312,35 @@ router.put('/appointments/:id', async (req, res) => {
     const { id } = req.params;
     const {
       customer_name, customer_phone, customer_email,
-      service_id, scheduled_at, duration_minutes,
+      service_id, staff_id, scheduled_at, duration_minutes,
       amount, currency, notes, payment_status
     } = req.body;
+    
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
     
     const result = await pool.query(`
       UPDATE transactions SET
         customer_name = $2, customer_phone = $3, customer_email = $4,
-        offering_id = $5, scheduled_at = $6, duration_minutes = $7,
-        amount = $8, currency = $9, notes = $10, payment_status = $11,
+        offering_id = $5, staff_id = $6, scheduled_at = $7, duration_minutes = $8,
+        amount = $9, currency = $10, notes = $11, payment_status = $12,
         updated_at = NOW()
-      WHERE id = $1 AND tenant_id = $12
+      WHERE id = $1 AND tenant_id = $13
       RETURNING *
     `, [
       id, customer_name, customer_phone, customer_email,
-      service_id, scheduled_at, duration_minutes,
-      amount, currency, notes, payment_status,
-      req.headers['x-tenant-id'] || 'default-tenant-id'
+      service_id, staff_id, scheduled_at, duration_minutes,
+      amount, currency, notes, payment_status, tenantId
     ]);
     
     if (result.rows.length === 0) {

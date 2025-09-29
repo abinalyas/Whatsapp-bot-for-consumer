@@ -2363,6 +2363,13 @@ function CalendarSection() {
       });
     }
     
+    console.log('🔍 Edit appointment data:', {
+      appointment,
+      timeValue,
+      scheduled_at: appointment.scheduled_at,
+      time: appointment.time
+    });
+    
     setEditAppointment({
       customerName: appointment.customer_name || appointment.customer || "",
       phone: appointment.customer_phone || appointment.phone || "",
