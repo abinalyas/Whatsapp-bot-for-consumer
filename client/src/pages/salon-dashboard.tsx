@@ -432,11 +432,22 @@ function OverviewSection({ onEditAppointment, onCancelAppointment }) {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [appointmentsData, statsData] = await Promise.all([
+        const [appointmentsData, statsData, staffData] = await Promise.all([
           salonApi.appointments.getAll({ date: new Date().toISOString().split('T')[0] }),
-          salonApi.stats.getStats()
+          salonApi.stats.getStats(),
+          staffApi.getAll()
         ]);
-        setAppointments(appointmentsData);
+        
+        // Transform appointments data to include staff names
+        const transformedAppointments = appointmentsData.map(apt => {
+          const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
+          return {
+            ...apt,
+            staff_name: staffName
+          };
+        });
+        
+        setAppointments(transformedAppointments);
         setStats(statsData);
         setError(null);
       } catch (err) {
