@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Header } from "@/components/header";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle, AlertTriangle } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle, AlertTriangle, Zap } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -423,6 +423,15 @@ function OverviewSection({ onEditAppointment, onCancelAppointment }) {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [appointments, setAppointments] = useState<any[]>([]);
+  
+  // Quick Actions modals state
+  const [showQuickBookModal, setShowQuickBookModal] = useState(false);
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [showProcessPaymentModal, setShowProcessPaymentModal] = useState(false);
+  const [showSendRemindersModal, setShowSendRemindersModal] = useState(false);
+  const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
+  const [showDailySummaryModal, setShowDailySummaryModal] = useState(false);
   const [stats, setStats] = useState({ todayAppointments: 0, todayRevenue: 0, totalServices: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -644,14 +653,81 @@ function OverviewSection({ onEditAppointment, onCancelAppointment }) {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Quick Actions
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <Button>Add New Appointment</Button>
-            <Button variant="outline">Export Daily Report</Button>
-            <Button variant="outline">Send Reminder Messages</Button>
-            <Button variant="outline">View Week Calendar</Button>
+          <div className="flex flex-wrap gap-3">
+            {/* Quick Book - Primary action */}
+            <Button 
+              onClick={() => setShowQuickBookModal(true)}
+              className="bg-black text-white hover:bg-gray-800 flex items-center gap-2 px-4 py-3 rounded-lg"
+            >
+              <Plus className="h-4 w-4" />
+              Quick Book
+            </Button>
+            
+            {/* Check In */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCheckInModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <Users className="h-4 w-4" />
+              Check In
+            </Button>
+            
+            {/* Process Payment */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowProcessPaymentModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <CreditCard className="h-4 w-4" />
+              Process Payment
+            </Button>
+            
+            {/* Send Reminders */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSendRemindersModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Send Reminders
+            </Button>
+            
+            {/* View Schedule */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowViewScheduleModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <Calendar className="h-4 w-4" />
+              View Schedule
+            </Button>
+            
+            {/* Walk-in */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowWalkInModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <Users className="h-4 w-4" />
+              Walk-in
+            </Button>
+            
+            {/* Daily Summary */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDailySummaryModal(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+            >
+              <Star className="h-4 w-4" />
+              Daily Summary
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -5573,6 +5649,493 @@ function SettingsSection() {
           {renderTabContent()}
         </CardContent>
       </Card>
+
+      {/* Quick Book Modal */}
+      {showQuickBookModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Quick Booking</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowQuickBookModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Name *</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Customer phone number"
+                />
+              </div>
+
+              {/* Service */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Service *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="">Select service</option>
+                    <option value="hair-cut">Hair Cut & Style</option>
+                    <option value="hair-color">Hair Color</option>
+                    <option value="manicure">Manicure</option>
+                    <option value="pedicure">Pedicure</option>
+                    <option value="facial">Facial Treatment</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Staff Member */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Staff Member *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="">Select staff</option>
+                    <option value="priya">Priya Sharma</option>
+                    <option value="rajesh">Rajesh Kumar</option>
+                    <option value="anita">Anita Singh</option>
+                    <option value="vikram">Vikram Patel</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      className="w-full p-3 border border-input rounded-md bg-background"
+                      defaultValue="2025-09-29"
+                    />
+                    <Calendar className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Time</label>
+                  <div className="relative">
+                    <input
+                      type="time"
+                      className="w-full p-3 border border-input rounded-md bg-background pr-10"
+                      placeholder="--:-- --"
+                    />
+                    <Clock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowQuickBookModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowQuickBookModal(false)}>
+                Book Appointment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check In Modal */}
+      {showCheckInModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Customer Check-in</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowCheckInModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Select Appointment */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Appointment *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="">Select appointment to check in</option>
+                    <option value="1">Sarah Johnson - Hair Cut & Style - 9:00 AM</option>
+                    <option value="2">Mike Chen - Beard Trim - 10:30 AM</option>
+                    <option value="3">Lisa Rodriguez - Manicure - 12:00 PM</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Check-in Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Check-in Notes</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Any additional notes about the customer's arrival"
+                />
+              </div>
+
+              {/* Special Requests */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Special Requests</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Any special requests or preferences"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowCheckInModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowCheckInModal(false)}>
+                Check In Customer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Process Payment Modal */}
+      {showProcessPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Process Payment</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowProcessPaymentModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Select Appointment */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Appointment *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="">Select appointment for payment</option>
+                    <option value="1">Sarah Johnson - Hair Cut & Style - ₹500</option>
+                    <option value="2">Mike Chen - Beard Trim - ₹300</option>
+                    <option value="3">Lisa Rodriguez - Manicure - ₹400</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Amount *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  defaultValue="0.00"
+                />
+              </div>
+
+              {/* Tip */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Tip</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  defaultValue="0.00"
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Method *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="cash">Cash</option>
+                    <option value="card">Credit Card</option>
+                    <option value="upi">UPI</option>
+                    <option value="netbanking">Net Banking</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Payment Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium mb-2">Payment Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Service Amount:</span>
+                    <span>₹0.00</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tip:</span>
+                    <span>₹0.00</span>
+                  </div>
+                  <div className="flex justify-between font-semibold border-t pt-1">
+                    <span>Total:</span>
+                    <span>₹0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowProcessPaymentModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowProcessPaymentModal(false)}>
+                Process Payment
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Reminders Modal */}
+      {showSendRemindersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Send Reminders</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowSendRemindersModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Reminder Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Reminder Type *</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="tomorrow">All Tomorrow's Appointments</option>
+                    <option value="today">Today's Appointments</option>
+                    <option value="week">This Week's Appointments</option>
+                    <option value="custom">Custom Selection</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Custom Message */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Custom Message (Optional)</label>
+                <textarea
+                  rows={3}
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Add a custom message to the reminder (optional)"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-medium mb-2 text-blue-800">Preview:</h4>
+                <p className="text-sm text-blue-700">
+                  "Hi [Customer Name], this is a reminder about your appointment tomorrow at [Time] for [Service] with [Staff]. See you soon! - Bella Salon"
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowSendRemindersModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowSendRemindersModal(false)}>
+                Send Reminders
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Schedule Modal */}
+      {showViewScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Staff Schedule Overview</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowViewScheduleModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Emma's Schedule */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold text-lg mb-3">Emma</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm">9:00 AM - Sarah Johnson</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm">2:30 PM - John Smith</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* David's Schedule */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold text-lg mb-3">David</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <span className="text-sm">10:30 AM - Mike Chen</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Anna's Schedule */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold text-lg mb-3">Anna</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span className="text-sm">12:00 PM - Lisa Rodriguez</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sofia's Schedule */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold text-lg mb-3">Sofia</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                    <span className="text-sm">4:00 PM - Amanda White</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <Button onClick={() => setShowViewScheduleModal(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Walk-in Modal */}
+      {showWalkInModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Walk-in Customer</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowWalkInModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <p className="text-gray-600 mb-6">Quickly register a walk-in customer and check availability.</p>
+            
+            <div className="space-y-4">
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer name</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border border-input rounded-md bg-background"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              {/* Select Service */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Select service</label>
+                <div className="relative">
+                  <select className="w-full p-3 border border-input rounded-md bg-background appearance-none">
+                    <option value="">Select service</option>
+                    <option value="hair-cut">Hair Cut & Style</option>
+                    <option value="hair-color">Hair Color</option>
+                    <option value="manicure">Manicure</option>
+                    <option value="pedicure">Pedicure</option>
+                    <option value="facial">Facial Treatment</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowWalkInModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowWalkInModal(false)}>
+                Check Availability
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Summary Modal */}
+      {showDailySummaryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Daily Summary</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowDailySummaryModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-gray-900">5</div>
+                <div className="text-sm text-gray-600">Appointments</div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-gray-900">₹850</div>
+                <div className="text-sm text-gray-600">Revenue</div>
+              </div>
+            </div>
+            
+            <div className="flex justify-center">
+              <Button onClick={() => setShowDailySummaryModal(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
