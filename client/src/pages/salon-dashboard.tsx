@@ -2620,7 +2620,15 @@ function CalendarSection() {
             <CardContent>
               <div className="space-y-2">
                 {timeSlots.map((time, index) => {
-                  const appointment = dayAppointments.find(apt => apt.time === time);
+                  const appointment = dayAppointments.find(apt => {
+                    // Try exact match first
+                    if (apt.time === time) return true;
+                    // Try to match by converting both to same format
+                    const aptTime = apt.time || '';
+                    const timeMatch = aptTime.includes(time.split(' ')[0]) || time.includes(aptTime.split(' ')[0]);
+                    console.log('🕐 Time matching:', { time, aptTime, timeMatch });
+                    return timeMatch;
+                  });
                   console.log('🕐 Time slot:', time, 'Found appointment:', appointment);
                   if (appointment) {
                     console.log('📋 Appointment details:', {
@@ -2716,7 +2724,7 @@ function CalendarSection() {
                 return (
                 <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs">
                       {appointment.time}
                     </div>
                     <div>
