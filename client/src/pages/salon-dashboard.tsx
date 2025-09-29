@@ -2480,15 +2480,34 @@ function CalendarSection() {
     let timeValue = appointment.time || "";
     if (!timeValue && appointment.scheduled_at) {
       const date = new Date(appointment.scheduled_at);
-      // Convert to 24-hour format for HTML time input
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      timeValue = `${hours}:${minutes}`;
-      console.log('🕐 Calendar: Extracted time from scheduled_at (24-hour):', timeValue);
+      // Convert to 12-hour format for time dropdown (matches timeSlots format)
+      timeValue = date.toLocaleTimeString('en-IN', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      console.log('🕐 Calendar: Extracted time from scheduled_at (12-hour):', timeValue);
     } else if (timeValue) {
-      // Convert existing time field to 24-hour format
-      timeValue = convertTo24HourFormat(timeValue);
-      console.log('🕐 Calendar: Converted existing time to 24-hour:', timeValue);
+      // Ensure time is in 12-hour format for dropdown
+      if (/^\d{1,2}:\d{2}$/.test(timeValue)) {
+        // Convert 24-hour format to 12-hour format
+        const [hours, minutes] = timeValue.split(':');
+        const hour24 = parseInt(hours);
+        let hour12 = hour24;
+        let ampm = 'AM';
+        
+        if (hour24 === 0) {
+          hour12 = 12;
+        } else if (hour24 > 12) {
+          hour12 = hour24 - 12;
+          ampm = 'PM';
+        } else if (hour24 === 12) {
+          ampm = 'PM';
+        }
+        
+        timeValue = `${hour12}:${minutes} ${ampm}`;
+      }
+      console.log('🕐 Calendar: Converted time to 12-hour format:', timeValue);
     }
 
     // Find service ID by service name (after services are loaded)
@@ -3915,7 +3934,7 @@ function CalendarSection() {
                     >
                       <option value="">Select service</option>
                       {(services || []).map((service) => (
-                        <option key={service.id} value={service.name}>{service.name} ({service.duration_minutes || 60} mins)</option>
+                        <option key={service.id} value={service.id}>{service.name} - ₹{service.base_price} ({service.duration_minutes || 60} mins)</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -3931,7 +3950,7 @@ function CalendarSection() {
                     >
                       <option value="">Select staff</option>
                       {(staff || []).map((staffMember) => (
-                        <option key={staffMember.id} value={staffMember.name}>{staffMember.name} - {staffMember.role}</option>
+                        <option key={staffMember.id} value={staffMember.id}>{staffMember.name} - {staffMember.role}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
