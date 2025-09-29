@@ -43,7 +43,7 @@ export interface UIService {
   icon?: string;
   category?: string;
   duration_minutes?: number; // UI expects duration_minutes (default 60)
-  currency?: string;       // UI expects currency (default USD)
+  currency?: string;       // UI expects currency (default INR)
   addOns?: string[];       // UI expects addOns array
   createdAt?: string;
   updatedAt?: string;

@@ -99,7 +99,7 @@ export const TransactionsManagementPage: React.FC = () => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(price);
   };
 
@@ -411,7 +411,7 @@ const TransactionDetails: React.FC<{ transaction: Transaction }> = ({ transactio
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(price);
   };
 
