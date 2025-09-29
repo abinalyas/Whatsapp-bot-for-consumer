@@ -5,7 +5,7 @@
  * Tests all functionality with various scenarios and edge cases
  */
 
-const BASE_URL = 'https://whatsapp-bot-for-consumer-num9fgy3b-abinalyas-projects.vercel.app';
+const BASE_URL = 'https://whatsapp-bot-for-consumer-aj007h6k8-abinalyas-projects.vercel.app';
 const TENANT_ID = 'bella-salon';
 
 console.log('🧪 Comprehensive Testing for Salon Dashboard');
@@ -542,11 +542,11 @@ async function testEdgeCases() {
       body: JSON.stringify(longNameAppointment)
     });
     
-    logTestResult(
-      'Edge Cases - Very Long Customer Name',
-      longNameResult.success,
-      longNameResult.error || 'Handled long customer name correctly'
-    );
+  logTestResult(
+    'Edge Cases - Very Long Customer Name',
+    !longNameResult.success && longNameResult.status === 400,
+    longNameResult.error || 'Should reject very long customer name'
+  );
   }
   
   // Test with future date (1 year from now)

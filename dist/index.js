@@ -3677,12 +3677,13 @@ var pool2 = new Pool3({
 });
 router2.get("/services", async (req, res) => {
   try {
+    const requestedTenant = req.headers["x-tenant-id"];
     const tenantResult = await pool2.query(`
       SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
-    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    `, [requestedTenant || "bella-salon", requestedTenant || "Bella Salon"]);
     const tenantId = tenantResult.rows[0]?.id;
     if (!tenantId) {
-      console.log("Tenant not found for services:", req.headers["x-tenant-id"] || "bella-salon");
+      console.log("Tenant not found for services:", requestedTenant || "bella-salon");
       return res.status(404).json({
         success: false,
         error: "Tenant not found"

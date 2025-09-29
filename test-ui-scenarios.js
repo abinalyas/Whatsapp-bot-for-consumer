@@ -5,7 +5,7 @@
  * Tests specific UI scenarios and user workflows
  */
 
-const BASE_URL = 'https://whatsapp-bot-for-consumer-num9fgy3b-abinalyas-projects.vercel.app';
+const BASE_URL = 'https://whatsapp-bot-for-consumer-aj007h6k8-abinalyas-projects.vercel.app';
 const TENANT_ID = 'bella-salon';
 
 console.log('🎭 UI Scenarios Testing for Salon Dashboard');

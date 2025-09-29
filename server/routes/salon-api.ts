@@ -12,13 +12,14 @@ const pool = new Pool({
 router.get('/services', async (req, res) => {
   try {
     // Get the correct tenant ID from the database
+    const requestedTenant = req.headers['x-tenant-id'];
     const tenantResult = await pool.query(`
       SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
-    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    `, [requestedTenant || 'bella-salon', requestedTenant || 'Bella Salon']);
     
     const tenantId = tenantResult.rows[0]?.id;
     if (!tenantId) {
-      console.log('Tenant not found for services:', req.headers['x-tenant-id'] || 'bella-salon');
+      console.log('Tenant not found for services:', requestedTenant || 'bella-salon');
       return res.status(404).json({
         success: false,
         error: 'Tenant not found'
