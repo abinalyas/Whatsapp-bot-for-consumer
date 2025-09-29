@@ -3886,7 +3886,7 @@ router2.get("/appointments", async (req, res) => {
       SELECT 
         t.id, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
         t.scheduled_at, t.duration_minutes, t.amount, t.currency, t.payment_status,
-        t.payment_method, t.notes, t.created_at, t.updated_at,
+        t.payment_method, t.notes, t.created_at, t.updated_at, t.staff_id,
         o.name as service_name, o.category as service_category
       FROM transactions t
       LEFT JOIN offerings o ON t.offering_id = o.id
