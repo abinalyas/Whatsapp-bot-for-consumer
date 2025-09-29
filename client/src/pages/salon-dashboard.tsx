@@ -2706,10 +2706,15 @@ function CalendarSection() {
           </Card>
         </div>
 
-        {/* Appointment Details */}
+        {/* Enhanced Appointment Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Appointment Details</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">Appointment Details</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                {dayAppointments.length} appointments today
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -2721,29 +2726,140 @@ function CalendarSection() {
                   duration: appointment.duration,
                   time: appointment.time
                 });
+                
+                // Calculate end time
+                const startTime = appointment.time || '9:00 AM';
+                const duration = appointment.duration || 60;
+                const [time, period] = startTime.split(' ');
+                const [hours, minutes] = time.split(':');
+                let hour24 = parseInt(hours);
+                if (period === 'PM' && hour24 !== 12) hour24 += 12;
+                if (period === 'AM' && hour24 === 12) hour24 = 0;
+                
+                const startMinutes = hour24 * 60 + parseInt(minutes);
+                const endMinutes = startMinutes + duration;
+                const endHour24 = Math.floor(endMinutes / 60);
+                const endMin = endMinutes % 60;
+                const endPeriod = endHour24 >= 12 ? 'PM' : 'AM';
+                const displayEndHour = endHour24 > 12 ? endHour24 - 12 : (endHour24 === 0 ? 12 : endHour24);
+                const endTime = `${displayEndHour}:${endMin.toString().padStart(2, '0')} ${endPeriod}`;
+                
+                // Format price in INR
+                const price = appointment.amount || 0;
+                const formattedPrice = new Intl.NumberFormat('en-IN', {
+                  style: 'currency',
+                  currency: 'INR',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                }).format(price);
+                
                 return (
-                <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs">
-                      {appointment.time}
-                    </div>
-                    <div>
-                      <div className="font-medium">{appointment.customer}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {appointment.duration} mins • {appointment.service} with {appointment.staff}
+                <div key={appointment.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    {/* Left Section - Time and Customer Info */}
+                    <div className="flex items-start gap-4">
+                      {/* Time Circle */}
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">
+                          {appointment.time}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 text-center">
+                          {endTime}
+                        </div>
+                      </div>
+                      
+                      {/* Customer and Service Details */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{appointment.customer}</h3>
+                          <Badge 
+                            variant={appointment.status === "confirmed" ? "default" : 
+                                   appointment.status === "pending" ? "secondary" : "destructive"}
+                            className="text-xs"
+                          >
+                            {appointment.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                          {/* Service Information */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Service</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-4">{appointment.service}</p>
+                          </div>
+                          
+                          {/* Staff Information */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Staff</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-4">{appointment.staff}</p>
+                          </div>
+                          
+                          {/* Duration */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Duration</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground ml-4">{appointment.duration} minutes</p>
+                          </div>
+                          
+                          {/* Price */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Price</span>
+                            </div>
+                            <p className="text-sm font-semibold text-green-600 ml-4">{formattedPrice}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Additional Info */}
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>📅 {new Date().toLocaleDateString('en-IN', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}</span>
+                          <span>⏰ {startTime} - {endTime}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={appointment.status === "confirmed" ? "default" : "secondary"}>
-                      {appointment.status}
-                    </Badge>
-                    <Button size="sm" variant="outline">Edit</Button>
-                    <Button size="sm" variant="outline" className="text-destructive">Cancel</Button>
+                    
+                    {/* Right Section - Actions */}
+                    <div className="flex flex-col gap-2">
+                      <Button size="sm" variant="outline" className="w-full">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 );
               })}
+              
+              {/* Empty State */}
+              {dayAppointments.length === 0 && (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No appointments today</h3>
+                  <p className="text-muted-foreground mb-4">Schedule appointments to see them here</p>
+                  <Button onClick={handleNewAppointment}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule Appointment
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
