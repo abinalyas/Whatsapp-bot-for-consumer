@@ -28,6 +28,7 @@ export interface ApiBooking {
   paymentReference?: string | null;
   appointmentDate?: string | null;  // ISO string or null
   appointmentTime?: string | null;  // "11:30 AM" format or null
+  scheduled_at?: string | null;     // ISO string from salon API
   notes?: string | null;
   createdAt: string;       // ISO string
   updatedAt: string;       // ISO string
@@ -116,7 +117,17 @@ export function transformApiBookingToUI(apiBooking: ApiBooking): UIBooking {
   let scheduled_at: string | undefined;
   let time: string | undefined;
   
-  if (apiBooking.appointmentDate) {
+  // Check for scheduled_at field (from salon API) or appointmentDate (from other APIs)
+  if (apiBooking.scheduled_at) {
+    scheduled_at = apiBooking.scheduled_at;
+    // Extract time from the scheduled_at datetime
+    const date = new Date(apiBooking.scheduled_at);
+    time = date.toLocaleTimeString('en-IN', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+  } else if (apiBooking.appointmentDate) {
     scheduled_at = apiBooking.appointmentDate;
     // Extract time from appointmentTime if available
     time = apiBooking.appointmentTime || undefined;
