@@ -26,8 +26,12 @@
     "test:api-comprehensive": "node test-comprehensive-api.js",
     "test:schema": "node test-database-schema.js",
     "test:integration": "node test-integration-workflows.js",
+    "test:frontend-backend": "node test-frontend-backend-integration.js",
+    "test:form-completeness": "node test-form-data-completeness.js",
+    "test:quick-actions": "node test-quick-actions-workflows.js",
     "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios",
-    "test:master": "node test-master-suite.js"
+    "test:master": "node test-master-suite.js",
+    "test:salon-dashboard": "npm run test:frontend-backend && npm run test:form-completeness && npm run test:quick-actions"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
