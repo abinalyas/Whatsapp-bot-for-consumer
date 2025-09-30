@@ -3735,19 +3735,25 @@ router2.post("/services", async (req, res) => {
       tags = [],
       images = []
     } = req.body;
+    console.log("\u{1F50D} Service creation request body:", req.body);
+    console.log("\u{1F50D} Extracted fields:", { name, base_price });
     if (!name || name.trim() === "") {
+      console.log("\u274C Service creation validation failed: name is empty or missing");
       return res.status(400).json({
         success: false,
         error: "Service name is required"
       });
     }
     if (!base_price || isNaN(parseFloat(base_price))) {
+      console.log("\u274C Service creation validation failed: base_price is invalid");
       return res.status(400).json({
         success: false,
         error: "Valid base price is required"
       });
     }
+    console.log("\u2705 Service creation validation passed:", { name, base_price });
     const finalDisplayOrder = display_order !== null && display_order !== void 0 ? display_order : 0;
+    const formattedBasePrice = parseFloat(base_price).toFixed(2);
     const result = await pool2.query(`
       INSERT INTO offerings (
         tenant_id, name, description, category, subcategory,
@@ -3761,7 +3767,7 @@ router2.post("/services", async (req, res) => {
       description,
       category,
       subcategory,
-      base_price,
+      formattedBasePrice,
       currency,
       duration_minutes,
       is_active,
@@ -3807,6 +3813,8 @@ router2.put("/services/:id", async (req, res) => {
       tags,
       images
     } = req.body;
+    console.log("\u{1F50D} Service update request body:", req.body);
+    console.log("\u{1F50D} Extracted fields:", { name, base_price, currency, is_active, display_order });
     if (name !== void 0 && (!name || name.trim() === "")) {
       return res.status(400).json({
         success: false,
@@ -3822,6 +3830,8 @@ router2.put("/services/:id", async (req, res) => {
     const formattedImages = Array.isArray(images) ? images : images ? [images] : [];
     const finalDisplayOrder = display_order !== null && display_order !== void 0 ? display_order : 0;
     const finalCurrency = currency || "USD";
+    const finalIsActive = is_active !== void 0 ? is_active : true;
+    const formattedBasePrice = base_price ? parseFloat(base_price).toFixed(2) : null;
     const result = await pool2.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -3836,10 +3846,10 @@ router2.put("/services/:id", async (req, res) => {
       description,
       category,
       subcategory,
-      base_price,
+      formattedBasePrice,
       finalCurrency,
       duration_minutes,
-      is_active,
+      finalIsActive,
       finalDisplayOrder,
       tags,
       JSON.stringify(formattedImages),
@@ -3900,6 +3910,41 @@ router2.delete("/services/:id", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to delete service"
+    });
+  }
+});
+router2.get("/services/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantResult = await pool2.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: "Tenant not found"
+      });
+    }
+    const result = await pool2.query(`
+      SELECT * FROM offerings 
+      WHERE id = $1 AND tenant_id = $2 AND offering_type = 'service'
+    `, [id, tenantId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Service not found"
+      });
+    }
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Error fetching service:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch service"
     });
   }
 });
@@ -4381,6 +4426,7 @@ router3.put("/staff/:id", async (req, res) => {
     const formattedSpecializations = Array.isArray(specializations) ? specializations : [];
     const formattedWorkingHours = typeof working_hours === "object" ? working_hours : {};
     const formattedWorkingDays = Array.isArray(working_days) ? working_days : [];
+    const finalRole = role || "staff";
     const result = await pool3.query(`
       UPDATE staff SET
         name = $2, email = $3, phone = $4, role = $5, specializations = $6,
@@ -4393,7 +4439,7 @@ router3.put("/staff/:id", async (req, res) => {
       name,
       email,
       phone,
-      role,
+      finalRole,
       JSON.stringify(formattedSpecializations),
       JSON.stringify(formattedWorkingHours),
       JSON.stringify(formattedWorkingDays),
