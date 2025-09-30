@@ -11,6 +11,10 @@ const DEFAULT_TENANT_ID = 'bella-salon';
 async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Debug logging
+  console.log(`🔍 API Call: ${options.method || 'GET'} ${url}`);
+  console.log(`🔍 Full URL: ${window.location.origin}${url}`);
+  
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -20,11 +24,17 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
     },
   });
 
+  console.log(`🔍 API Response: ${response.status} ${response.statusText} for ${url}`);
+
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ API Error: ${response.status} ${response.statusText} - ${errorText}`);
     throw new Error(`API call failed: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log(`✅ API Success: ${options.method || 'GET'} ${url}`, data);
+  return data;
 }
 
 // Service Management API

@@ -964,12 +964,13 @@ function ServicesSection() {
       setSaving(true);
       console.log(`Toggling service ${serviceId} from ${currentStatus} to ${!currentStatus}`);
       
-      const response = await fetch(`/api/services/${serviceId}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/salon/services/${serviceId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
         },
-        body: JSON.stringify({ isActive: !currentStatus }),
+        body: JSON.stringify({ is_active: !currentStatus }),
       });
 
       console.log(`Toggle response status: ${response.status}`);
@@ -1009,13 +1010,27 @@ function ServicesSection() {
         
         // Load real services from API
         try {
-          const response = await fetch('/api/services');
+          console.log('🔍 Loading services from API...');
+          console.log('🔍 Current window location:', window.location.href);
+          
+          const response = await fetch('/api/salon/services', {
+            headers: {
+              'x-tenant-id': 'bella-salon'
+            }
+          });
+          console.log('🔍 API Response status:', response.status);
+          console.log('🔍 API Response URL:', response.url);
+          
           if (!response.ok) {
             throw new Error('Failed to load services from API');
           }
           
-          const apiServices: ApiService[] = await response.json();
+          const apiResponse = await response.json();
+          const apiServices: ApiService[] = apiResponse.data || apiResponse;
           console.log('Loaded services from API:', apiServices);
+          console.log('🔍 API Services count:', apiServices.length);
+          console.log('🔍 First service ID:', apiServices[0]?.id);
+          console.log('🔍 First service name:', apiServices[0]?.name);
           
           // Transform API services to UI format using utility
           const transformedServices = transformApiServicesToUI(apiServices);
