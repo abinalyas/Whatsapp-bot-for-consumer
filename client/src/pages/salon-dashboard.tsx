@@ -957,6 +957,7 @@ function ServicesSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formValid, setFormValid] = useState(false);
 
   // Toggle service availability
   const toggleServiceAvailability = async (serviceId: string, currentStatus: boolean) => {
@@ -1465,20 +1466,40 @@ function ServicesSection() {
                 addOns: []
               };
               await handleAddService(serviceData);
-            }} className="space-y-4">
+            }} className="space-y-4" id="service-form" onChange={(e) => {
+              const form = e.target as HTMLFormElement;
+              const formData = new FormData(form);
+              const name = formData.get('name')?.toString().trim();
+              const category = formData.get('category')?.toString();
+              const basePrice = formData.get('base_price')?.toString();
+              const duration = formData.get('duration')?.toString();
+              
+              const isValid = name && name.length > 0 && 
+                            category && category !== '' && 
+                            basePrice && parseFloat(basePrice) > 0 && 
+                            duration && parseInt(duration) > 0;
+              setFormValid(!!isValid);
+            }}>
               <div>
-                <label className="block text-sm font-medium mb-2">Service Name</label>
+                <label className="block text-sm font-medium mb-2">
+                  Service Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   name="name"
                   type="text"
                   placeholder="e.g., Hair Cut"
                   className="w-full p-3 border border-input rounded-md bg-background"
                   required
+                  minLength={1}
+                  maxLength={200}
                 />
+                <p className="text-xs text-gray-500 mt-1">Required field</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
+                <label className="block text-sm font-medium mb-2">
+                  Category <span className="text-red-500">*</span>
+                </label>
                 <select name="category" className="w-full p-3 border border-input rounded-md bg-background" required>
                   <option value="">Select category</option>
                   <option value="hair">Hair</option>
@@ -1486,29 +1507,40 @@ function ServicesSection() {
                   <option value="skincare">Skincare</option>
                   <option value="spa">Spa</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Required field</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Price (₹) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="base_price"
                     type="number"
                     step="0.01"
-                    placeholder="45"
+                    min="0"
+                    max="999999.99"
+                    placeholder="45.00"
                     className="w-full p-3 border border-input rounded-md bg-background"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field (0.01 - 999999.99)</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Duration (mins)</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Duration (minutes) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="duration"
                     type="number"
+                    min="1"
+                    max="1440"
                     placeholder="60"
                     className="w-full p-3 border border-input rounded-md bg-background"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field (1-1440 minutes)</p>
                 </div>
               </div>
               
@@ -1529,11 +1561,17 @@ function ServicesSection() {
                 <Switch name="is_active" defaultChecked />
               </div>
               
+              {!formValid && (
+                <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+                  ⚠️ Please fill in all required fields to enable the save button
+                </div>
+              )}
+              
               <div className="flex justify-end gap-3 mt-6">
                 <Button type="button" variant="outline" onClick={handleCloseModals}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving || !formValid}>
                   {saving ? 'Saving...' : 'Save Service'}
                 </Button>
               </div>
@@ -2073,46 +2111,66 @@ function StaffSection() {
             }} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="name"
                     type="text"
                     placeholder="John Doe"
                     className="w-full p-3 border border-input rounded-md bg-background"
                     required
+                    minLength={1}
+                    maxLength={200}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Role</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Role <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="role"
                     type="text"
                     placeholder="Hair Stylist"
                     className="w-full p-3 border border-input rounded-md bg-background"
                     required
+                    minLength={1}
+                    maxLength={100}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="email"
                     type="email"
                     placeholder="john@bellasalon.com"
                     className="w-full p-3 border border-input rounded-md bg-background"
                     required
+                    maxLength={255}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field (valid email format)</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Phone <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="phone"
                     type="tel"
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+91 98765 43210"
                     className="w-full p-3 border border-input rounded-md bg-background"
+                    required
+                    pattern="[+]?[0-9\s\-\(\)]{10,20}"
+                    maxLength={20}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Required field (10-20 digits)</p>
                 </div>
               </div>
               
