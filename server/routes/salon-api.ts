@@ -71,6 +71,10 @@ router.post('/services', async (req, res) => {
       is_active = true, display_order = 0, tags = [], images = []
     } = req.body;
     
+    // Debug logging
+    console.log('🔍 Service creation request body:', req.body);
+    console.log('🔍 Extracted fields:', { name, base_price });
+    
     // Validate required fields
     if (!name || name.trim() === '') {
       console.log('❌ Service creation validation failed: name is empty or missing');
@@ -142,6 +146,10 @@ router.put('/services/:id', async (req, res) => {
       base_price, currency, duration_minutes, 
       is_active, display_order, tags, images
     } = req.body;
+    
+    // Debug logging
+    console.log('🔍 Service update request body:', req.body);
+    console.log('🔍 Extracted fields:', { name, base_price, currency, is_active, display_order });
     
     // Validate required fields for updates
     if (name !== undefined && (!name || name.trim() === '')) {
