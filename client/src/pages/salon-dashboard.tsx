@@ -6039,8 +6039,8 @@ export default function SalonDashboard() {
   const loadQuickBookData = async () => {
     try {
       const [servicesResponse, staffResponse] = await Promise.all([
-        fetch('/api/salon/services'),
-        fetch('/api/staff/staff')
+        fetch('/api/salon/services', { headers: { 'x-tenant-id': 'bella-salon' } }),
+        fetch('/api/staff/staff', { headers: { 'x-tenant-id': 'bella-salon' } })
       ]);
       
       const servicesData = await servicesResponse.json();
@@ -6144,7 +6144,7 @@ export default function SalonDashboard() {
     setDailySummaryLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const response = await fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       const result = await response.json();
       
       if (result.success) {
@@ -6201,7 +6201,7 @@ export default function SalonDashboard() {
   const loadCheckInData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const response = await fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       const result = await response.json();
       
       if (result.success) {
@@ -6231,7 +6231,7 @@ export default function SalonDashboard() {
     setCheckInLoading(true);
     try {
       // First, get the current appointment data to preserve all fields
-      const appointmentResponse = await fetch(`/api/salon/appointments/${checkInData.appointmentId}`);
+      const appointmentResponse = await fetch(`/api/salon/appointments/${checkInData.appointmentId}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       const appointmentResult = await appointmentResponse.json();
       
       if (!appointmentResult.success || !appointmentResult.data) {
@@ -6288,7 +6288,7 @@ export default function SalonDashboard() {
   const loadPaymentData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/salon/appointments?date=${today}`);
+      const response = await fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       const result = await response.json();
       
       if (result.success) {
@@ -6318,7 +6318,7 @@ export default function SalonDashboard() {
     setPaymentLoading(true);
     try {
       // First, get the current appointment data to preserve all fields
-      const appointmentResponse = await fetch(`/api/salon/appointments/${paymentData.appointmentId}`);
+      const appointmentResponse = await fetch(`/api/salon/appointments/${paymentData.appointmentId}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       const appointmentResult = await appointmentResponse.json();
       
       if (!appointmentResult.success || !appointmentResult.data) {
@@ -6380,14 +6380,14 @@ export default function SalonDashboard() {
       
       let appointmentsResponse;
       if (reminderData.reminderType === 'tomorrow') {
-        appointmentsResponse = await fetch(`/api/salon/appointments?date=${tomorrow}`);
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${tomorrow}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       } else if (reminderData.reminderType === 'today') {
-        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`);
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       } else if (reminderData.reminderType === 'week') {
         // Get appointments for the next 7 days
-        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}&days=7`);
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}&days=7`, { headers: { 'x-tenant-id': 'bella-salon' } });
       } else {
-        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`);
+        appointmentsResponse = await fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } });
       }
       
       const result = await appointmentsResponse.json();
@@ -6463,8 +6463,8 @@ export default function SalonDashboard() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const [staffResponse, appointmentsResponse] = await Promise.all([
-        fetch('/api/staff/staff'),
-        fetch(`/api/salon/appointments?date=${today}`)
+        fetch('/api/staff/staff', { headers: { 'x-tenant-id': 'bella-salon' } }),
+        fetch(`/api/salon/appointments?date=${today}`, { headers: { 'x-tenant-id': 'bella-salon' } })
       ]);
       
       const staffResult = await staffResponse.json();
@@ -6515,8 +6515,8 @@ export default function SalonDashboard() {
   const loadWalkInData = async () => {
     try {
       const [servicesResponse, staffResponse] = await Promise.all([
-        fetch('/api/salon/services'),
-        fetch('/api/staff/staff')
+        fetch('/api/salon/services', { headers: { 'x-tenant-id': 'bella-salon' } }),
+        fetch('/api/staff/staff', { headers: { 'x-tenant-id': 'bella-salon' } })
       ]);
       
       const servicesResult = await servicesResponse.json();
