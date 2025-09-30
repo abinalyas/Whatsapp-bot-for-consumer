@@ -71,6 +71,24 @@ router.post('/services', async (req, res) => {
       is_active = true, display_order = 0, tags = [], images = []
     } = req.body;
     
+    // Validate required fields
+    if (!name || name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Service name is required'
+      });
+    }
+    
+    if (!base_price || isNaN(parseFloat(base_price))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid base price is required'
+      });
+    }
+    
+    // Ensure display_order is not null
+    const finalDisplayOrder = display_order !== null && display_order !== undefined ? display_order : 0;
+    
     const result = await pool.query(`
       INSERT INTO offerings (
         tenant_id, name, description, category, subcategory,
@@ -82,7 +100,7 @@ router.post('/services', async (req, res) => {
       tenantId,
       name, description, category, subcategory,
       base_price, currency, duration_minutes, is_active,
-      display_order, tags, images
+      finalDisplayOrder, tags, images
     ]);
     
     res.json({
@@ -121,8 +139,26 @@ router.put('/services/:id', async (req, res) => {
       is_active, display_order, tags, images
     } = req.body;
     
+    // Validate required fields for updates
+    if (name !== undefined && (!name || name.trim() === '')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Service name cannot be empty'
+      });
+    }
+    
+    if (base_price !== undefined && (!base_price || isNaN(parseFloat(base_price)))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid base price is required'
+      });
+    }
+    
     // Handle images field - ensure it's properly formatted JSON
     const formattedImages = Array.isArray(images) ? images : (images ? [images] : []);
+    
+    // Ensure display_order is not null
+    const finalDisplayOrder = display_order !== null && display_order !== undefined ? display_order : 0;
     
     const result = await pool.query(`
       UPDATE offerings SET
@@ -135,7 +171,7 @@ router.put('/services/:id', async (req, res) => {
     `, [
       id, name, description, category, subcategory,
       base_price, currency, duration_minutes, is_active,
-      display_order, tags, JSON.stringify(formattedImages), tenantId
+      finalDisplayOrder, tags, JSON.stringify(formattedImages), tenantId
     ]);
     
     if (result.rows.length === 0) {

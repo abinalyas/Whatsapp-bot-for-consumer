@@ -1454,10 +1454,14 @@ function ServicesSection() {
               const serviceData = {
                 name: formData.get('name'),
                 category: formData.get('category'),
-                base_price: parseFloat(formData.get('price') || '0'),
+                base_price: parseFloat(formData.get('base_price') || '0'),
+                currency: 'INR', // Default currency for India
                 duration_minutes: parseInt(formData.get('duration') || '60'),
                 description: formData.get('description'),
                 is_active: formData.get('is_active') === 'on',
+                display_order: 0, // Default display order
+                tags: [], // Default empty tags
+                images: [], // Default empty images
                 addOns: []
               };
               await handleAddService(serviceData);
@@ -1488,7 +1492,7 @@ function ServicesSection() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Price (₹)</label>
                   <input
-                    name="price"
+                    name="base_price"
                     type="number"
                     step="0.01"
                     placeholder="45"

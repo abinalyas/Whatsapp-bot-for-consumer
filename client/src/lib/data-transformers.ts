@@ -124,10 +124,16 @@ export function transformUIServiceToAPI(uiService: Partial<UIService>): Partial<
     id: uiService.id,
     name: uiService.name,
     description: uiService.description,
-    price: uiService.base_price,            // base_price -> price
-    isActive: uiService.is_active,          // is_active -> isActive
+    base_price: uiService.base_price,       // Keep base_price as base_price
+    is_active: uiService.is_active,         // Keep is_active as is_active
     icon: uiService.icon,
     category: uiService.category,
+    subcategory: uiService.subcategory,
+    currency: uiService.currency || 'USD',
+    duration_minutes: uiService.duration_minutes,
+    display_order: uiService.display_order || 0,
+    tags: uiService.tags || [],
+    images: uiService.images || []
   };
 }
 

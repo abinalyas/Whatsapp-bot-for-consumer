@@ -3734,6 +3734,19 @@ router2.post("/services", async (req, res) => {
       tags = [],
       images = []
     } = req.body;
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "Service name is required"
+      });
+    }
+    if (!base_price || isNaN(parseFloat(base_price))) {
+      return res.status(400).json({
+        success: false,
+        error: "Valid base price is required"
+      });
+    }
+    const finalDisplayOrder = display_order !== null && display_order !== void 0 ? display_order : 0;
     const result = await pool2.query(`
       INSERT INTO offerings (
         tenant_id, name, description, category, subcategory,
@@ -3751,7 +3764,7 @@ router2.post("/services", async (req, res) => {
       currency,
       duration_minutes,
       is_active,
-      display_order,
+      finalDisplayOrder,
       tags,
       images
     ]);
@@ -3793,7 +3806,20 @@ router2.put("/services/:id", async (req, res) => {
       tags,
       images
     } = req.body;
+    if (name !== void 0 && (!name || name.trim() === "")) {
+      return res.status(400).json({
+        success: false,
+        error: "Service name cannot be empty"
+      });
+    }
+    if (base_price !== void 0 && (!base_price || isNaN(parseFloat(base_price)))) {
+      return res.status(400).json({
+        success: false,
+        error: "Valid base price is required"
+      });
+    }
     const formattedImages = Array.isArray(images) ? images : images ? [images] : [];
+    const finalDisplayOrder = display_order !== null && display_order !== void 0 ? display_order : 0;
     const result = await pool2.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -3812,7 +3838,7 @@ router2.put("/services/:id", async (req, res) => {
       currency,
       duration_minutes,
       is_active,
-      display_order,
+      finalDisplayOrder,
       tags,
       JSON.stringify(formattedImages),
       tenantId
