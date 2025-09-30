@@ -160,6 +160,9 @@ router.put('/services/:id', async (req, res) => {
     // Ensure display_order is not null
     const finalDisplayOrder = display_order !== null && display_order !== undefined ? display_order : 0;
     
+    // Ensure currency is not null - default to USD if not provided
+    const finalCurrency = currency || 'USD';
+    
     const result = await pool.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -170,7 +173,7 @@ router.put('/services/:id', async (req, res) => {
       RETURNING *
     `, [
       id, name, description, category, subcategory,
-      base_price, currency, duration_minutes, is_active,
+      base_price, finalCurrency, duration_minutes, is_active,
       finalDisplayOrder, tags, JSON.stringify(formattedImages), tenantId
     ]);
     

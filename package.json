@@ -36,7 +36,8 @@
     "test:database-constraints": "vitest run tests/database-constraints.test.ts",
     "test:api-integration": "vitest run tests/api-integration.test.ts",
     "test:form-validation": "vitest run tests/form-validation.test.ts",
-    "test:e2e-workflows": "vitest run tests/e2e-workflows.test.ts"
+    "test:e2e-workflows": "vitest run tests/e2e-workflows.test.ts",
+    "test:vercel-environment": "vitest run tests/vercel-environment.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

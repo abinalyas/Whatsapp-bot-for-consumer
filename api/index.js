@@ -3820,6 +3820,7 @@ router2.put("/services/:id", async (req, res) => {
     }
     const formattedImages = Array.isArray(images) ? images : images ? [images] : [];
     const finalDisplayOrder = display_order !== null && display_order !== void 0 ? display_order : 0;
+    const finalCurrency = currency || "USD";
     const result = await pool2.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -3835,7 +3836,7 @@ router2.put("/services/:id", async (req, res) => {
       category,
       subcategory,
       base_price,
-      currency,
+      finalCurrency,
       duration_minutes,
       is_active,
       finalDisplayOrder,
