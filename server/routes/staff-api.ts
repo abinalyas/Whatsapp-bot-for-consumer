@@ -133,6 +133,9 @@ router.put('/staff/:id', async (req, res) => {
     // For now, we'll store it as a separate JSONB field
     const formattedWorkingDays = Array.isArray(working_days) ? working_days : [];
     
+    // Ensure role is not null - default to 'staff' if not provided
+    const finalRole = role || 'staff';
+    
     const result = await pool.query(`
       UPDATE staff SET
         name = $2, email = $3, phone = $4, role = $5, specializations = $6,
@@ -141,7 +144,7 @@ router.put('/staff/:id', async (req, res) => {
       WHERE id = $1 AND tenant_id = $14
       RETURNING *
     `, [
-      id, name, email, phone, role, JSON.stringify(formattedSpecializations), 
+      id, name, email, phone, finalRole, JSON.stringify(formattedSpecializations), 
       JSON.stringify(formattedWorkingHours), JSON.stringify(formattedWorkingDays),
       hourly_rate, commission_rate, is_active, notes, avatar_url, tenantId
     ]);

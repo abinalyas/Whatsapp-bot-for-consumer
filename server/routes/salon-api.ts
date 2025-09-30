@@ -73,6 +73,7 @@ router.post('/services', async (req, res) => {
     
     // Validate required fields
     if (!name || name.trim() === '') {
+      console.log('❌ Service creation validation failed: name is empty or missing');
       return res.status(400).json({
         success: false,
         error: 'Service name is required'
@@ -80,11 +81,14 @@ router.post('/services', async (req, res) => {
     }
     
     if (!base_price || isNaN(parseFloat(base_price))) {
+      console.log('❌ Service creation validation failed: base_price is invalid');
       return res.status(400).json({
         success: false,
         error: 'Valid base price is required'
       });
     }
+    
+    console.log('✅ Service creation validation passed:', { name, base_price });
     
     // Ensure display_order is not null
     const finalDisplayOrder = display_order !== null && display_order !== undefined ? display_order : 0;
@@ -163,6 +167,9 @@ router.put('/services/:id', async (req, res) => {
     // Ensure currency is not null - default to USD if not provided
     const finalCurrency = currency || 'USD';
     
+    // Ensure is_active is not null - default to true if not provided
+    const finalIsActive = is_active !== undefined ? is_active : true;
+    
     const result = await pool.query(`
       UPDATE offerings SET
         name = $2, description = $3, category = $4, subcategory = $5,
@@ -173,7 +180,7 @@ router.put('/services/:id', async (req, res) => {
       RETURNING *
     `, [
       id, name, description, category, subcategory,
-      base_price, finalCurrency, duration_minutes, is_active,
+      base_price, finalCurrency, duration_minutes, finalIsActive,
       finalDisplayOrder, tags, JSON.stringify(formattedImages), tenantId
     ]);
     
@@ -241,6 +248,49 @@ router.delete('/services/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete service'
+    });
+  }
+});
+
+// Get specific service by ID
+router.get('/services/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the correct tenant ID from the database
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [req.headers['x-tenant-id'] || 'bella-salon', 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT * FROM offerings 
+      WHERE id = $1 AND tenant_id = $2 AND offering_type = 'service'
+    `, [id, tenantId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Service not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching service:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch service'
     });
   }
 });
