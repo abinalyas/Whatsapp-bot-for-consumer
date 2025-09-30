@@ -99,20 +99,20 @@ export interface UIBooking {
 /**
  * Transform API service to UI service format
  */
-export function transformApiServiceToUI(apiService: ApiService): UIService {
+export function transformApiServiceToUI(apiService: any): UIService {
   return {
     id: apiService.id,
     name: apiService.name,
     description: apiService.description,
-    base_price: apiService.price,           // price -> base_price
-    is_active: apiService.isActive,         // isActive -> is_active
+    base_price: typeof apiService.base_price === 'string' ? parseFloat(apiService.base_price) : (apiService.base_price || apiService.price || 0),
+    is_active: apiService.is_active !== undefined ? apiService.is_active : (apiService.isActive || true),
     icon: apiService.icon,
     category: apiService.category,
-    duration_minutes: 60,                   // default duration
-    currency: 'INR',                        // default currency for India
-    addOns: [],                             // default empty addOns
-    createdAt: apiService.createdAt,
-    updatedAt: apiService.updatedAt,
+    duration_minutes: apiService.duration_minutes || 60,
+    currency: apiService.currency || 'INR',
+    addOns: apiService.addOns || [],
+    createdAt: apiService.created_at || apiService.createdAt,
+    updatedAt: apiService.updated_at || apiService.updatedAt,
   };
 }
 
@@ -223,8 +223,8 @@ export function isApiService(obj: any): obj is ApiService {
   return obj && 
     typeof obj.id === 'string' &&
     typeof obj.name === 'string' &&
-    typeof obj.price === 'number' &&
-    typeof obj.isActive === 'boolean';
+    (typeof obj.base_price === 'number' || typeof obj.base_price === 'string' || typeof obj.price === 'number') &&
+    (typeof obj.is_active === 'boolean' || typeof obj.isActive === 'boolean');
 }
 
 /**
