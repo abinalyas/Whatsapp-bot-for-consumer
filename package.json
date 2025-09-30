@@ -31,7 +31,12 @@
     "test:quick-actions": "node test-quick-actions-workflows.js",
     "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios",
     "test:master": "node test-master-suite.js",
-    "test:salon-dashboard": "npm run test:frontend-backend && npm run test:form-completeness && npm run test:quick-actions"
+    "test:salon-dashboard": "npm run test:frontend-backend && npm run test:form-completeness && npm run test:quick-actions",
+    "test:comprehensive-suite": "tsx tests/run-comprehensive-tests.ts",
+    "test:database-constraints": "vitest run tests/database-constraints.test.ts",
+    "test:api-integration": "vitest run tests/api-integration.test.ts",
+    "test:form-validation": "vitest run tests/form-validation.test.ts",
+    "test:e2e-workflows": "vitest run tests/e2e-workflows.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
