@@ -1120,11 +1120,23 @@ function ServicesSection() {
         name: formData.get('name'),
         description: formData.get('description'),
         category: formData.get('category'),
+        subcategory: editingService.subcategory || null, // Preserve existing subcategory
         base_price: parseFloat(formData.get('base_price') || '0'),
         currency: 'INR', // Default currency for India
         duration_minutes: parseInt(formData.get('duration_minutes') || '60'),
-        is_active: true,
-        addOns: [] // Default empty addOns array
+        is_active: formData.get('is_active') === 'true', // Read from form
+        display_order: editingService.display_order || 1, // Preserve existing display order
+        tags: editingService.tags || [], // Preserve existing tags
+        images: editingService.images || [], // Preserve existing images
+        offering_type: 'service', // Required field
+        pricing_type: 'fixed', // Required field
+        is_schedulable: editingService.is_schedulable !== undefined ? editingService.is_schedulable : true, // Preserve existing schedulable status
+        pricing_config: editingService.pricing_config || {}, // Preserve existing pricing config
+        availability_config: editingService.availability_config || {}, // Preserve existing availability config
+        has_variants: editingService.has_variants || false, // Preserve existing variants status
+        variants: editingService.variants || [], // Preserve existing variants
+        custom_fields: editingService.custom_fields || {}, // Preserve existing custom fields
+        metadata: editingService.metadata || {} // Preserve existing metadata
       };
       
       await salonApi.services.update(editingService.id, serviceData);
@@ -1142,12 +1154,43 @@ function ServicesSection() {
   const handleSaveService = async (serviceData) => {
     try {
       if (editingService) {
-        // Update existing service
-        await salonApi.services.update(editingService.id, serviceData);
-        setServices(services.map(s => s.id === editingService.id ? { ...s, ...serviceData } : s));
+        // Update existing service - ensure all required fields are included
+        const completeServiceData = {
+          ...serviceData,
+          subcategory: editingService.subcategory || null,
+          display_order: editingService.display_order || 1,
+          tags: editingService.tags || [],
+          images: editingService.images || [],
+          offering_type: 'service',
+          pricing_type: 'fixed',
+          is_schedulable: editingService.is_schedulable !== undefined ? editingService.is_schedulable : true,
+          pricing_config: editingService.pricing_config || {},
+          availability_config: editingService.availability_config || {},
+          has_variants: editingService.has_variants || false,
+          variants: editingService.variants || [],
+          custom_fields: editingService.custom_fields || {},
+          metadata: editingService.metadata || {}
+        };
+        await salonApi.services.update(editingService.id, completeServiceData);
+        setServices(services.map(s => s.id === editingService.id ? { ...s, ...completeServiceData } : s));
       } else {
-        // Create new service
-        const newService = await salonApi.services.create(serviceData);
+        // Create new service - ensure all required fields are included
+        const completeServiceData = {
+          ...serviceData,
+          offering_type: 'service',
+          pricing_type: 'fixed',
+          is_schedulable: true,
+          display_order: 1,
+          tags: [],
+          images: [],
+          pricing_config: {},
+          availability_config: {},
+          has_variants: false,
+          variants: [],
+          custom_fields: {},
+          metadata: {}
+        };
+        const newService = await salonApi.services.create(completeServiceData);
         setServices([...services, newService]);
       }
       setShowAddModal(false);
@@ -1561,7 +1604,11 @@ function ServicesSection() {
                 <div>
                   <div className="font-medium">Service Available</div>
                 </div>
-                <Switch defaultChecked={editingService.is_active} />
+                <Switch 
+                  defaultChecked={editingService.is_active} 
+                  name="is_active"
+                  value={editingService.is_active ? "true" : "false"}
+                />
               </div>
               
               <div className="flex justify-end gap-3 mt-6">
