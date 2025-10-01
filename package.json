@@ -40,6 +40,7 @@
     "test:cancel-appointment": "node tests/cancel-appointment-test.js",
     "test:cancel-appointment-uuid-fix": "node tests/cancel-appointment-uuid-fix-test.js",
     "test:cancel-appointment-modal-ui": "node tests/cancel-appointment-modal-ui-test.js",
+    "test:calendar-add-appointment-fix": "node tests/calendar-add-appointment-fix-test.js",
     "test:quick-actions": "node test-quick-actions-workflows.js",
     "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios",
     "test:master": "node test-master-suite.js",
