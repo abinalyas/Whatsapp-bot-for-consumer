@@ -130,6 +130,7 @@ router.post('/services', async (req, res) => {
 // Update service
 router.put('/services/:id', async (req, res) => {
   try {
+    console.log('🔧 Service Update API v2.1.0 - Dynamic Field Update');
     // Get the correct tenant ID from the database
     const tenantResult = await pool.query(`
       SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
@@ -184,19 +185,100 @@ router.put('/services/:id', async (req, res) => {
     // Convert base_price to proper decimal format for database
     const formattedBasePrice = base_price ? parseFloat(base_price).toFixed(2) : null;
     
+    // Build dynamic UPDATE query based on provided fields
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+    
+    // Add id and tenant_id at the end
+    updateValues.push(id);
+    updateValues.push(tenantId);
+    const idParamIndex = paramIndex++;
+    const tenantParamIndex = paramIndex++;
+    
+    // Only update fields that are provided
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, name);
+      paramIndex++;
+    }
+    
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, description);
+      paramIndex++;
+    }
+    
+    if (category !== undefined) {
+      updateFields.push(`category = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, category);
+      paramIndex++;
+    }
+    
+    if (subcategory !== undefined) {
+      updateFields.push(`subcategory = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, subcategory);
+      paramIndex++;
+    }
+    
+    if (base_price !== undefined) {
+      updateFields.push(`base_price = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, formattedBasePrice);
+      paramIndex++;
+    }
+    
+    if (currency !== undefined) {
+      updateFields.push(`currency = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalCurrency);
+      paramIndex++;
+    }
+    
+    if (duration_minutes !== undefined) {
+      updateFields.push(`duration_minutes = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, duration_minutes);
+      paramIndex++;
+    }
+    
+    if (is_active !== undefined) {
+      updateFields.push(`is_active = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalIsActive);
+      paramIndex++;
+    }
+    
+    if (display_order !== undefined) {
+      updateFields.push(`display_order = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalDisplayOrder);
+      paramIndex++;
+    }
+    
+    if (tags !== undefined) {
+      updateFields.push(`tags = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, tags);
+      paramIndex++;
+    }
+    
+    if (images !== undefined) {
+      updateFields.push(`images = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, JSON.stringify(formattedImages));
+      paramIndex++;
+    }
+    
+    // Always update the updated_at timestamp
+    updateFields.push(`updated_at = NOW()`);
+    
+    if (updateFields.length === 1) { // Only updated_at
+      return res.status(400).json({
+        success: false,
+        error: 'No valid fields provided for update'
+      });
+    }
+    
     const result = await pool.query(`
       UPDATE offerings SET
-        name = $2, description = $3, category = $4, subcategory = $5,
-        base_price = $6, currency = $7, duration_minutes = $8,
-        is_active = $9, display_order = $10, tags = $11, images = $12,
-        updated_at = NOW()
-      WHERE id = $1 AND tenant_id = $13
+        ${updateFields.join(', ')}
+      WHERE id = $${idParamIndex} AND tenant_id = $${tenantParamIndex}
       RETURNING *
-    `, [
-      id, name, description, category, subcategory,
-      formattedBasePrice, finalCurrency, duration_minutes, finalIsActive,
-      finalDisplayOrder, tags, JSON.stringify(formattedImages), tenantId
-    ]);
+    `, updateValues);
     
     if (result.rows.length === 0) {
       return res.status(404).json({

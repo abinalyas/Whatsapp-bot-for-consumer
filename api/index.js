@@ -3788,6 +3788,7 @@ router2.post("/services", async (req, res) => {
 });
 router2.put("/services/:id", async (req, res) => {
   try {
+    console.log("\u{1F527} Service Update API v2.1.0 - Dynamic Field Update");
     const tenantResult = await pool2.query(`
       SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
     `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
@@ -3831,29 +3832,81 @@ router2.put("/services/:id", async (req, res) => {
     const finalCurrency = currency || "USD";
     const finalIsActive = is_active !== void 0 ? is_active : true;
     const formattedBasePrice = base_price ? parseFloat(base_price).toFixed(2) : null;
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+    updateValues.push(id);
+    updateValues.push(tenantId);
+    const idParamIndex = paramIndex++;
+    const tenantParamIndex = paramIndex++;
+    if (name !== void 0) {
+      updateFields.push(`name = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, name);
+      paramIndex++;
+    }
+    if (description !== void 0) {
+      updateFields.push(`description = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, description);
+      paramIndex++;
+    }
+    if (category !== void 0) {
+      updateFields.push(`category = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, category);
+      paramIndex++;
+    }
+    if (subcategory !== void 0) {
+      updateFields.push(`subcategory = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, subcategory);
+      paramIndex++;
+    }
+    if (base_price !== void 0) {
+      updateFields.push(`base_price = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, formattedBasePrice);
+      paramIndex++;
+    }
+    if (currency !== void 0) {
+      updateFields.push(`currency = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalCurrency);
+      paramIndex++;
+    }
+    if (duration_minutes !== void 0) {
+      updateFields.push(`duration_minutes = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, duration_minutes);
+      paramIndex++;
+    }
+    if (is_active !== void 0) {
+      updateFields.push(`is_active = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalIsActive);
+      paramIndex++;
+    }
+    if (display_order !== void 0) {
+      updateFields.push(`display_order = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, finalDisplayOrder);
+      paramIndex++;
+    }
+    if (tags !== void 0) {
+      updateFields.push(`tags = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, tags);
+      paramIndex++;
+    }
+    if (images !== void 0) {
+      updateFields.push(`images = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, JSON.stringify(formattedImages));
+      paramIndex++;
+    }
+    updateFields.push(`updated_at = NOW()`);
+    if (updateFields.length === 1) {
+      return res.status(400).json({
+        success: false,
+        error: "No valid fields provided for update"
+      });
+    }
     const result = await pool2.query(`
       UPDATE offerings SET
-        name = $2, description = $3, category = $4, subcategory = $5,
-        base_price = $6, currency = $7, duration_minutes = $8,
-        is_active = $9, display_order = $10, tags = $11, images = $12,
-        updated_at = NOW()
-      WHERE id = $1 AND tenant_id = $13
+        ${updateFields.join(", ")}
+      WHERE id = $${idParamIndex} AND tenant_id = $${tenantParamIndex}
       RETURNING *
-    `, [
-      id,
-      name,
-      description,
-      category,
-      subcategory,
-      formattedBasePrice,
-      finalCurrency,
-      duration_minutes,
-      finalIsActive,
-      finalDisplayOrder,
-      tags,
-      JSON.stringify(formattedImages),
-      tenantId
-    ]);
+    `, updateValues);
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,

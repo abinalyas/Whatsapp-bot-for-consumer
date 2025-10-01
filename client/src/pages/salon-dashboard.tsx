@@ -5991,6 +5991,9 @@ function SettingsSection() {
 }
 
 export default function SalonDashboard() {
+  // Log version for deployment tracking
+  console.log('🚀 Salon Dashboard v2.1.0 - Service Toggle Fix');
+  
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
