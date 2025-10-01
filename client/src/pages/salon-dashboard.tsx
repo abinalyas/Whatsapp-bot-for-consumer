@@ -7385,11 +7385,20 @@ export default function SalonDashboard() {
         console.log('🔍 MAIN COMPONENT: allAppointments (all dates) length:', allAppointments?.length || 0);
         console.log('🔍 MAIN COMPONENT: loading state:', loading);
         
-        // Pass ALL appointments to CalendarSection (not just today's)
+        // Ensure allAppointments is defined before passing to CalendarSection
+        const appointmentsToPass = allAppointments || [];
+        console.log('🔍 MAIN COMPONENT: appointmentsToPass length:', appointmentsToPass.length);
+        
+        // Create a wrapper function to update allAppointments when CalendarSection calls setAppointments
+        const handleSetAppointments = (newAppointments) => {
+          console.log('🔍 MAIN COMPONENT: CalendarSection updating appointments, new length:', newAppointments?.length || 0);
+          setAllAppointments(newAppointments);
+        };
+        
         return <CalendarSection 
           loadTodaysAppointments={loadTodaysAppointments}
-          appointments={allAppointments || []}
-          setAppointments={setAllAppointments}
+          appointments={appointmentsToPass}
+          setAppointments={handleSetAppointments}
         />;
       case "payments":
         return <PaymentsSection />;
