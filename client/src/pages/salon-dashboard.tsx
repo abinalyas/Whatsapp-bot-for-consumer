@@ -144,13 +144,7 @@ const services = [
 
 // Staff members will be loaded from API dynamically
 
-const todaysStaffSchedule = [
-  { time: "9:00 AM", staff: "Emma Johnson", customer: "Sarah Johnson", service: "Hair Cut" },
-  { time: "10:30 AM", staff: "David Rodriguez", customer: "Mike Chen", service: "Beard Trim" },
-  { time: "12:00 PM", staff: "Anna Thompson", customer: "Lisa Rodriguez", service: "Manicure" },
-  { time: "2:30 PM", staff: "Emma Johnson", customer: "John Smith", service: "Hair Wash" },
-  { time: "4:00 PM", staff: "Sofia Martinez", customer: "Amanda White", service: "Facial" },
-];
+// todaysStaffSchedule is now loaded dynamically from API
 
 const timeSlots = [
   "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
@@ -827,8 +821,8 @@ function OverviewSection({
 
       {/* Edit Appointment Modal */}
       {showEditModal && editingAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Edit Appointment</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -1440,8 +1434,8 @@ function ServicesSection() {
 
       {/* Add Service Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Add New Service</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -1592,8 +1586,8 @@ function ServicesSection() {
 
       {/* Edit Service Modal */}
       {showEditModal && editingService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Edit Service</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -1735,6 +1729,37 @@ function StaffSection() {
   const [showAvailabilityManager, setShowAvailabilityManager] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
   const [showStaffScheduler, setShowStaffScheduler] = useState(false);
+  const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  // Load today's appointments for staff schedule
+  const loadTodaysAppointments = async () => {
+    try {
+      setScheduleLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/salon/appointments?date=${today}`, {
+        headers: { 'x-tenant-id': 'bella-salon' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setTodaysAppointments(result.data || []);
+        } else {
+          console.error('Failed to load appointments:', result.error);
+          setTodaysAppointments([]);
+        }
+      } else {
+        console.error('Failed to load appointments:', response.statusText);
+        setTodaysAppointments([]);
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      setTodaysAppointments([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
 
   // Load staff from API
   useEffect(() => {
@@ -1832,10 +1857,46 @@ function StaffSection() {
     };
 
     loadStaff();
+    loadTodaysAppointments();
   }, []);
 
   const handleShowAddStaff = () => {
     setShowAddModal(true);
+  };
+
+  const handleReassignAppointment = async (appointment) => {
+    try {
+      console.log('Reassigning appointment:', appointment);
+      
+      // For now, show a simple alert. In a real implementation, this would open a modal
+      // to select a new staff member and update the appointment
+      const newStaffId = prompt(`Reassign appointment for ${appointment.customer_name || appointment.customer} to which staff member? (Enter staff ID)`);
+      
+      if (newStaffId) {
+        const response = await fetch(`/api/salon/appointments/${appointment.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': 'bella-salon'
+          },
+          body: JSON.stringify({
+            staff_id: newStaffId
+          })
+        });
+        
+        if (response.ok) {
+          console.log('Appointment reassigned successfully');
+          // Reload today's appointments to show the updated schedule
+          loadTodaysAppointments();
+        } else {
+          console.error('Failed to reassign appointment:', response.statusText);
+          alert('Failed to reassign appointment. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error reassigning appointment:', error);
+      alert('Error reassigning appointment. Please try again.');
+    }
   };
 
   const handleEditStaff = (staffMember) => {
@@ -2072,19 +2133,48 @@ function StaffSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {todaysStaffSchedule.map((appointment, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{appointment.time}</TableCell>
-                  <TableCell>{appointment.staff}</TableCell>
-                  <TableCell>{appointment.customer}</TableCell>
-                  <TableCell>{appointment.service}</TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline">
-                      Reassign
-                    </Button>
+              {scheduleLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      Loading today's schedule...
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : todaysAppointments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    No appointments scheduled for today
+                  </TableCell>
+                </TableRow>
+              ) : (
+                todaysAppointments.map((appointment, index) => (
+                  <TableRow key={appointment.id || index}>
+                    <TableCell className="font-medium">
+                      {appointment.time || appointment.scheduled_time || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {appointment.staff_name || appointment.staff || 'Unassigned'}
+                    </TableCell>
+                    <TableCell>
+                      {appointment.customer_name || appointment.customer || appointment.phone || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {appointment.service_name || appointment.service || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleReassignAppointment(appointment)}
+                      >
+                        Reassign
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -2092,8 +2182,8 @@ function StaffSection() {
 
       {/* Add Staff Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Add New Staff Member</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -2258,8 +2348,8 @@ function StaffSection() {
 
       {/* Edit Staff Modal */}
       {showEditModal && editingStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Edit Staff Member</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -3934,8 +4024,8 @@ function CalendarSection() {
 
       {/* New Appointment Modal */}
       {showNewAppointmentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Add New Appointment</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModal}>
@@ -4073,8 +4163,8 @@ function CalendarSection() {
 
       {/* Edit Appointment Modal */}
       {showEditAppointmentModal && editingAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
                 <Edit className="h-5 w-5 text-primary" />
@@ -4887,8 +4977,8 @@ function CustomersSection() {
 
       {/* Add Customer Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Add New Customer</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -4960,8 +5050,8 @@ function CustomersSection() {
 
       {/* Edit Customer Modal */}
       {showEditModal && editingCustomer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Edit Customer</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -5034,8 +5124,8 @@ function CustomersSection() {
 
       {/* Send Birthday Wishes Modal */}
       {showWishesModal && birthdayCustomer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold flex items-center gap-2">
                 <Gift className="h-5 w-5" />
@@ -5264,8 +5354,8 @@ function PromotionsSection() {
 
       {/* Create Campaign Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Create New Campaign</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -5374,8 +5464,8 @@ function PromotionsSection() {
 
       {/* Edit Campaign Modal */}
       {showEditModal && editingCampaign && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold">Edit Campaign</h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
@@ -5491,8 +5581,8 @@ function PromotionsSection() {
 
       {/* Send Campaign Modal */}
       {showSendModal && sendingCampaign && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold flex items-center gap-2">
                 <Send className="h-5 w-5 text-blue-500" />
@@ -7077,8 +7167,8 @@ export default function SalonDashboard() {
       
       {/* Edit Appointment Modal */}
       {showEditAppointmentModal && editingAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
                 <Edit className="h-5 w-5 text-primary" />
@@ -7238,8 +7328,8 @@ export default function SalonDashboard() {
       
       {/* Quick Book Modal */}
       {showQuickBookModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
                 <Plus className="h-5 w-5 text-primary" />
