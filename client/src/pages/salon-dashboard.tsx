@@ -2649,7 +2649,7 @@ function StaffSection({
   );
 }
 
-function CalendarSection({ loadTodaysAppointments }) {
+function CalendarSection({ loadTodaysAppointments, appointments, setAppointments }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -2686,113 +2686,29 @@ function CalendarSection({ loadTodaysAppointments }) {
   });
   const [cancelReason, setCancelReason] = useState("");
   const [sendNotification, setSendNotification] = useState(true);
-  const [appointments, setAppointments] = useState<any[]>([]);
   const [services, setServices] = useState<UIService[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load data from API
+  // Load services and staff data only (appointments come from main component)
   useEffect(() => {
-    const loadData = async () => {
+    const loadServicesAndStaff = async () => {
       try {
-        console.log('🚀 STARTING DATA LOADING...');
         setLoading(true);
-        const [appointmentsData, servicesData, staffData] = await Promise.all([
-          salonApi.appointments.getAll(),
+        const [servicesData, staffData] = await Promise.all([
           salonApi.services.getAll(),
           staffApi.getAll()
         ]);
-        console.log('📊 RAW API DATA LOADED:');
-        console.log('📊 Appointments:', appointmentsData);
-        console.log('📊 Services:', servicesData);
-        console.log('📊 Staff:', staffData);
-        // Transform API bookings to UI format using utility
-        const transformedBookings = transformApiBookingsToUI(appointmentsData);
         
-        // Set services and staff first
         setServices(servicesData);
         setStaff(staffData);
-        
-        // Enhance appointments with calendar display properties
-        const enhancedAppointments = transformedBookings.map(apt => {
-          const appointmentDateTime = new Date(apt.scheduled_at || '');
-          // Format time to match timeSlots format (e.g., "9:00 AM")
-          const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-IN', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-          });
-          
-          return {
-            ...apt,
-            // Calendar display properties - use the transformed data
-            customer: apt.customer_name,
-            service: apt.service_name || apt.service || 'Service', // Use service_name from API
-            staff: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned', // Use actual staff or default
-            duration: apt.duration_minutes || apt.duration || 60,
-            time: timeString,
-            status: apt.payment_status || apt.status || 'confirmed',
-            amount: parseFloat(apt.amount || 0),
-            // Additional properties for calendar display
-            customer_name: apt.customer_name,
-            service_name: apt.service_name || 'Service', // Use service_name from API
-            staff_name: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
-            duration_minutes: apt.duration_minutes || apt.duration || 60,
-            phone: apt.customer_phone,
-            email: apt.customer_email
-          };
-        });
-        
-        console.log('🔧 ENHANCEMENT COMPLETE:');
-        console.log('🔧 Original appointments data:', appointmentsData);
-        console.log('🔧 Enhanced appointments:', enhancedAppointments);
-        console.log('🔧 Sample enhanced appointment:', enhancedAppointments[0]);
-        console.log('🔧 Setting appointments state with:', enhancedAppointments.length, 'appointments');
-        
-        setAppointments(enhancedAppointments);
         setError(null);
       } catch (err) {
-        console.error('Error loading calendar data:', err);
-        setError('Failed to load calendar data');
-        // Fallback to mock data with calendar display properties
-        const mockAppointments = [
-          { 
-            id: 1, 
-            customer_name: "Priya Sharma", 
-            service_name: "Hair Cut & Color", 
-            staff_name: "Priya Sharma", 
-            scheduled_at: new Date().toISOString(), 
-            duration_minutes: 120, 
-            amount: 180, 
-            payment_status: "paid",
-            // Calendar display properties
-            customer: "Sarah Johnson",
-            service: "Hair Cut & Color",
-            staff: "Emma",
-            duration: 120,
-            time: new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
-            status: 'confirmed'
-          },
-          { 
-            id: 2, 
-            customer_name: "Rajesh Kumar", 
-            service_name: "Beard Trim", 
-            staff_name: "Rajesh Kumar", 
-            scheduled_at: new Date().toISOString(), 
-            duration_minutes: 30, 
-            amount: 35, 
-            payment_status: "paid",
-            // Calendar display properties
-            customer: "Mike Chen",
-            service: "Beard Trim",
-            staff: "David",
-            duration: 30,
-            time: new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }),
-            status: 'confirmed'
-          }
-        ];
-        setAppointments(mockAppointments);
+        console.error('Error loading services and staff:', err);
+        setError('Failed to load services and staff data');
+        
+        // Fallback to mock data
         setServices([
           { id: 1, name: "Hair Cut & Style", category: "Hair", base_price: 45 },
           { id: 2, name: "Hair Color", category: "Hair", base_price: 80 },
@@ -2808,7 +2724,7 @@ function CalendarSection({ loadTodaysAppointments }) {
       }
     };
 
-    loadData();
+    loadServicesAndStaff();
   }, []);
 
   const timeSlots = [
@@ -7398,6 +7314,8 @@ export default function SalonDashboard() {
       case "calendar":
         return <CalendarSection 
           loadTodaysAppointments={loadTodaysAppointments}
+          appointments={appointments}
+          setAppointments={setAppointments}
         />;
       case "payments":
         return <PaymentsSection />;
