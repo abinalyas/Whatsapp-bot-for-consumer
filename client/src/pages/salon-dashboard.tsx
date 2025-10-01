@@ -471,7 +471,6 @@ function OverviewSection({
   onOpenDailySummary
 }) {
   console.log('🚀 MAIN COMPONENT: SalonDashboard component mounted/rendered');
-  console.log('🚀 MAIN COMPONENT: Current section:', currentSection);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
