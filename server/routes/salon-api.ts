@@ -764,21 +764,41 @@ router.put('/appointments/:id', async (req, res) => {
 // Delete appointment
 router.delete('/appointments/:id', async (req, res) => {
   try {
+    console.log('🗑️ Delete Appointment API - Starting deletion');
     const { id } = req.params;
+    
+    // Get the correct tenant ID from the database
+    const requestedTenant = req.headers['x-tenant-id'];
+    const tenantResult = await pool.query(`
+      SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
+    `, [requestedTenant || 'bella-salon', requestedTenant || 'Bella Salon']);
+    
+    const tenantId = tenantResult.rows[0]?.id;
+    if (!tenantId) {
+      console.log('Tenant not found for delete appointment:', requestedTenant || 'bella-salon');
+      return res.status(404).json({
+        success: false,
+        error: 'Tenant not found'
+      });
+    }
+    
+    console.log('🗑️ Deleting appointment:', id, 'for tenant:', tenantId);
     
     const result = await pool.query(`
       DELETE FROM transactions 
       WHERE id = $1 AND tenant_id = $2
       RETURNING id
-    `, [id, req.headers['x-tenant-id'] || 'default-tenant-id']);
+    `, [id, tenantId]);
     
     if (result.rows.length === 0) {
+      console.log('🗑️ Appointment not found:', id);
       return res.status(404).json({
         success: false,
         error: 'Appointment not found'
       });
     }
     
+    console.log('🗑️ Appointment deleted successfully:', id);
     res.json({
       success: true,
       message: 'Appointment deleted successfully'
