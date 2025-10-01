@@ -3441,7 +3441,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                               {appointment.customer || appointment.customer_name || 'N/A'}
                             </div>
                             <div className="text-sm text-gray-600">
-                              {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff || 'Unassigned'}
+                              {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff_name || appointment.staff || 'Unassigned'}
                             </div>
                             <div className="text-sm text-gray-500">
                               {appointment.duration || appointment.duration_minutes || 60} min • {new Intl.NumberFormat('en-IN', {
@@ -3489,7 +3489,7 @@ function CalendarSection({ loadTodaysAppointments }) {
             <CardContent>
               <div className="space-y-6">
                 {staffMembers.map((staff, index) => {
-                  const staffAppointments = dayAppointments.filter(apt => apt.staff === staff);
+                  const staffAppointments = dayAppointments.filter(apt => apt.staff_name === staff);
                   
                   // Create hourly timeline (9 AM to 7 PM)
                   const hours = Array.from({ length: 11 }, (_, i) => i + 9); // 9 to 19 (9 AM to 7 PM)
@@ -3553,7 +3553,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                             return (
                               <div
                                 key={aptIndex}
-                                className={`absolute h-6 rounded text-white text-xs flex items-center px-2 font-medium ${getBlockColor(appointment.service, appointment.status)}`}
+                                className={`absolute h-6 rounded text-white text-xs flex items-center px-2 font-medium ${getBlockColor(appointment.service_name || appointment.service, appointment.status)}`}
                                 style={{
                                   left: `${(position / 11) * 100}%`,
                                   width: `${(width / 11) * 100}%`,
@@ -3561,7 +3561,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                                 }}
                               >
                                 <span className="truncate">
-                                  {appointment.customer?.split(' ')[0] || 'Customer'}
+                                  {(appointment.customer_name || appointment.customer)?.split(' ')[0] || 'Customer'}
                                 </span>
                     </div>
                   );
@@ -3642,7 +3642,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                     {/* Left Section - Customer Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-3">
-                        <h3 className="font-semibold text-lg">{appointment.customer}</h3>
+                        <h3 className="font-semibold text-lg">{appointment.customer_name || appointment.customer}</h3>
                         <Badge 
                           variant={appointment.status === "confirmed" ? "default" : 
                                  appointment.status === "pending" ? "secondary" : "destructive"}
@@ -3659,7 +3659,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <div>
                             <p className="text-xs text-muted-foreground">Service</p>
-                            <p className="text-sm font-medium">{appointment.service}</p>
+                            <p className="text-sm font-medium">{appointment.service_name || appointment.service}</p>
                       </div>
                     </div>
                         
@@ -3668,7 +3668,7 @@ function CalendarSection({ loadTodaysAppointments }) {
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           <div>
                             <p className="text-xs text-muted-foreground">Staff</p>
-                            <p className="text-sm font-medium">{appointment.staff}</p>
+                            <p className="text-sm font-medium">{appointment.staff_name || appointment.staff}</p>
                   </div>
                         </div>
                         
