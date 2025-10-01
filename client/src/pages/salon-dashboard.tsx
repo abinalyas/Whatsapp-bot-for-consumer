@@ -573,8 +573,10 @@ function OverviewSection({
         });
         
         console.log('🔍 MAIN COMPONENT: Setting appointments state with', transformedTodayAppointments.length, 'appointments');
+        console.log('🔍 MAIN COMPONENT: Transformed appointments data:', transformedTodayAppointments);
         setAppointments(transformedTodayAppointments);
         setAllAppointments(transformedAllAppointments);
+        console.log('🔍 MAIN COMPONENT: Appointments state set successfully');
         
         // Calculate real stats from data
         const todayRevenue = calculateRevenueFromAppointments(transformedAllAppointments, 'today');
@@ -2715,6 +2717,8 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
   console.log('🗓️ CALENDAR SECTION RENDERED');
   console.log('📅 CALENDAR SECTION: Received props - appointments length:', appointments?.length || 0);
   console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
+  console.log('📅 CALENDAR SECTION: loadTodaysAppointments function:', typeof loadTodaysAppointments);
+  console.log('📅 CALENDAR SECTION: setAppointments function:', typeof setAppointments);
   
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -7377,6 +7381,9 @@ export default function SalonDashboard() {
           loadTodaysAppointments={loadTodaysAppointments}
         />;
       case "calendar":
+        console.log('🔍 MAIN COMPONENT: Rendering CalendarSection with props:');
+        console.log('🔍 MAIN COMPONENT: appointments length:', appointments?.length || 0);
+        console.log('🔍 MAIN COMPONENT: appointments data:', appointments);
         return <CalendarSection 
           loadTodaysAppointments={loadTodaysAppointments}
           appointments={appointments}
