@@ -1935,8 +1935,7 @@ function StaffSection() {
           'x-tenant-id': 'bella-salon'
         },
         body: JSON.stringify({
-          staff_id: selectedStaffId,
-          notify_customer: notifyCustomer
+          staff_id: selectedStaffId
         })
       });
 
@@ -6247,7 +6246,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.3 - Reassign Appointment Modal');
+      console.log('🚀 Salon Dashboard v2.2.4 - Reassign API Fix');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

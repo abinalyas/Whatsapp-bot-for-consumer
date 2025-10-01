@@ -4203,20 +4203,10 @@ router2.get("/appointments/:id", async (req, res) => {
 });
 router2.put("/appointments/:id", async (req, res) => {
   try {
+    console.log("\u{1F527} Appointment Update API v2.2.3 - Dynamic Field Update");
     const { id } = req.params;
-    const {
-      customer_name,
-      customer_phone,
-      customer_email,
-      service_id,
-      staff_id,
-      scheduled_at,
-      duration_minutes,
-      amount,
-      currency,
-      notes,
-      payment_status
-    } = req.body;
+    const updateData = req.body;
+    console.log("\u{1F50D} Update request body:", updateData);
     const tenantResult = await pool2.query(`
       SELECT id FROM tenants WHERE domain = $1 OR business_name = $2
     `, [req.headers["x-tenant-id"] || "bella-salon", "Bella Salon"]);
@@ -4227,44 +4217,103 @@ router2.put("/appointments/:id", async (req, res) => {
         error: "Tenant not found"
       });
     }
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+    updateValues.push(id);
+    updateValues.push(tenantId);
+    const idParamIndex = paramIndex++;
+    const tenantParamIndex = paramIndex++;
+    if (updateData.customer_name !== void 0) {
+      updateFields.push(`customer_name = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.customer_name);
+      paramIndex++;
+    }
+    if (updateData.customer_phone !== void 0) {
+      updateFields.push(`customer_phone = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.customer_phone);
+      paramIndex++;
+    }
+    if (updateData.customer_email !== void 0) {
+      updateFields.push(`customer_email = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.customer_email);
+      paramIndex++;
+    }
+    if (updateData.service_id !== void 0) {
+      updateFields.push(`offering_id = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.service_id);
+      paramIndex++;
+    }
+    if (updateData.staff_id !== void 0) {
+      updateFields.push(`staff_id = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.staff_id);
+      paramIndex++;
+    }
+    if (updateData.scheduled_at !== void 0) {
+      updateFields.push(`scheduled_at = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.scheduled_at);
+      paramIndex++;
+    }
+    if (updateData.duration_minutes !== void 0) {
+      updateFields.push(`duration_minutes = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.duration_minutes);
+      paramIndex++;
+    }
+    if (updateData.amount !== void 0) {
+      updateFields.push(`amount = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.amount);
+      paramIndex++;
+    }
+    if (updateData.currency !== void 0) {
+      updateFields.push(`currency = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.currency);
+      paramIndex++;
+    }
+    if (updateData.notes !== void 0) {
+      updateFields.push(`notes = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.notes);
+      paramIndex++;
+    }
+    if (updateData.payment_status !== void 0) {
+      updateFields.push(`payment_status = $${paramIndex}`);
+      updateValues.splice(paramIndex - 1, 0, updateData.payment_status);
+      paramIndex++;
+    }
+    updateFields.push(`updated_at = NOW()`);
+    if (updateFields.length === 1) {
+      return res.status(400).json({
+        success: false,
+        error: "No valid fields provided for update"
+      });
+    }
+    console.log("\u{1F50D} Update fields:", updateFields);
+    console.log("\u{1F50D} Update values:", updateValues);
     const result = await pool2.query(`
       UPDATE transactions SET
-        customer_name = $2, customer_phone = $3, customer_email = $4,
-        offering_id = $5, staff_id = $6, scheduled_at = $7, duration_minutes = $8,
-        amount = $9, currency = $10, notes = $11, payment_status = $12,
-        updated_at = NOW()
-      WHERE id = $1 AND tenant_id = $13
+        ${updateFields.join(", ")}
+      WHERE id = $${idParamIndex} AND tenant_id = $${tenantParamIndex}
       RETURNING *
-    `, [
-      id,
-      customer_name,
-      customer_phone,
-      customer_email,
-      service_id,
-      staff_id,
-      scheduled_at,
-      duration_minutes,
-      amount,
-      currency,
-      notes,
-      payment_status,
-      tenantId
-    ]);
+    `, updateValues);
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: "Appointment not found"
       });
     }
+    console.log("\u2705 Appointment updated successfully:", result.rows[0].id);
     res.json({
       success: true,
       data: result.rows[0]
     });
   } catch (error) {
     console.error("Error updating appointment:", error);
+    console.error("Error details:", error.message);
+    console.error("Request body:", req.body);
+    console.error("Appointment ID:", req.params.id);
     res.status(500).json({
       success: false,
-      error: "Failed to update appointment"
+      error: "Failed to update appointment",
+      details: error.message
     });
   }
 });
