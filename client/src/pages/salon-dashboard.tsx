@@ -1737,20 +1737,59 @@ function StaffSection() {
     try {
       setScheduleLoading(true);
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/salon/appointments?date=${today}`, {
-        headers: { 'x-tenant-id': 'bella-salon' }
-      });
       
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setTodaysAppointments(result.data || []);
+      // Load both appointments and staff data
+      const [appointmentsResponse, staffResponse] = await Promise.all([
+        fetch(`/api/salon/appointments?date=${today}`, {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/staff/staff', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        })
+      ]);
+      
+      if (appointmentsResponse.ok && staffResponse.ok) {
+        const appointmentsResult = await appointmentsResponse.json();
+        const staffResult = await staffResponse.json();
+        
+        if (appointmentsResult.success && staffResult.success) {
+          const appointments = appointmentsResult.data || [];
+          const staffMembers = staffResult.data || [];
+          
+          // Create a staff lookup map
+          const staffMap = new Map();
+          staffMembers.forEach(staff => {
+            staffMap.set(staff.id, staff.name);
+          });
+          
+          // Map appointments with staff names and formatted time
+          const mappedAppointments = appointments.map(appointment => {
+            // Extract time from scheduled_at (format: "2025-10-01T17:31:00.000Z")
+            let timeFormatted = 'N/A';
+            if (appointment.scheduled_at) {
+              const date = new Date(appointment.scheduled_at);
+              timeFormatted = date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+            }
+            
+            return {
+              ...appointment,
+              staff_name: staffMap.get(appointment.staff_id) || 'Unassigned',
+              time: timeFormatted
+            };
+          });
+          
+          console.log('📅 Mapped appointments for staff schedule:', mappedAppointments);
+          setTodaysAppointments(mappedAppointments);
         } else {
-          console.error('Failed to load appointments:', result.error);
+          console.error('Failed to load data:', appointmentsResult.error || staffResult.error);
           setTodaysAppointments([]);
         }
       } else {
-        console.error('Failed to load appointments:', response.statusText);
+        console.error('Failed to load appointments or staff:', appointmentsResponse.statusText, staffResponse.statusText);
         setTodaysAppointments([]);
       }
     } catch (error) {
@@ -2152,16 +2191,16 @@ function StaffSection() {
                 todaysAppointments.map((appointment, index) => (
                   <TableRow key={appointment.id || index}>
                     <TableCell className="font-medium">
-                      {appointment.time || appointment.scheduled_time || 'N/A'}
+                      {appointment.time || 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {appointment.staff_name || appointment.staff || 'Unassigned'}
+                      {appointment.staff_name || 'Unassigned'}
                     </TableCell>
                     <TableCell>
-                      {appointment.customer_name || appointment.customer || appointment.phone || 'N/A'}
+                      {appointment.customer_name || appointment.customer_phone || 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {appointment.service_name || appointment.service || 'N/A'}
+                      {appointment.service_name || 'N/A'}
                     </TableCell>
                     <TableCell>
                       <Button 
@@ -6092,7 +6131,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.1 - Modal & Schedule Fixes');
+      console.log('🚀 Salon Dashboard v2.2.2 - Staff Schedule Data Mapping Fix');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
