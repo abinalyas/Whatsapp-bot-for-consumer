@@ -3152,6 +3152,9 @@ function CalendarSection() {
       
       setAppointments(enhancedAppointments);
       
+      // Reload today's appointments for staff schedule
+      loadTodaysAppointments();
+      
       // Close modal
       handleCloseEditModal();
       
@@ -3255,6 +3258,9 @@ function CalendarSection() {
       };
       setAppointments(prev => [...prev, newAppointmentData]);
       
+      // Reload today's appointments for staff schedule
+      loadTodaysAppointments();
+      
       // Close modal and reset form
       handleCloseModal();
       
@@ -3300,6 +3306,10 @@ function CalendarSection() {
         status: 'confirmed'
       };
       setAppointments(prev => [...prev, newApt]);
+      
+      // Reload today's appointments for staff schedule
+      loadTodaysAppointments();
+      
       handleCloseModal();
     } finally {
       setLoading(false);
@@ -6246,7 +6256,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.4 - Reassign API Fix');
+      console.log('🚀 Salon Dashboard v2.2.5 - Auto-Refresh Fix');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -7220,6 +7230,9 @@ export default function SalonDashboard() {
       });
       
       setAppointments(enhancedAppointments);
+      
+      // Reload today's appointments for staff schedule
+      loadTodaysAppointments();
       
       // Close modal
       handleCloseEditModal();
