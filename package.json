@@ -38,6 +38,7 @@
     "test:data-flow-verification": "node tests/data-flow-verification-test.js",
     "test:edit-appointment-fix": "node tests/edit-appointment-fix-test.js",
     "test:cancel-appointment": "node tests/cancel-appointment-test.js",
+    "test:cancel-appointment-uuid-fix": "node tests/cancel-appointment-uuid-fix-test.js",
     "test:quick-actions": "node test-quick-actions-workflows.js",
     "test:all": "npm run test:deployed && npm run test:comprehensive && npm run test:scenarios",
     "test:master": "node test-master-suite.js",
