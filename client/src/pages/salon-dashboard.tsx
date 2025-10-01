@@ -2923,28 +2923,47 @@ function CalendarSection() {
       console.error('Error loading data for edit modal:', error);
     }
 
-    // Helper function to convert time to 24-hour format for HTML time input
-    const convertTo24HourFormat = (timeString) => {
-      if (!timeString) return "";
-      
-      // If already in 24-hour format (HH:mm), return as is
-      if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM')) {
-        return timeString;
-      }
-      
-      // Convert 12-hour format to 24-hour format
-      const [time, period] = timeString.split(' ');
-      const [hours, minutes] = time.split(':');
-      let hour24 = parseInt(hours);
-      
-      if (period === 'PM' && hour24 !== 12) {
-        hour24 += 12;
-      } else if (period === 'AM' && hour24 === 12) {
-        hour24 = 0;
-      }
-      
-      return `${hour24.toString().padStart(2, '0')}:${minutes}`;
-    };
+  // Helper function to convert time to 24-hour format for HTML time input
+  const convertTo24HourFormat = (timeString) => {
+    if (!timeString) return "";
+    
+    console.log('🔄 Converting time to 24-hour format:', timeString);
+    
+    // If already in 24-hour format (HH:mm), return as is
+    if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM')) {
+      console.log('✅ Already in 24-hour format:', timeString);
+      return timeString;
+    }
+    
+    // Convert 12-hour format to 24-hour format
+    const [time, period] = timeString.split(' ');
+    if (!time || !period) {
+      console.warn('⚠️ Invalid time format:', timeString);
+      return "10:00"; // Default fallback
+    }
+    
+    const [hours, minutes] = time.split(':');
+    if (!hours || !minutes) {
+      console.warn('⚠️ Invalid time components:', timeString);
+      return "10:00"; // Default fallback
+    }
+    
+    let hour24 = parseInt(hours);
+    if (isNaN(hour24)) {
+      console.warn('⚠️ Invalid hour:', hours);
+      return "10:00"; // Default fallback
+    }
+    
+    if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    
+    const result = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+    console.log('✅ Converted to 24-hour format:', result);
+    return result;
+  };
 
     // Use the existing time field from appointment data (already in correct format)
     let timeValue = appointment.time || "";
@@ -6256,7 +6275,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.5 - Auto-Refresh Fix');
+      console.log('🚀 Salon Dashboard v2.2.6 - Edit Modal Time Fix');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -7038,9 +7057,12 @@ export default function SalonDashboard() {
         console.log('🕐 Initial time extraction:', {
           appointmentTime: appointment.time,
           scheduled_at: appointment.scheduled_at,
+          appointmentTime_field: appointment.appointmentTime,
+          appointment_time_field: appointment.appointment_time,
           timeValue
         });
         
+        // First, try to extract from scheduled_at (most reliable)
         if (!timeValue && appointment.scheduled_at) {
           try {
             const date = new Date(appointment.scheduled_at);
@@ -7071,6 +7093,12 @@ export default function SalonDashboard() {
           }
         }
         
+        // Final fallback - if still no time, use a reasonable default
+        if (!timeValue) {
+          timeValue = "10:00";
+          console.log('🕐 Using default time:', timeValue);
+        }
+        
         // Find staff ID (this should already be correct)
         let staffId = appointment.staff_id || "";
         console.log('🔍 Staff ID from appointment:', staffId);
@@ -7087,6 +7115,12 @@ export default function SalonDashboard() {
           status: appointment.payment_status || appointment.status || "confirmed",
           notes: appointment.notes || ""
         };
+        
+        console.log('🔍 Final edit data being set:', {
+          originalAppointment: appointment,
+          extractedTime: timeValue,
+          finalEditData: editData
+        });
         
         console.log('🔍 Setting edit appointment data:', editData);
         setEditAppointment(editData);
