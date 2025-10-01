@@ -470,6 +470,8 @@ function OverviewSection({
   onOpenWalkIn,
   onOpenDailySummary
 }) {
+  console.log('🚀 MAIN COMPONENT: SalonDashboard component mounted/rendered');
+  console.log('🚀 MAIN COMPONENT: Current section:', currentSection);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
@@ -484,6 +486,7 @@ function OverviewSection({
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('🚀 MAIN COMPONENT: Starting data loading...');
         setLoading(true);
         
         // Get all appointments for revenue calculation (not just today's)
@@ -496,9 +499,19 @@ function OverviewSection({
         ]);
         
         // Transform appointments data to include staff names and calendar fields
-        const transformedTodayAppointments = todayAppointmentsData.map(apt => {
+        console.log('🔍 DEBUG: Starting appointment transformation');
+        console.log('🔍 DEBUG: todayAppointmentsData:', todayAppointmentsData);
+        console.log('🔍 DEBUG: staffData:', staffData);
+        console.log('🔍 DEBUG: servicesData:', servicesData);
+        
+        const transformedTodayAppointments = todayAppointmentsData.map((apt, index) => {
+          console.log(`🔍 DEBUG: Processing appointment ${index}:`, apt);
+          
           const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
           const service = servicesData.find(s => s.id === apt.service_id);
+          
+          console.log(`🔍 DEBUG: Appointment ${index} - staffName:`, staffName);
+          console.log(`🔍 DEBUG: Appointment ${index} - service:`, service);
           
           // Calculate time for calendar display
           const appointmentDateTime = new Date(apt.scheduled_at || '');
@@ -508,7 +521,9 @@ function OverviewSection({
             hour12: true 
           });
           
-          return {
+          console.log(`🔍 DEBUG: Appointment ${index} - timeString:`, timeString);
+          
+          const transformedApt = {
             ...apt,
             staff_name: staffName,
             service_name: service?.name || apt.service_name || 'Unknown Service',
@@ -522,7 +537,12 @@ function OverviewSection({
             service: service?.name || apt.service_name || 'Unknown Service',
             staff: staffName
           };
+          
+          console.log(`🔍 DEBUG: Appointment ${index} - transformed:`, transformedApt);
+          return transformedApt;
         });
+        
+        console.log('🔍 DEBUG: All transformed appointments:', transformedTodayAppointments);
         
         const transformedAllAppointments = allAppointmentsData.map(apt => {
           const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
@@ -552,6 +572,7 @@ function OverviewSection({
           };
         });
         
+        console.log('🔍 MAIN COMPONENT: Setting appointments state with', transformedTodayAppointments.length, 'appointments');
         setAppointments(transformedTodayAppointments);
         setAllAppointments(transformedAllAppointments);
         
@@ -2692,6 +2713,9 @@ function StaffSection({
 
 function CalendarSection({ loadTodaysAppointments, appointments, setAppointments }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
+  console.log('📅 CALENDAR SECTION: Received props - appointments length:', appointments?.length || 0);
+  console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
+  
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState({

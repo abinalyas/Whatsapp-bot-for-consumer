@@ -20,6 +20,8 @@ async function testCalendarDataConsistency() {
         console.error('❌ Browser Error:', msg.text());
       } else if (msg.text().includes('🚀') || msg.text().includes('📅') || msg.text().includes('🔍')) {
         console.log('📱 Browser Log:', msg.text());
+      } else if (msg.text().includes('MAIN COMPONENT')) {
+        console.log('📱 Browser Log:', msg.text());
       }
     });
 
