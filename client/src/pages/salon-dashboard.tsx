@@ -1467,7 +1467,7 @@ function ServicesSection() {
               };
               await handleAddService(serviceData);
             }} className="space-y-4" id="service-form" onChange={(e) => {
-              const form = e.target as HTMLFormElement;
+              const form = e.currentTarget;
               const formData = new FormData(form);
               const name = formData.get('name')?.toString().trim();
               const category = formData.get('category')?.toString();
@@ -1478,6 +1478,16 @@ function ServicesSection() {
                             category && category !== '' && 
                             basePrice && parseFloat(basePrice) > 0 && 
                             duration && parseInt(duration) > 0;
+              
+              // Debug logging for form validation
+              console.log('🔍 Form validation:', {
+                name: name,
+                category: category,
+                basePrice: basePrice,
+                duration: duration,
+                isValid: isValid
+              });
+              
               setFormValid(!!isValid);
             }}>
               <div>
@@ -5992,7 +6002,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-  console.log('🚀 Salon Dashboard v2.1.0 - Service Toggle Fix');
+  console.log('🚀 Salon Dashboard v2.1.1 - Form Validation Fix');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
