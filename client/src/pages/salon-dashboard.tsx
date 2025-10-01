@@ -3396,7 +3396,8 @@ function CalendarSection({ loadTodaysAppointments }) {
             <CardContent>
               <div className="space-y-2">
                 {timeSlots.map((time, index) => {
-                  const appointment = dayAppointments.find(apt => {
+                  // Find ALL appointments for this time slot (not just the first one)
+                  const appointments = dayAppointments.filter(apt => {
                     // Try exact match first
                     if (apt.time === time) return true;
                     // Try to match by converting both to same format
@@ -3404,6 +3405,9 @@ function CalendarSection({ loadTodaysAppointments }) {
                     const timeMatch = aptTime.includes(time.split(' ')[0]) || time.includes(aptTime.split(' ')[0]);
                     return timeMatch;
                   });
+                  
+                  // For backward compatibility, keep the first appointment as the main one
+                  const appointment = appointments[0];
 
                   // Get status color for appointment
                   const getStatusColor = (status) => {
@@ -3426,8 +3430,15 @@ function CalendarSection({ loadTodaysAppointments }) {
                       
                       {/* Status Indicator */}
                       <div className="flex-shrink-0">
-                        {appointment ? (
-                          <div className={`w-1 h-12 rounded-full ${getStatusColor(appointment.status || 'confirmed')}`}></div>
+                        {appointments.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {appointments.map((apt, aptIndex) => (
+                              <div 
+                                key={apt.id || aptIndex}
+                                className={`w-1 h-4 rounded-full ${getStatusColor(apt.status || 'confirmed')}`}
+                              ></div>
+                            ))}
+                          </div>
                         ) : (
                           <div className="w-1 h-12 rounded-full bg-gray-200"></div>
                         )}
@@ -3435,22 +3446,27 @@ function CalendarSection({ loadTodaysAppointments }) {
                       
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        {appointment ? (
-                          <div className="space-y-1">
-                            <div className="font-semibold text-gray-900">
-                              {appointment.customer || appointment.customer_name || 'N/A'}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {appointment.service || appointment.service_name || 'N/A'} • {appointment.staff_name || appointment.staff || 'Unassigned'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {appointment.duration || appointment.duration_minutes || 60} min • {new Intl.NumberFormat('en-IN', {
-                                style: 'currency',
-                                currency: 'INR',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0,
-                              }).format(appointment.amount || 0)}
-                            </div>
+                        {appointments.length > 0 ? (
+                          <div className="space-y-2">
+                            {appointments.map((apt, aptIndex) => (
+                              <div key={apt.id || aptIndex} className="space-y-1">
+                                <div className="font-semibold text-gray-900">
+                                  {apt.customer_name || apt.customer || 'N/A'}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {apt.service_name || apt.service || 'N/A'} • {apt.staff_name || apt.staff || 'Unassigned'}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {apt.duration_minutes || apt.duration || 60} min • {new Intl.NumberFormat('en-IN', {
+                                    style: 'currency',
+                                    currency: 'INR',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0,
+                                  }).format(apt.amount || 0)}
+                                </div>
+                                {aptIndex < appointments.length - 1 && <hr className="border-gray-200" />}
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -3462,14 +3478,19 @@ function CalendarSection({ loadTodaysAppointments }) {
                       
                       {/* Status Badge */}
                       <div className="flex-shrink-0">
-                        {appointment ? (
-                          <Badge 
-                            variant={appointment.status === "confirmed" ? "default" : 
-                                    appointment.status === "pending" ? "secondary" : "destructive"}
-                            className="text-xs"
-                          >
-                            {appointment.status || 'confirmed'}
-                          </Badge>
+                        {appointments.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {appointments.map((apt, aptIndex) => (
+                              <Badge 
+                                key={apt.id || aptIndex}
+                                variant={apt.status === "confirmed" ? "default" : 
+                                        apt.status === "pending" ? "secondary" : "destructive"}
+                                className="text-xs"
+                              >
+                                {apt.status || 'confirmed'}
+                              </Badge>
+                            ))}
+                          </div>
                         ) : (
                           <span className="text-xs text-gray-400">Free</span>
                         )}
