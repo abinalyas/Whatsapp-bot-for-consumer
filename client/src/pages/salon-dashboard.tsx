@@ -907,28 +907,35 @@ function OverviewSection({
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-yellow-500" />
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
                 Cancel Appointment
               </h3>
               <Button variant="ghost" size="sm" onClick={handleCloseModals}>
-                <XCircle className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
             
             <div className="mb-6">
-              <p className="text-muted-foreground mb-4">
-                Are you sure you want to cancel the appointment for <strong>{cancellingAppointment.customer} at {cancellingAppointment.time}</strong>?
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to cancel the appointment for <strong>{cancellingAppointment.customer_name || cancellingAppointment.customer} at {cancellingAppointment.appointment_time || cancellingAppointment.time}</strong>?
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600">
                 This action cannot be undone. The customer will be notified about the cancellation.
               </p>
             </div>
             
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={handleCloseModals}>
+              <Button variant="outline" onClick={handleCloseModals} className="border-gray-300 text-gray-700 hover:bg-gray-50">
                 Keep Appointment
               </Button>
-              <Button variant="destructive">
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  onCancelAppointment(cancellingAppointment);
+                  handleCloseModals();
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
                 Cancel Appointment
               </Button>
             </div>
@@ -6210,7 +6217,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.7 - Fixed loadTodaysAppointments Scope Issue');
+      console.log('🚀 Salon Dashboard v2.2.8 - Implemented Cancel Appointment Functionality');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -7030,6 +7037,41 @@ export default function SalonDashboard() {
     return `${hour24.toString().padStart(2, '0')}:${minutes}`;
   };
 
+  // Cancel appointment handler
+  const handleCancelAppointment = async (appointment) => {
+    if (!appointment) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/salon/appointments/${appointment.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        }
+      });
+
+      if (response.ok) {
+        // Remove the cancelled appointment from the appointments list
+        setAppointments(prev => prev.filter(apt => apt.id !== appointment.id));
+        
+        // Reload today's appointments for staff schedule
+        loadTodaysAppointments();
+        
+        console.log('Appointment cancelled successfully');
+        alert('Appointment cancelled successfully!');
+      } else {
+        console.error('Failed to cancel appointment:', response.statusText);
+        alert('Failed to cancel appointment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      alert('Error cancelling appointment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Edit appointment handlers
   const handleEditAppointment = async (appointment) => {
     setEditingAppointment(appointment);
@@ -7297,7 +7339,7 @@ export default function SalonDashboard() {
       case "overview":
         return <OverviewSection 
           onEditAppointment={handleEditAppointment}
-          onCancelAppointment={() => alert('Cancel appointment functionality will be implemented here!')}
+          onCancelAppointment={handleCancelAppointment}
           onOpenQuickBook={handleOpenQuickBook}
           onOpenCheckIn={handleOpenCheckIn}
           onOpenProcessPayment={handleOpenProcessPayment}
