@@ -487,27 +487,68 @@ function OverviewSection({
         setLoading(true);
         
         // Get all appointments for revenue calculation (not just today's)
-        const [todayAppointmentsData, allAppointmentsData, statsData, staffData] = await Promise.all([
+        const [todayAppointmentsData, allAppointmentsData, statsData, staffData, servicesData] = await Promise.all([
           salonApi.appointments.getAll({ date: new Date().toISOString().split('T')[0] }),
           salonApi.appointments.getAll(), // Get all appointments for revenue calculation
           salonApi.stats.getStats(),
-          staffApi.getAll()
+          staffApi.getAll(),
+          salonApi.services.getAll()
         ]);
         
-        // Transform appointments data to include staff names
+        // Transform appointments data to include staff names and calendar fields
         const transformedTodayAppointments = todayAppointmentsData.map(apt => {
           const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
+          const service = servicesData.find(s => s.id === apt.service_id);
+          
+          // Calculate time for calendar display
+          const appointmentDateTime = new Date(apt.scheduled_at || '');
+          const timeString = appointmentDateTime.toLocaleTimeString('en-IN', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          
           return {
             ...apt,
-            staff_name: staffName
+            staff_name: staffName,
+            service_name: service?.name || apt.service_name || 'Unknown Service',
+            customer_name: apt.customer_name || apt.customer || 'Unknown Customer',
+            time: timeString,
+            duration: apt.duration_minutes || apt.duration || 60,
+            amount: parseFloat(apt.amount || 0),
+            status: apt.payment_status || apt.status || 'confirmed',
+            // Legacy fields for backward compatibility
+            customer: apt.customer_name || apt.customer || 'Unknown Customer',
+            service: service?.name || apt.service_name || 'Unknown Service',
+            staff: staffName
           };
         });
         
         const transformedAllAppointments = allAppointmentsData.map(apt => {
           const staffName = staffData.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
+          const service = servicesData.find(s => s.id === apt.service_id);
+          
+          // Calculate time for calendar display
+          const appointmentDateTime = new Date(apt.scheduled_at || '');
+          const timeString = appointmentDateTime.toLocaleTimeString('en-IN', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          
           return {
             ...apt,
-            staff_name: staffName
+            staff_name: staffName,
+            service_name: service?.name || apt.service_name || 'Unknown Service',
+            customer_name: apt.customer_name || apt.customer || 'Unknown Customer',
+            time: timeString,
+            duration: apt.duration_minutes || apt.duration || 60,
+            amount: parseFloat(apt.amount || 0),
+            status: apt.payment_status || apt.status || 'confirmed',
+            // Legacy fields for backward compatibility
+            customer: apt.customer_name || apt.customer || 'Unknown Customer',
+            service: service?.name || apt.service_name || 'Unknown Service',
+            staff: staffName
           };
         });
         
