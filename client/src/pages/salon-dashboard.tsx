@@ -2649,7 +2649,7 @@ function StaffSection({
   );
 }
 
-function CalendarSection() {
+function CalendarSection({ loadTodaysAppointments }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -7375,7 +7375,9 @@ export default function SalonDashboard() {
           loadTodaysAppointments={loadTodaysAppointments}
         />;
       case "calendar":
-        return <CalendarSection />;
+        return <CalendarSection 
+          loadTodaysAppointments={loadTodaysAppointments}
+        />;
       case "payments":
         return <PaymentsSection />;
       case "customers":
