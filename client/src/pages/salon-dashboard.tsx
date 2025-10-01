@@ -1717,7 +1717,12 @@ function ServicesSection() {
   );
 }
 
-function StaffSection() {
+function StaffSection({ 
+  todaysAppointments, 
+  setTodaysAppointments, 
+  scheduleLoading, 
+  loadTodaysAppointments 
+}) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
@@ -1729,80 +1734,10 @@ function StaffSection() {
   const [showAvailabilityManager, setShowAvailabilityManager] = useState(false);
   const [selectedStaffForAvailability, setSelectedStaffForAvailability] = useState(null);
   const [showStaffScheduler, setShowStaffScheduler] = useState(false);
-  const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassigningAppointment, setReassigningAppointment] = useState<any>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [notifyCustomer, setNotifyCustomer] = useState(false);
-
-  // Load today's appointments for staff schedule
-  const loadTodaysAppointments = async () => {
-    try {
-      setScheduleLoading(true);
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Load both appointments and staff data
-      const [appointmentsResponse, staffResponse] = await Promise.all([
-        fetch(`/api/salon/appointments?date=${today}`, {
-          headers: { 'x-tenant-id': 'bella-salon' }
-        }),
-        fetch('/api/staff/staff', {
-          headers: { 'x-tenant-id': 'bella-salon' }
-        })
-      ]);
-      
-      if (appointmentsResponse.ok && staffResponse.ok) {
-        const appointmentsResult = await appointmentsResponse.json();
-        const staffResult = await staffResponse.json();
-        
-        if (appointmentsResult.success && staffResult.success) {
-          const appointments = appointmentsResult.data || [];
-          const staffMembers = staffResult.data || [];
-          
-          // Create a staff lookup map
-          const staffMap = new Map();
-          staffMembers.forEach(staff => {
-            staffMap.set(staff.id, staff.name);
-          });
-          
-          // Map appointments with staff names and formatted time
-          const mappedAppointments = appointments.map(appointment => {
-            // Extract time from scheduled_at (format: "2025-10-01T17:31:00.000Z")
-            let timeFormatted = 'N/A';
-            if (appointment.scheduled_at) {
-              const date = new Date(appointment.scheduled_at);
-              timeFormatted = date.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              });
-            }
-            
-            return {
-              ...appointment,
-              staff_name: staffMap.get(appointment.staff_id) || 'Unassigned',
-              time: timeFormatted
-            };
-          });
-          
-          console.log('📅 Mapped appointments for staff schedule:', mappedAppointments);
-          setTodaysAppointments(mappedAppointments);
-        } else {
-          console.error('Failed to load data:', appointmentsResult.error || staffResult.error);
-          setTodaysAppointments([]);
-        }
-      } else {
-        console.error('Failed to load appointments or staff:', appointmentsResponse.statusText, staffResponse.statusText);
-        setTodaysAppointments([]);
-      }
-    } catch (error) {
-      console.error('Error loading appointments:', error);
-      setTodaysAppointments([]);
-    } finally {
-      setScheduleLoading(false);
-    }
-  };
 
   // Load staff from API
   useEffect(() => {
@@ -6275,7 +6210,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.6 - Edit Modal Time Fix');
+      console.log('🚀 Salon Dashboard v2.2.7 - Fixed loadTodaysAppointments Scope Issue');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -6299,12 +6234,90 @@ export default function SalonDashboard() {
   const [services, setServices] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   
+  // Staff schedule state
+  const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  
   // Quick Actions modals state
   const [showQuickBookModal, setShowQuickBookModal] = useState(false);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showProcessPaymentModal, setShowProcessPaymentModal] = useState(false);
   const [showSendRemindersModal, setShowSendRemindersModal] = useState(false);
   const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
+
+  // Load today's appointments for staff schedule
+  const loadTodaysAppointments = async () => {
+    try {
+      setScheduleLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Load both appointments and staff data
+      const [appointmentsResponse, staffResponse] = await Promise.all([
+        fetch(`/api/salon/appointments?date=${today}`, {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/staff/staff', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        })
+      ]);
+      
+      if (appointmentsResponse.ok && staffResponse.ok) {
+        const appointmentsResult = await appointmentsResponse.json();
+        const staffResult = await staffResponse.json();
+        
+        if (appointmentsResult.success && staffResult.success) {
+          const appointments = appointmentsResult.data || [];
+          const staffMembers = staffResult.data || [];
+          
+          // Create a staff lookup map
+          const staffMap = new Map();
+          staffMembers.forEach(staff => {
+            staffMap.set(staff.id, staff.name);
+          });
+          
+          // Map appointments with staff names and formatted time
+          const mappedAppointments = appointments.map(appointment => {
+            // Extract time from scheduled_at (format: "2025-10-01T17:31:00.000Z")
+            let timeFormatted = 'N/A';
+            if (appointment.scheduled_at) {
+              const date = new Date(appointment.scheduled_at);
+              timeFormatted = date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              });
+            }
+            
+            return {
+              ...appointment,
+              staff_name: staffMap.get(appointment.staff_id) || 'Unassigned',
+              time: timeFormatted
+            };
+          });
+          
+          console.log('📅 Mapped appointments for staff schedule:', mappedAppointments);
+          setTodaysAppointments(mappedAppointments);
+        } else {
+          console.error('Failed to load data:', appointmentsResult.error || staffResult.error);
+          setTodaysAppointments([]);
+        }
+      } else {
+        console.error('Failed to load appointments or staff:', appointmentsResponse.statusText, staffResponse.statusText);
+        setTodaysAppointments([]);
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      setTodaysAppointments([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  // Load today's appointments on component mount
+  useEffect(() => {
+    loadTodaysAppointments();
+  }, []);
+
   const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [showDailySummaryModal, setShowDailySummaryModal] = useState(false);
   
@@ -6358,7 +6371,6 @@ export default function SalonDashboard() {
     staffSchedules: [],
     appointments: []
   });
-  const [scheduleLoading, setScheduleLoading] = useState(false);
   
   // Send Reminders modal state
   const [reminderData, setReminderData] = useState({
@@ -7297,7 +7309,12 @@ export default function SalonDashboard() {
       case "services":
         return <ServicesSection />;
       case "staff":
-        return <StaffSection />;
+        return <StaffSection 
+          todaysAppointments={todaysAppointments}
+          setTodaysAppointments={setTodaysAppointments}
+          scheduleLoading={scheduleLoading}
+          loadTodaysAppointments={loadTodaysAppointments}
+        />;
       case "calendar":
         return <CalendarSection />;
       case "payments":
