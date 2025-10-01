@@ -1731,6 +1731,10 @@ function StaffSection() {
   const [showStaffScheduler, setShowStaffScheduler] = useState(false);
   const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassigningAppointment, setReassigningAppointment] = useState<any>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+  const [notifyCustomer, setNotifyCustomer] = useState(false);
 
   // Load today's appointments for staff schedule
   const loadTodaysAppointments = async () => {
@@ -1903,39 +1907,72 @@ function StaffSection() {
     setShowAddModal(true);
   };
 
-  const handleReassignAppointment = async (appointment) => {
+  const handleReassignAppointment = (appointment) => {
+    console.log('Opening reassign modal for appointment:', appointment);
+    setReassigningAppointment(appointment);
+    setSelectedStaffId('');
+    setNotifyCustomer(false);
+    setShowReassignModal(true);
+  };
+
+  const handleConfirmReassignment = async () => {
+    if (!reassigningAppointment || !selectedStaffId) {
+      alert('Please select a staff member to reassign to.');
+      return;
+    }
+
     try {
-      console.log('Reassigning appointment:', appointment);
-      
-      // For now, show a simple alert. In a real implementation, this would open a modal
-      // to select a new staff member and update the appointment
-      const newStaffId = prompt(`Reassign appointment for ${appointment.customer_name || appointment.customer} to which staff member? (Enter staff ID)`);
-      
-      if (newStaffId) {
-        const response = await fetch(`/api/salon/appointments/${appointment.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-tenant-id': 'bella-salon'
-          },
-          body: JSON.stringify({
-            staff_id: newStaffId
-          })
-        });
+      console.log('Confirming reassignment:', {
+        appointmentId: reassigningAppointment.id,
+        newStaffId: selectedStaffId,
+        notifyCustomer: notifyCustomer
+      });
+
+      const response = await fetch(`/api/salon/appointments/${reassigningAppointment.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': 'bella-salon'
+        },
+        body: JSON.stringify({
+          staff_id: selectedStaffId,
+          notify_customer: notifyCustomer
+        })
+      });
+
+      if (response.ok) {
+        console.log('Appointment reassigned successfully');
         
-        if (response.ok) {
-          console.log('Appointment reassigned successfully');
-          // Reload today's appointments to show the updated schedule
-          loadTodaysAppointments();
+        // Show success message
+        if (notifyCustomer) {
+          alert('Appointment reassigned successfully and customer has been notified.');
         } else {
-          console.error('Failed to reassign appointment:', response.statusText);
-          alert('Failed to reassign appointment. Please try again.');
+          alert('Appointment reassigned successfully.');
         }
+        
+        // Close modal and reload data
+        setShowReassignModal(false);
+        setReassigningAppointment(null);
+        setSelectedStaffId('');
+        setNotifyCustomer(false);
+        
+        // Reload today's appointments to show the updated schedule
+        loadTodaysAppointments();
+      } else {
+        console.error('Failed to reassign appointment:', response.statusText);
+        alert('Failed to reassign appointment. Please try again.');
       }
     } catch (error) {
       console.error('Error reassigning appointment:', error);
       alert('Error reassigning appointment. Please try again.');
     }
+  };
+
+  const handleCloseReassignModal = () => {
+    setShowReassignModal(false);
+    setReassigningAppointment(null);
+    setSelectedStaffId('');
+    setNotifyCustomer(false);
   };
 
   const handleEditStaff = (staffMember) => {
@@ -2584,6 +2621,85 @@ function StaffSection() {
                   }
                 }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Appointment Modal */}
+      {showReassignModal && reassigningAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Reassign Appointment</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleCloseReassignModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Appointment Details */}
+              <div className="text-sm text-gray-600">
+                Reassigning appointment for <strong>{reassigningAppointment.customer_name || reassigningAppointment.customer_phone}</strong> at <strong>{reassigningAppointment.time}</strong>
+              </div>
+
+              {/* Staff Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Select New Staff Member</label>
+                <div className="relative">
+                  <select
+                    value={selectedStaffId}
+                    onChange={(e) => setSelectedStaffId(e.target.value)}
+                    className="w-full p-3 border border-input rounded-md bg-background appearance-none"
+                  >
+                    <option value="">Choose staff member</option>
+                    {staff.map((staffMember) => (
+                      <option key={staffMember.id} value={staffMember.id}>
+                        {staffMember.name} - {staffMember.role}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Notification Checkbox */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center h-5">
+                    <input
+                      type="checkbox"
+                      id="notifyCustomer"
+                      checked={notifyCustomer}
+                      onChange={(e) => setNotifyCustomer(e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="notifyCustomer" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      Notify customer about staff change
+                    </label>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Customer will be notified about the staff change via SMS/WhatsApp
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={handleCloseReassignModal}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmReassignment} 
+                disabled={!selectedStaffId || saving}
+              >
+                {saving ? 'Reassigning...' : 'Confirm Reassignment'}
+              </Button>
             </div>
           </div>
         </div>
@@ -6131,7 +6247,7 @@ function SettingsSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.2 - Staff Schedule Data Mapping Fix');
+      console.log('🚀 Salon Dashboard v2.2.3 - Reassign Appointment Modal');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
