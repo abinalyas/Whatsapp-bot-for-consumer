@@ -7384,6 +7384,21 @@ export default function SalonDashboard() {
         console.log('🔍 MAIN COMPONENT: Rendering CalendarSection with props:');
         console.log('🔍 MAIN COMPONENT: appointments length:', appointments?.length || 0);
         console.log('🔍 MAIN COMPONENT: appointments data:', appointments);
+        console.log('🔍 MAIN COMPONENT: loading state:', loading);
+        
+        // Show loading state if appointments are not loaded yet
+        if (loading || !appointments || appointments.length === 0) {
+          console.log('🔍 MAIN COMPONENT: Showing loading state for calendar');
+          return (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading calendar data...</p>
+              </div>
+            </div>
+          );
+        }
+        
         return <CalendarSection 
           loadTodaysAppointments={loadTodaysAppointments}
           appointments={appointments}
