@@ -41,7 +41,7 @@ async function testCriticalFlows() {
       const buttons = await page.$$('button');
       for (const btn of buttons) {
         const buttonText = await page.evaluate(el => el.textContent?.trim(), btn);
-        if (buttonText && buttonText.includes(text)) {
+        if (buttonText && buttonText.toLowerCase().includes(text.toLowerCase())) {
           return btn;
         }
       }
@@ -56,7 +56,13 @@ async function testCriticalFlows() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         return true;
       }
+      
+      // Debug: Show all available buttons when not found
+      const allButtons = await page.$$eval('button', buttons => 
+        buttons.map(btn => btn.textContent?.trim()).filter(text => text)
+      );
       console.log(`❌ Button "${text}" not found${section ? ` in ${section}` : ''}`);
+      console.log(`🔍 Available buttons: ${allButtons.slice(0, 10).join(', ')}...`);
       return false;
     };
 
@@ -108,9 +114,23 @@ async function testCriticalFlows() {
     console.log('\n🧪 Testing Services Section...');
     if (await clickButton('Services')) {
       results.services = true;
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait longer for section to load
       
-      // Test Add Service
-      if (await clickButton('Add Service', 'Services')) {
+      // Test Add Service - use working approach
+      const addServiceResult = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const btn = buttons.find(btn => btn.textContent?.trim().toLowerCase().includes('add service'));
+        if (btn) {
+          btn.click();
+          return { found: true, text: btn.textContent?.trim() };
+        }
+        return { found: false };
+      });
+      
+      if (addServiceResult.found) {
+        console.log(`✅ Found and clicked Add Service button: "${addServiceResult.text}"`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         if (await checkModal('Add Service')) {
           results.addService = true;
           
@@ -123,6 +143,8 @@ async function testCriticalFlows() {
           
           await closeModal();
         }
+      } else {
+        console.log('❌ Add Service button not found');
       }
     }
 
@@ -130,9 +152,23 @@ async function testCriticalFlows() {
     console.log('\n🧪 Testing Staff Section...');
     if (await clickButton('Staff')) {
       results.staff = true;
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Wait longer for section to load
       
-      // Test Add Staff
-      if (await clickButton('Add Staff', 'Staff')) {
+      // Test Add Staff - use working approach
+      const addStaffResult = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const btn = buttons.find(btn => btn.textContent?.trim().toLowerCase().includes('add staff'));
+        if (btn) {
+          btn.click();
+          return { found: true, text: btn.textContent?.trim() };
+        }
+        return { found: false };
+      });
+      
+      if (addStaffResult.found) {
+        console.log(`✅ Found and clicked Add Staff button: "${addStaffResult.text}"`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         if (await checkModal('Add Staff')) {
           results.addStaff = true;
           
@@ -145,6 +181,8 @@ async function testCriticalFlows() {
           
           await closeModal();
         }
+      } else {
+        console.log('❌ Add Staff button not found');
       }
     }
 
