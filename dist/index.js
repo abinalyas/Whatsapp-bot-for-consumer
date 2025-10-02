@@ -271,14 +271,14 @@ Please reply with the time slot number or time.`,
             selectedTime = availableSlots[timeNumber - 1].time;
           } else {
             const timePatterns = [
-              /(\d{1,2})\s*(am|pm)/i,
-              // 10 am, 2 pm
               /(\d{1,2}):(\d{2})\s*(am|pm)/i,
               // 10:30 am, 2:45 pm
+              /(\d{1,2})\s*(am|pm)/i,
+              // 10 am, 2 pm
               /(\d{1,2}):(\d{2})/i,
               // 10:30, 14:30
-              /(\d{1,2})/i
-              // 10, 14
+              /^(\d{1,2})$/i
+              // Only match if it's just a number (not part of another word)
             ];
             let matchedTime = null;
             for (const pattern of timePatterns) {
