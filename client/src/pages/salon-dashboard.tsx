@@ -3250,10 +3250,23 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                   const appointments = dayAppointments.filter(apt => {
                     // Try exact match first
                     if (apt.time === time) return true;
-                    // Try to match by converting both to same format
+                    
+                    // More precise time matching - convert both to same format for comparison
                     const aptTime = apt.time || '';
-                    const timeMatch = aptTime.includes(time.split(' ')[0]) || time.includes(aptTime.split(' ')[0]);
-                    return timeMatch;
+                    const timeStr = time;
+                    
+                    // Extract time part (e.g., "11:30" from "11:30 AM")
+                    const aptTimePart = aptTime.split(' ')[0];
+                    const timePart = timeStr.split(' ')[0];
+                    
+                    // Debug time matching
+                    const matches = aptTimePart === timePart;
+                    if (matches) {
+                      console.log(`🔧 TIME MATCH: ${apt.customer_name} at ${aptTime} matches time slot ${time}`);
+                    }
+                    
+                    // Only match if the time parts are exactly the same
+                    return matches;
                   });
                   
                   // For backward compatibility, keep the first appointment as the main one
@@ -3363,6 +3376,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                   const staffAppointments = dayAppointments.filter(apt => apt.staff_name === staff);
                   console.log(`🔍 Timeline: Staff ${staff} has ${staffAppointments.length} appointments:`, staffAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, time: apt.time })));
                   console.log(`🔍 Timeline: All dayAppointments for debugging:`, dayAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, staff: apt.staff_name, time: apt.time })));
+                  console.log(`🔍 Timeline: Using same data source as list view - appointments state length:`, appointments?.length || 0);
                   
                   // Create hourly timeline (9 AM to 7 PM)
                   const hours = Array.from({ length: 11 }, (_, i) => i + 9); // 9 to 19 (9 AM to 7 PM)
