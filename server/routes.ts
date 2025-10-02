@@ -65,6 +65,10 @@ async function sendWhatsAppMessage(to: string, message: string): Promise<boolean
     const phoneNumberId = process.env.WHATSAPP_PHONE_ID;
     const accessToken = process.env.WHATSAPP_TOKEN;
     
+    console.log(`🔍 WhatsApp Send - PhoneNumberId: ${phoneNumberId ? 'SET' : 'MISSING'}`);
+    console.log(`🔍 WhatsApp Send - AccessToken: ${accessToken ? 'SET' : 'MISSING'}`);
+    console.log(`🔍 WhatsApp Send - To: ${to}, Message: ${message.substring(0, 50)}...`);
+    
     if (!phoneNumberId || !accessToken) {
       console.error("WhatsApp credentials not configured");
       return false;
@@ -85,12 +89,16 @@ async function sendWhatsAppMessage(to: string, message: string): Promise<boolean
       }),
     });
 
+    console.log(`🔍 WhatsApp API Response Status: ${response.status}`);
+    
     if (!response.ok) {
       const error = await response.text();
-      console.error("Failed to send WhatsApp message:", error);
+      console.error(`❌ Failed to send WhatsApp message: ${error}`);
+      console.error(`❌ Response status: ${response.status} ${response.statusText}`);
       return false;
     }
 
+    console.log(`✅ WhatsApp message sent successfully to ${to}`);
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
@@ -980,18 +988,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   );
                   
                   if (result.success && result.message) {
-                    await sendWhatsAppMessage(message.from, result.message);
-                    console.log(`Successfully processed message via simple webhook`);
+                    console.log(`📤 Sending response to WhatsApp: ${result.message.substring(0, 50)}...`);
+                    const messageSent = await sendWhatsAppMessage(message.from, result.message);
                     
-                    // Update conversation state if successful
-                    if (result.nextStep) {
-                      bookingContext.currentStep = result.nextStep;
-                      // Store a deep copy of the context to preserve all changes
-                      legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
-                      console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                    if (messageSent) {
+                      console.log(`✅ Successfully processed and sent message via simple webhook`);
+                      
+                      // Update conversation state if successful
+                      if (result.nextStep) {
+                        bookingContext.currentStep = result.nextStep;
+                        // Store a deep copy of the context to preserve all changes
+                        legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
+                        console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                      }
+                    } else {
+                      console.error(`❌ Failed to send WhatsApp message, but processing was successful`);
                     }
                   } else {
-                    console.error(`Simple webhook failed to process message:`, result);
+                    console.error(`❌ Simple webhook failed to process message:`, result);
                     await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
                   }
                 } catch (error) {
