@@ -7628,16 +7628,30 @@ Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
    */
   async handleConfirmation(messageText, context) {
     try {
+      console.log("\u{1F50D} handleConfirmation called with:", { messageText, context: JSON.stringify(context, null, 2) });
       const confirmKeywords = ["yes", "confirm", "book", "ok", "okay", "proceed"];
       if (!confirmKeywords.some((keyword) => messageText.includes(keyword))) {
+        console.log("\u274C Confirmation keyword not found");
         return {
           success: false,
           message: "Please type 'yes' or 'confirm' to book the appointment, or 'cancel' to start over."
         };
       }
+      console.log("\u2705 Confirmation keyword found, proceeding with booking creation");
+      console.log("\u{1F4CA} Appointment data:", context.appointmentData);
+      if (!context.appointmentData) {
+        console.log("\u274C No appointment data found in context");
+        return {
+          success: false,
+          message: "I'm sorry, there was an error with your appointment data. Please start over."
+        };
+      }
+      console.log("\u{1F4DD} Calling createAppointment...");
       const appointmentId = await this.createAppointment(context.tenantId, context.appointmentData);
+      console.log("\u{1F4CA} createAppointment result:", appointmentId);
       if (appointmentId) {
         context.currentStep = "completed";
+        console.log("\u2705 Appointment created successfully, returning success response");
         return {
           success: true,
           message: `\u{1F389} **Appointment Booked Successfully!**
@@ -7646,8 +7660,8 @@ Your appointment has been confirmed:
 
 \u{1F4C5} Date: ${context.selectedDate}
 \u23F0 Time: ${context.selectedTime}
-\u{1F487}\u200D\u2640\uFE0F Service: ${context.appointmentData.service_id}
-\u{1F469}\u200D\u{1F4BC} Staff: ${context.selectedStaff}
+\u{1F487}\u200D\u2640\uFE0F Service: ${context.appointmentData.service_name}
+\u{1F469}\u200D\u{1F4BC} Staff: ${context.appointmentData.staff_name}
 \u{1F4B0} Price: \u20B9${context.appointmentData.amount}
 
 You'll receive a confirmation SMS shortly. 
@@ -7657,16 +7671,20 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           nextStep: "completed"
         };
       } else {
+        console.log("\u274C createAppointment returned null");
         return {
           success: false,
           message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
         };
       }
     } catch (error) {
-      console.error("Error handling confirmation:", error);
+      console.error("\u274C Error handling confirmation:", error);
+      console.error("\u274C Error details:", error.message);
+      console.error("\u274C Error stack:", error.stack);
       return {
         success: false,
-        message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
+        message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly.",
+        error: error instanceof Error ? error.message : "Unknown error"
       };
     }
   }
