@@ -6272,15 +6272,61 @@ export default function SalonDashboard() {
   const loadAllAppointments = async () => {
     try {
       console.log('🚀 MAIN COMPONENT: Loading all appointments...');
-      const response = await fetch('/api/salon/appointments', {
-        headers: { 'x-tenant-id': 'bella-salon' }
-      });
       
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          console.log('🚀 MAIN COMPONENT: Loaded all appointments:', result.data?.length || 0);
-          setAllAppointments(result.data || []);
+      // Load both appointments and staff/services data for transformation
+      const [appointmentsResponse, staffResponse, servicesResponse] = await Promise.all([
+        fetch('/api/salon/appointments', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/staff/staff', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/salon/services', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        })
+      ]);
+      
+      if (appointmentsResponse.ok && staffResponse.ok && servicesResponse.ok) {
+        const appointmentsResult = await appointmentsResponse.json();
+        const staffResult = await staffResponse.json();
+        const servicesResult = await servicesResponse.json();
+        
+        if (appointmentsResult.success) {
+          console.log('🚀 MAIN COMPONENT: Loaded all appointments:', appointmentsResult.data?.length || 0);
+          console.log('🚀 MAIN COMPONENT: Loaded staff data:', staffResult.data?.length || 0);
+          console.log('🚀 MAIN COMPONENT: Loaded services data:', servicesResult.data?.length || 0);
+          
+          // Transform appointments data to include staff names and calendar fields
+          const transformedAppointments = appointmentsResult.data.map(apt => {
+            const staffName = staffResult.data.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
+            const service = servicesResult.data.find(s => s.id === apt.service_id);
+            
+            // Calculate time for calendar display
+            const appointmentDateTime = new Date(apt.scheduled_at || '');
+            const timeString = appointmentDateTime.toLocaleTimeString('en-IN', { 
+              hour: 'numeric', 
+              minute: '2-digit', 
+              hour12: true 
+            });
+            
+            return {
+              ...apt,
+              staff_name: staffName,
+              service_name: service?.name || apt.service_name || 'Unknown Service',
+              customer_name: apt.customer_name || apt.customer || 'Unknown Customer',
+              time: timeString,
+              duration: apt.duration_minutes || apt.duration || 60,
+              amount: parseFloat(apt.amount || 0),
+              status: apt.payment_status || apt.status || 'confirmed',
+              // Legacy fields for backward compatibility
+              customer: apt.customer_name || apt.customer || 'Unknown Customer',
+              service: service?.name || apt.service_name || 'Unknown Service',
+              staff: staffName
+            };
+          });
+          
+          console.log('🚀 MAIN COMPONENT: Transformed all appointments:', transformedAppointments.length);
+          setAllAppointments(transformedAppointments);
         }
       }
     } catch (error) {
