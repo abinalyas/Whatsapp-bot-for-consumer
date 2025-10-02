@@ -3413,13 +3413,18 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                             
                             const startHour = hour24;
                             const duration = appointment.duration || 60;
-                            const endHour = startHour + Math.ceil(duration / 60);
+                            
+                            // Calculate actual end time in hours (including fractional hours)
+                            const startMinutes = parseInt(minutes) || 0;
+                            const totalStartMinutes = startHour * 60 + startMinutes;
+                            const endMinutes = totalStartMinutes + duration;
+                            const endHour = endMinutes / 60; // Keep as decimal for accurate positioning
                             
                             console.log(`🔧 TIME CALCULATION: ${appointment.customer_name} - Start: ${startTime} -> ${startHour}:00, Duration: ${duration}min, End: ${endHour}:00`);
                             
                             // Calculate position (0-10 for hours 9-19)
                             const position = Math.max(0, startHour - 9);
-                            const width = Math.min(11 - position, Math.ceil(duration / 60));
+                            const width = Math.min(11 - position, endHour - startHour);
                             
                             // Color based on service type or status
                             const getBlockColor = (service: string, status: string) => {
