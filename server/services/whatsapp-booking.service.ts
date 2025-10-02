@@ -263,6 +263,15 @@ Please reply with the date number or date.`,
       }
 
       if (!selectedDate) {
+        // Check if user sent a service name instead of date
+        const serviceKeywords = ['hair', 'facial', 'bridal', 'manicure', 'pedicure', 'threading', 'makeup', 'spa', 'coloring', 'cut'];
+        if (serviceKeywords.some(keyword => messageText.toLowerCase().includes(keyword))) {
+          return {
+            success: false,
+            message: "It looks like you're trying to select a service, but we're currently selecting a date. Please choose a date from the list above, or type 'back' to change your service selection."
+          };
+        }
+        
         return {
           success: false,
           message: "Please select a valid date from the list above."
