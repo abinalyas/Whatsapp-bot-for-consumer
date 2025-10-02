@@ -627,7 +627,7 @@ function OverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-2xl">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'today'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'today'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From today's appointments
@@ -642,7 +642,7 @@ function OverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-2xl">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'week'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'week'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this week's appointments
@@ -657,7 +657,7 @@ function OverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-2xl">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'month'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'month'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this month's appointments
@@ -672,7 +672,7 @@ function OverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-2xl">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'year'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'year'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this year's appointments
@@ -4631,7 +4631,7 @@ function PaymentsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'today'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'today'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From today's appointments
@@ -4646,7 +4646,7 @@ function PaymentsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'week'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'week'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this week's appointments
@@ -4661,7 +4661,7 @@ function PaymentsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'month'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'month'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this month's appointments
@@ -4676,7 +4676,7 @@ function PaymentsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments, 'year'))}
+              {loading ? "..." : formatCurrencyWithCommas(calculateRevenueFromAppointments(allAppointments || [], 'year'))}
             </div>
             <p className="text-xs text-muted-foreground">
               From this year's appointments
