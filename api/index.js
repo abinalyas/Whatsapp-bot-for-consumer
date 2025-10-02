@@ -284,7 +284,6 @@ Please reply with the time slot number or time.`,
             for (const pattern of timePatterns) {
               const match = messageText.match(pattern);
               if (match) {
-                console.log(`\u{1F50D} Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
                 let hour = parseInt(match[1]);
                 let minute = 0;
                 let period = void 0;
@@ -294,18 +293,15 @@ Please reply with the time slot number or time.`,
                 } else if (pattern.toString().includes("(am|pm)")) {
                   period = match[2];
                 }
-                console.log(`\u{1F50D} Parsed time:`, { hour, minute, period });
-                if (period === "pm" && hour !== 12) {
+                if (period && period.toLowerCase() === "pm" && hour !== 12) {
                   hour += 12;
-                } else if (period === "am" && hour === 12) {
+                } else if (period && period.toLowerCase() === "am" && hour === 12) {
                   hour = 0;
                 }
                 const formattedTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-                console.log(`\u{1F50D} Formatted time:`, formattedTime);
                 for (const slot of availableSlots) {
                   if (slot.time === formattedTime) {
                     matchedTime = slot.time;
-                    console.log(`\u{1F50D} Found matching slot:`, slot.time);
                     break;
                   }
                 }
@@ -314,10 +310,13 @@ Please reply with the time slot number or time.`,
             }
             if (matchedTime) {
               selectedTime = matchedTime;
+              console.log(`\u{1F50D} Using matched time: ${selectedTime}`);
             } else {
+              console.log(`\u{1F50D} No pattern match, trying fallback for: ${messageText}`);
               for (const slot of availableSlots) {
                 if (messageText.includes(slot.time.toLowerCase()) || messageText.includes(slot.time.replace(":", ""))) {
                   selectedTime = slot.time;
+                  console.log(`\u{1F50D} Fallback matched: ${selectedTime}`);
                   break;
                 }
               }
@@ -330,6 +329,7 @@ Please reply with the time slot number or time.`,
             };
           }
           context.selectedTime = selectedTime;
+          console.log(`\u{1F50D} Final selected time: ${selectedTime}`);
           context.currentStep = "staff_selection";
           const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
           return {

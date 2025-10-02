@@ -333,8 +333,6 @@ Please reply with the time slot number or time.`,
         for (const pattern of timePatterns) {
           const match = messageText.match(pattern);
           if (match) {
-            console.log(`🔍 Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
-            
             let hour = parseInt(match[1]);
             let minute = 0;
             let period = undefined;
@@ -349,24 +347,20 @@ Please reply with the time slot number or time.`,
               period = match[2];
             }
             
-            console.log(`🔍 Parsed time:`, { hour, minute, period });
-            
             // Convert to 24-hour format if needed
-            if (period === 'pm' && hour !== 12) {
+            if (period && period.toLowerCase() === 'pm' && hour !== 12) {
               hour += 12;
-            } else if (period === 'am' && hour === 12) {
+            } else if (period && period.toLowerCase() === 'am' && hour === 12) {
               hour = 0;
             }
             
             // Format as HH:MM
             const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            console.log(`🔍 Formatted time:`, formattedTime);
             
             // Check if this time is available
             for (const slot of availableSlots) {
               if (slot.time === formattedTime) {
                 matchedTime = slot.time;
-                console.log(`🔍 Found matching slot:`, slot.time);
                 break;
               }
             }
@@ -377,12 +371,15 @@ Please reply with the time slot number or time.`,
         
         if (matchedTime) {
           selectedTime = matchedTime;
+          console.log(`🔍 Using matched time: ${selectedTime}`);
         } else {
           // Try to match by time string (fallback)
+          console.log(`🔍 No pattern match, trying fallback for: ${messageText}`);
           for (const slot of availableSlots) {
             if (messageText.includes(slot.time.toLowerCase()) || 
                 messageText.includes(slot.time.replace(':', ''))) {
               selectedTime = slot.time;
+              console.log(`🔍 Fallback matched: ${selectedTime}`);
               break;
             }
           }
@@ -397,6 +394,7 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
+      console.log(`🔍 Final selected time: ${selectedTime}`);
       context.currentStep = 'staff_selection';
 
       // Get available staff for the selected time
