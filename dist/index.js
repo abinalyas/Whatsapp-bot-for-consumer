@@ -7984,6 +7984,10 @@ function createSimpleWebhookRoutes() {
   const router4 = Router5();
   const bookingService = new WhatsAppBookingService();
   const conversationState = /* @__PURE__ */ new Map();
+  const clearConversationState = (phoneNumber) => {
+    conversationState.delete(phoneNumber);
+    console.log(`Cleared conversation state for ${phoneNumber}`);
+  };
   router4.get("/whatsapp/simple", (req, res) => {
     try {
       const mode = req.query["hub.mode"];
@@ -8068,6 +8072,29 @@ function createSimpleWebhookRoutes() {
       });
     }
   });
+  router4.post("/whatsapp/simple/reset", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({
+          error: "MISSING_PARAMETERS",
+          message: "phoneNumber is required"
+        });
+      }
+      clearConversationState(phoneNumber);
+      res.json({
+        success: true,
+        message: `Conversation state cleared for ${phoneNumber}`,
+        phoneNumber
+      });
+    } catch (error) {
+      console.error("Error resetting conversation state:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to reset conversation state"
+      });
+    }
+  });
   router4.post("/whatsapp/simple/test", async (req, res) => {
     try {
       const { phoneNumber, message } = req.body;
@@ -8096,6 +8123,15 @@ function createSimpleWebhookRoutes() {
             currentStep: "welcome"
           };
         }
+      }
+      if (message.toLowerCase().includes("reset") || message.toLowerCase().includes("start over")) {
+        clearConversationState(phoneNumber);
+        bookingContext = {
+          tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+          // Bella Salon tenant ID
+          customerPhone: phoneNumber,
+          currentStep: "welcome"
+        };
       }
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
       const result = await bookingService.processBookingMessage(
