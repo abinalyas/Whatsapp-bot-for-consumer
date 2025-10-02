@@ -7378,9 +7378,9 @@ Reply with the number or name of the service to book.`,
       if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services2.length) {
         selectedService = services2[serviceNumber - 1];
       } else {
-        const messageTextLower = messageText.toLowerCase().trim();
+        const messageTextLower = messageText.toLowerCase().trim().replace(/\s+/g, "");
         for (const service of services2) {
-          const serviceNameLower = service.name.toLowerCase();
+          const serviceNameLower = service.name.toLowerCase().replace(/\s+/g, "");
           if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
             selectedService = service;
             break;

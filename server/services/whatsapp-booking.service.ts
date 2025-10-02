@@ -163,10 +163,10 @@ Reply with the number or name of the service to book.`,
       if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services.length) {
         selectedService = services[serviceNumber - 1];
       } else {
-        // Try to match by service name (case insensitive)
-        const messageTextLower = messageText.toLowerCase().trim();
+        // Try to match by service name (case insensitive, handle spaces)
+        const messageTextLower = messageText.toLowerCase().trim().replace(/\s+/g, '');
         for (const service of services) {
-          const serviceNameLower = service.name.toLowerCase();
+          const serviceNameLower = service.name.toLowerCase().replace(/\s+/g, '');
           if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
             selectedService = service;
             break;
