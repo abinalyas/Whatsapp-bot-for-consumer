@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Header } from "@/components/header";
-import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle, AlertTriangle, Zap } from "lucide-react";
+import { Calendar, Users, Scissors, CreditCard, MessageSquare, Settings, Home, UserCheck, Clock, DollarSign, Star, Bell, Grid3X3, List, Plus, Edit, Trash2, Info, Mail, Phone, MapPin, ChevronDown, CalendarDays, TrendingUp, Download, RefreshCw, BarChart3, PieChart, Search, Gift, Eye, Send, Megaphone, Briefcase, Upload, Save, X, XCircle, AlertTriangle, Zap, Bot, Play, CheckCircle, TrendingDown, Copy } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -42,6 +42,7 @@ const menuItems = [
   { id: "payments", title: "Payments", icon: CreditCard },
   { id: "customers", title: "Customers", icon: Users },
   { id: "promotions", title: "Promotions", icon: MessageSquare },
+  { id: "whatsapp-bot", title: "WhatsApp Bot", icon: Bot },
   { id: "settings", title: "Settings", icon: Settings },
 ];
 
@@ -6132,6 +6133,271 @@ function SettingsSection() {
   );
 }
 
+function WhatsAppBotSection() {
+  const [botMetrics] = useState({
+    totalConversations: 2847,
+    successfulBookings: 1653,
+    customerSatisfaction: 94,
+    responseTime: 0.8
+  });
+
+  const [botFlows] = useState([
+    {
+      id: 1,
+      title: "Book Appointment",
+      icon: Calendar,
+      category: "Booking",
+      description: "Complete appointment booking flow with service selection and confirmation",
+      uses: 342,
+      successRate: 87
+    },
+    {
+      id: 2,
+      title: "Reschedule Appointment",
+      icon: Clock,
+      category: "Management",
+      description: "Easy rescheduling with alternative time slots",
+      uses: 156,
+      successRate: 92
+    },
+    {
+      id: 3,
+      title: "Service Information",
+      icon: Info,
+      category: "Information",
+      description: "Browse services, prices, and duration details",
+      uses: 289,
+      successRate: 95
+    },
+    {
+      id: 4,
+      title: "Payment & Confirmation",
+      icon: CreditCard,
+      category: "Payment",
+      description: "Secure payment processing and booking confirmation",
+      uses: 198,
+      successRate: 89
+    },
+    {
+      id: 5,
+      title: "Loyalty & Rewards",
+      icon: Gift,
+      category: "Rewards",
+      description: "Check points, redeem rewards, and exclusive offers",
+      uses: 134,
+      successRate: 91
+    },
+    {
+      id: 6,
+      title: "Salon Information",
+      icon: MapPin,
+      category: "Information",
+      description: "Hours, location, contact details, and general inquiries",
+      uses: 267,
+      successRate: 98
+    },
+    {
+      id: 7,
+      title: "Feedback & Reviews",
+      icon: Star,
+      category: "Feedback",
+      description: "Collect service feedback and manage customer satisfaction",
+      uses: 89,
+      successRate: 94
+    },
+    {
+      id: 8,
+      title: "Emergency & Cancellations",
+      icon: XCircle,
+      category: "Management",
+      description: "Handle urgent cancellations and emergency rebookings",
+      uses: 76,
+      successRate: 88
+    }
+  ]);
+
+  const handleBotSettings = () => {
+    console.log("Opening bot settings...");
+    // TODO: Implement bot settings modal
+  };
+
+  const handleTestBot = () => {
+    console.log("Testing bot...");
+    // TODO: Implement bot testing
+  };
+
+  const handlePreviewFlow = (flowId) => {
+    console.log(`Previewing flow ${flowId}...`);
+    // TODO: Implement flow preview
+  };
+
+  const handleCopyFlow = (flowId) => {
+    console.log(`Copying flow ${flowId}...`);
+    // TODO: Implement flow copying
+  };
+
+  const handleEditFlow = (flowId) => {
+    console.log(`Editing flow ${flowId}...`);
+    // TODO: Implement flow editing
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Bot className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold">WhatsApp Bot Flows</h1>
+            <p className="text-muted-foreground">
+              Automated customer service flows for booking, support, and engagement.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleBotSettings}>
+            <Settings className="h-4 w-4 mr-2" />
+            Bot Settings
+          </Button>
+          <Button onClick={handleTestBot}>
+            <Play className="h-4 w-4 mr-2" />
+            Test Bot
+          </Button>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Conversations</p>
+                <p className="text-3xl font-bold">{botMetrics.totalConversations.toLocaleString()}</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +12%
+                </p>
+              </div>
+              <MessageSquare className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Successful Bookings</p>
+                <p className="text-3xl font-bold">{botMetrics.successfulBookings.toLocaleString()}</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +18%
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Customer Satisfaction</p>
+                <p className="text-3xl font-bold">{botMetrics.customerSatisfaction}%</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +3%
+                </p>
+              </div>
+              <Star className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Response Time</p>
+                <p className="text-3xl font-bold">{botMetrics.responseTime}s</p>
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3" />
+                  -15%
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bot Flow Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {botFlows.map((flow) => (
+          <Card key={flow.id} className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <flow.icon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{flow.title}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      {flow.category}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mb-4">
+                {flow.description}
+              </p>
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm">
+                  <span className="font-medium">{flow.uses} uses</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">{flow.successRate}% success</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handlePreviewFlow(flow.id)}
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  Preview
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleCopyFlow(flow.id)}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleEditFlow(flow.id)}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SalonDashboard() {
   // Log version for deployment tracking
       console.log('🚀 Salon Dashboard v2.2.8 - Implemented Cancel Appointment Functionality');
@@ -7419,6 +7685,8 @@ export default function SalonDashboard() {
         return <CustomersSection />;
       case "promotions":
         return <PromotionsSection />;
+      case "whatsapp-bot":
+        return <WhatsAppBotSection />;
       case "settings":
         return <SettingsSection />;
       default:
