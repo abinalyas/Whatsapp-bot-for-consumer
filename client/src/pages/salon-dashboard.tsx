@@ -468,15 +468,18 @@ function OverviewSection({
   onOpenSendReminders,
   onOpenViewSchedule,
   onOpenWalkIn,
-  onOpenDailySummary
+  onOpenDailySummary,
+  appointments,
+  setAppointments,
+  allAppointments,
+  setAllAppointments
 }) {
   console.log('🚀 MAIN COMPONENT: SalonDashboard component mounted/rendered');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   // editingAppointment state moved to exported component
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [allAppointments, setAllAppointments] = useState<any[]>([]); // Store all appointments for revenue calculation
+  // appointments, setAppointments, allAppointments, and setAllAppointments now received as props
   
   // Safety check to ensure allAppointments is always defined
   if (typeof allAppointments === 'undefined') {
@@ -7148,6 +7151,9 @@ export default function SalonDashboard() {
         // Reload today's appointments for staff schedule
         loadTodaysAppointments();
         
+        // Reload all appointments for revenue calculation
+        loadAllAppointments();
+        
         console.log('Appointment cancelled successfully');
         
         // Close modal and reset state
@@ -7292,6 +7298,9 @@ export default function SalonDashboard() {
       // Reload today's appointments for staff schedule
       loadTodaysAppointments();
       
+      // Reload all appointments for revenue calculation
+      loadAllAppointments();
+      
       // Close modal
       handleCloseEditModal();
       alert('Appointment updated successfully!');
@@ -7317,6 +7326,10 @@ export default function SalonDashboard() {
           onOpenViewSchedule={handleOpenViewSchedule}
           onOpenWalkIn={handleOpenWalkIn}
           onOpenDailySummary={handleOpenDailySummary}
+          appointments={appointments}
+          setAppointments={setAppointments}
+          allAppointments={allAppointments}
+          setAllAppointments={setAllAppointments}
         />;
       case "services":
         return <ServicesSection />;
