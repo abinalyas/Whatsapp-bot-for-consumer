@@ -321,11 +321,9 @@ Please reply with the time slot number or time.`,
       const timeNumber = parseInt(input);
       if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
         selectedTime = availableSlots[timeNumber - 1].time;
-        console.log(`🔍 Selected by number ${timeNumber}: ${selectedTime}`);
       } else {
         // Parse time from text input
         selectedTime = this.parseTimeFromText(input, availableSlots);
-        console.log(`🔍 Selected by text parsing "${input}": ${selectedTime}`);
       }
 
       if (!selectedTime) {
@@ -336,7 +334,6 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
-      console.log(`🔍 Final selected time stored in context: ${selectedTime}`);
       context.currentStep = 'staff_selection';
 
       // Get available staff for the selected time
@@ -368,33 +365,21 @@ Please reply with the staff member number or name.`,
    * Parse time from text input and match with available slots
    */
   private parseTimeFromText(input: string, availableSlots: Array<{ time: string; available: boolean }>): string | null {
-    // Remove extra spaces and normalize
-    const normalizedInput = input.replace(/\s+/g, ' ').trim();
+    // Normalize input
+    const normalizedInput = input.replace(/\s+/g, ' ').trim().toLowerCase();
     
-    // Direct time format matching (most reliable)
+    // Direct exact matches first
     for (const slot of availableSlots) {
-      // Check exact matches first
       if (normalizedInput === slot.time.toLowerCase()) {
-        return slot.time;
-      }
-      
-      // Check without colon
-      if (normalizedInput === slot.time.replace(':', '').toLowerCase()) {
-        return slot.time;
-      }
-      
-      // Check with different separators
-      if (normalizedInput === slot.time.replace(':', ' ').toLowerCase()) {
         return slot.time;
       }
     }
     
-    // Parse 12-hour format with AM/PM
-    const amPmMatch = normalizedInput.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+    // Handle AM/PM format (e.g., "9 am", "2 pm")
+    const amPmMatch = normalizedInput.match(/^(\d{1,2})\s*(am|pm)$/);
     if (amPmMatch) {
       let hour = parseInt(amPmMatch[1]);
-      const minute = amPmMatch[2] ? parseInt(amPmMatch[2]) : 0;
-      const period = amPmMatch[3].toLowerCase();
+      const period = amPmMatch[2];
       
       // Convert to 24-hour format
       if (period === 'pm' && hour !== 12) {
@@ -403,7 +388,7 @@ Please reply with the staff member number or name.`,
         hour = 0;
       }
       
-      const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
       
       // Check if this time is available
       for (const slot of availableSlots) {
@@ -413,42 +398,13 @@ Please reply with the staff member number or name.`,
       }
     }
     
-    // Parse 24-hour format
-    const time24Match = normalizedInput.match(/^(\d{1,2})(?::(\d{2}))?$/);
-    if (time24Match) {
-      let hour = parseInt(time24Match[1]);
-      const minute = time24Match[2] ? parseInt(time24Match[2]) : 0;
-      
-      // Ensure hour is in valid range
-      if (hour >= 0 && hour <= 23) {
-        const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        
-        // Check if this time is available
-        for (const slot of availableSlots) {
-          if (slot.time === formattedTime) {
-            return slot.time;
-          }
-        }
-      }
-    }
-    
-    // Try partial matching for common cases
+    // Handle 24-hour format (e.g., "9", "17")
     const hourMatch = normalizedInput.match(/^(\d{1,2})$/);
     if (hourMatch) {
       const hour = parseInt(hourMatch[1]);
       
-      // Try as 24-hour format first
+      // Try as 24-hour format
       if (hour >= 0 && hour <= 23) {
-        const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
-        for (const slot of availableSlots) {
-          if (slot.time === formattedTime) {
-            return slot.time;
-          }
-        }
-      }
-      
-      // Try as 12-hour format (AM)
-      if (hour >= 1 && hour <= 12) {
         const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
         for (const slot of availableSlots) {
           if (slot.time === formattedTime) {

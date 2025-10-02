@@ -270,10 +270,8 @@ Please reply with the time slot number or time.`,
           const timeNumber = parseInt(input);
           if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
             selectedTime = availableSlots[timeNumber - 1].time;
-            console.log(`\u{1F50D} Selected by number ${timeNumber}: ${selectedTime}`);
           } else {
             selectedTime = this.parseTimeFromText(input, availableSlots);
-            console.log(`\u{1F50D} Selected by text parsing "${input}": ${selectedTime}`);
           }
           if (!selectedTime) {
             return {
@@ -282,7 +280,6 @@ Please reply with the time slot number or time.`,
             };
           }
           context.selectedTime = selectedTime;
-          console.log(`\u{1F50D} Final selected time stored in context: ${selectedTime}`);
           context.currentStep = "staff_selection";
           const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
           return {
@@ -309,45 +306,25 @@ Please reply with the staff member number or name.`,
        * Parse time from text input and match with available slots
        */
       parseTimeFromText(input, availableSlots) {
-        const normalizedInput = input.replace(/\s+/g, " ").trim();
+        const normalizedInput = input.replace(/\s+/g, " ").trim().toLowerCase();
         for (const slot of availableSlots) {
           if (normalizedInput === slot.time.toLowerCase()) {
             return slot.time;
           }
-          if (normalizedInput === slot.time.replace(":", "").toLowerCase()) {
-            return slot.time;
-          }
-          if (normalizedInput === slot.time.replace(":", " ").toLowerCase()) {
-            return slot.time;
-          }
         }
-        const amPmMatch = normalizedInput.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
+        const amPmMatch = normalizedInput.match(/^(\d{1,2})\s*(am|pm)$/);
         if (amPmMatch) {
           let hour = parseInt(amPmMatch[1]);
-          const minute = amPmMatch[2] ? parseInt(amPmMatch[2]) : 0;
-          const period = amPmMatch[3].toLowerCase();
+          const period = amPmMatch[2];
           if (period === "pm" && hour !== 12) {
             hour += 12;
           } else if (period === "am" && hour === 12) {
             hour = 0;
           }
-          const formattedTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+          const formattedTime = `${hour.toString().padStart(2, "0")}:00`;
           for (const slot of availableSlots) {
             if (slot.time === formattedTime) {
               return slot.time;
-            }
-          }
-        }
-        const time24Match = normalizedInput.match(/^(\d{1,2})(?::(\d{2}))?$/);
-        if (time24Match) {
-          let hour = parseInt(time24Match[1]);
-          const minute = time24Match[2] ? parseInt(time24Match[2]) : 0;
-          if (hour >= 0 && hour <= 23) {
-            const formattedTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-            for (const slot of availableSlots) {
-              if (slot.time === formattedTime) {
-                return slot.time;
-              }
             }
           }
         }
@@ -355,14 +332,6 @@ Please reply with the staff member number or name.`,
         if (hourMatch) {
           const hour = parseInt(hourMatch[1]);
           if (hour >= 0 && hour <= 23) {
-            const formattedTime = `${hour.toString().padStart(2, "0")}:00`;
-            for (const slot of availableSlots) {
-              if (slot.time === formattedTime) {
-                return slot.time;
-              }
-            }
-          }
-          if (hour >= 1 && hour <= 12) {
             const formattedTime = `${hour.toString().padStart(2, "0")}:00`;
             for (const slot of availableSlots) {
               if (slot.time === formattedTime) {
