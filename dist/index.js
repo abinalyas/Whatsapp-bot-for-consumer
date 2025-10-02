@@ -284,18 +284,22 @@ Please reply with the time slot number or time.`,
             for (const pattern of timePatterns) {
               const match = messageText.match(pattern);
               if (match) {
+                console.log(`\u{1F50D} Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
                 let hour = parseInt(match[1]);
                 let minute = match[2] ? parseInt(match[2]) : 0;
                 const period = match[3]?.toLowerCase();
+                console.log(`\u{1F50D} Parsed time:`, { hour, minute, period });
                 if (period === "pm" && hour !== 12) {
                   hour += 12;
                 } else if (period === "am" && hour === 12) {
                   hour = 0;
                 }
                 const formattedTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+                console.log(`\u{1F50D} Formatted time:`, formattedTime);
                 for (const slot of availableSlots) {
                   if (slot.time === formattedTime) {
                     matchedTime = slot.time;
+                    console.log(`\u{1F50D} Found matching slot:`, slot.time);
                     break;
                   }
                 }

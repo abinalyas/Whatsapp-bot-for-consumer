@@ -333,9 +333,13 @@ Please reply with the time slot number or time.`,
         for (const pattern of timePatterns) {
           const match = messageText.match(pattern);
           if (match) {
+            console.log(`🔍 Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
+            
             let hour = parseInt(match[1]);
             let minute = match[2] ? parseInt(match[2]) : 0;
             const period = match[3]?.toLowerCase();
+            
+            console.log(`🔍 Parsed time:`, { hour, minute, period });
             
             // Convert to 24-hour format if needed
             if (period === 'pm' && hour !== 12) {
@@ -346,11 +350,13 @@ Please reply with the time slot number or time.`,
             
             // Format as HH:MM
             const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            console.log(`🔍 Formatted time:`, formattedTime);
             
             // Check if this time is available
             for (const slot of availableSlots) {
               if (slot.time === formattedTime) {
                 matchedTime = slot.time;
+                console.log(`🔍 Found matching slot:`, slot.time);
                 break;
               }
             }
