@@ -455,7 +455,12 @@ Please reply with the staff member number or name.`,
       const service = await this.getServiceById(context.tenantId, context.selectedService!);
 
       // Create appointment data
+      // Parse the selected time and date in Indian timezone
       const appointmentDateTime = new Date(`${context.selectedDate}T${context.selectedTime}:00`);
+      
+      // Convert to UTC for storage (subtract 5:30 hours for IST to UTC conversion)
+      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+      const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
       
       context.appointmentData = {
         customer_name: context.customerName || 'WhatsApp Customer',
@@ -465,7 +470,7 @@ Please reply with the staff member number or name.`,
         service_name: service?.name || 'Unknown Service',
         staff_id: context.selectedStaff,
         staff_name: selectedStaff.name,
-        scheduled_at: appointmentDateTime.toISOString(),
+        scheduled_at: utcDateTime.toISOString(),
         selectedTime: context.selectedTime,
         amount: service?.price || 0,
         currency: 'INR',
