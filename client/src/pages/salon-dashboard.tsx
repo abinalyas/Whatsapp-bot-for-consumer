@@ -3422,6 +3422,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                               return 'bg-gray-500';
                             };
                             
+                            console.log(`🔧 TIMELINE RENDER: Staff ${staff}, Appointment ${appointment.id}, Customer ${appointment.customer_name}, Time ${appointment.time}`);
                             return (
                               <div
                                 key={`${staff}-${appointment.id}`}
@@ -3596,6 +3597,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                           console.log('🔍 EDIT BUTTON CLICKED - handleEditAppointmentLocal:', typeof handleEditAppointmentLocal);
                           const functionToCall = handleEditAppointment || handleEditAppointmentLocal;
                           console.log('🔍 EDIT BUTTON CLICKED - Using function:', typeof functionToCall);
+                          console.log('🔍 EDIT BUTTON CLICKED - Function name:', functionToCall.name);
                           functionToCall(appointment);
                         }}
                       >
@@ -7195,6 +7197,7 @@ export default function SalonDashboard() {
   };
 
   const handleSaveEditAppointment = async () => {
+    console.log('🔧 MAIN COMPONENT: handleSaveEditAppointment called');
     if (!editingAppointment) return;
     
     setLoading(true);
@@ -8372,3 +8375,4 @@ export default function SalonDashboard() {
 }
 // Force deployment Tue Sep 30 16:11:16 IST 2025
 // Force deployment 1759229037
+// Force rebuild - Thu Oct  2 11:46:33 IST 2025
