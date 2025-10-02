@@ -370,6 +370,8 @@ Please reply with the staff member number or name.`,
           context.currentStep = "confirmation";
           const service = await this.getServiceById(context.tenantId, context.selectedService);
           const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${context.selectedTime}:00`);
+          const indianOffset = 5.5 * 60;
+          const utcDateTime = new Date(appointmentDateTime.getTime() - indianOffset * 60 * 1e3);
           context.appointmentData = {
             customer_name: context.customerName || "WhatsApp Customer",
             customer_phone: context.customerPhone,
@@ -378,7 +380,7 @@ Please reply with the staff member number or name.`,
             service_name: service?.name || "Unknown Service",
             staff_id: context.selectedStaff,
             staff_name: selectedStaff.name,
-            scheduled_at: appointmentDateTime.toISOString(),
+            scheduled_at: utcDateTime.toISOString(),
             selectedTime: context.selectedTime,
             amount: service?.price || 0,
             currency: "INR",
