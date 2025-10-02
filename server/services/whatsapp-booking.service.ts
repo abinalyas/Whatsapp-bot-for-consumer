@@ -69,7 +69,15 @@ export class WhatsAppBookingService {
         
         case 'time_selection':
           console.log('🔍 Routing to handleTimeSelection');
-          return await this.handleTimeSelection(messageText, context);
+          try {
+            return await this.handleTimeSelection(messageText, context);
+          } catch (error) {
+            console.error('❌ Error in handleTimeSelection:', error);
+            return {
+              success: false,
+              message: "I'm sorry, there was an error processing your time selection. Please try again."
+            };
+          }
         
         case 'confirmation':
           return await this.handleConfirmation(messageText, context);
