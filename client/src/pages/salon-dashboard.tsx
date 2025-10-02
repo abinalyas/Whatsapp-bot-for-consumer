@@ -3428,8 +3428,10 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                             let hour24 = parseInt(hours);
                             console.log(`🔍 TIME DEBUG: Parsed hour24 before conversion: ${hour24}`);
                             
-                            if (period === 'PM' && hour24 !== 12) hour24 += 12;
-                            if (period === 'AM' && hour24 === 12) hour24 = 0;
+                            // Fix AM/PM conversion - ensure period is uppercase for comparison
+                            const upperPeriod = period?.toUpperCase();
+                            if (upperPeriod === 'PM' && hour24 !== 12) hour24 += 12;
+                            if (upperPeriod === 'AM' && hour24 === 12) hour24 = 0;
                             
                             console.log(`🔍 TIME DEBUG: Final hour24 after conversion: ${hour24}`);
                             
