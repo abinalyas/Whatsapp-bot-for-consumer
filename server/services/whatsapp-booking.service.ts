@@ -668,11 +668,34 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       // Generate a unique booking ID
       const bookingId = randomUUID();
       
-      // Create a conversation ID for this booking
+      // Create a conversation record first
       const conversationId = randomUUID();
+      console.log(`📝 Creating conversation with ID: ${conversationId}`);
       
+      await this.pool.query(`
+        INSERT INTO conversations (
+          id, phone_number, customer_name, current_state, 
+          selected_service, selected_date, selected_time, context_data
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        conversationId,
+        appointmentData.customer_phone,
+        appointmentData.customer_name,
+        'booking_completed',
+        appointmentData.service_id,
+        appointmentData.selectedDate,
+        appointmentData.selectedTime,
+        JSON.stringify({
+          service_name: appointmentData.service_name,
+          staff_name: appointmentData.staff_name,
+          amount: appointmentData.amount
+        })
+      ]);
+      
+      console.log(`✅ Conversation created successfully: ${conversationId}`);
+      
+      // Now create the booking with the valid conversation_id
       console.log(`📝 Inserting booking with ID: ${bookingId}`);
-      console.log(`📝 Conversation ID: ${conversationId}`);
       console.log(`📝 Service ID: ${appointmentData.service_id}`);
       console.log(`📝 Phone: ${appointmentData.customer_phone}`);
       console.log(`📝 Name: ${appointmentData.customer_name}`);
@@ -706,7 +729,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
     } catch (error) {
       console.error('❌ Error creating appointment:', error);
       console.error('❌ Error details:', error.message);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error constraint:', error.constraint);
       return null;
     }
   }

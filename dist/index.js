@@ -7807,8 +7807,28 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       console.log("\u{1F50D} Creating appointment with data:", JSON.stringify(appointmentData, null, 2));
       const bookingId = randomUUID3();
       const conversationId = randomUUID3();
+      console.log(`\u{1F4DD} Creating conversation with ID: ${conversationId}`);
+      await this.pool.query(`
+        INSERT INTO conversations (
+          id, phone_number, customer_name, current_state, 
+          selected_service, selected_date, selected_time, context_data
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+        conversationId,
+        appointmentData.customer_phone,
+        appointmentData.customer_name,
+        "booking_completed",
+        appointmentData.service_id,
+        appointmentData.selectedDate,
+        appointmentData.selectedTime,
+        JSON.stringify({
+          service_name: appointmentData.service_name,
+          staff_name: appointmentData.staff_name,
+          amount: appointmentData.amount
+        })
+      ]);
+      console.log(`\u2705 Conversation created successfully: ${conversationId}`);
       console.log(`\u{1F4DD} Inserting booking with ID: ${bookingId}`);
-      console.log(`\u{1F4DD} Conversation ID: ${conversationId}`);
       console.log(`\u{1F4DD} Service ID: ${appointmentData.service_id}`);
       console.log(`\u{1F4DD} Phone: ${appointmentData.customer_phone}`);
       console.log(`\u{1F4DD} Name: ${appointmentData.customer_name}`);
@@ -7839,7 +7859,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
     } catch (error) {
       console.error("\u274C Error creating appointment:", error);
       console.error("\u274C Error details:", error.message);
-      console.error("\u274C Error stack:", error.stack);
+      console.error("\u274C Error code:", error.code);
+      console.error("\u274C Error constraint:", error.constraint);
       return null;
     }
   }
