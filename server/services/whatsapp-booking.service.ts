@@ -1,6 +1,7 @@
 /**
- * WhatsApp Booking Integration Service
+ * WhatsApp Booking Integration Service v2.0
  * Handles appointment bookings from WhatsApp Bot and integrates with salon dashboard
+ * Now with smart staff matching - no more manual staff selection!
  */
 
 import { Pool } from '@neondatabase/serverless';
