@@ -3367,6 +3367,17 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                   const staffAppointments = dayAppointments.filter(apt => apt.staff_name === staff);
                   console.log(`🔍 Timeline: Staff ${staff} has ${staffAppointments.length} appointments:`, staffAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, time: apt.time })));
                   console.log(`🔍 Timeline: All dayAppointments for debugging:`, dayAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, staff: apt.staff_name, time: apt.time })));
+                  
+                  // Debug specific appointments
+                  staffAppointments.forEach(apt => {
+                    console.log(`🔍 APPOINTMENT DEBUG: ${apt.customer_name}`, {
+                      id: apt.id,
+                      time: apt.time,
+                      scheduled_at: apt.scheduled_at,
+                      staff_name: apt.staff_name,
+                      service: apt.service_name
+                    });
+                  });
                   console.log(`🔍 Timeline: Using same data source as list view - appointments state length:`, appointments?.length || 0);
                   
                   // Create hourly timeline (9 AM to 7 PM)
@@ -3405,11 +3416,22 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                           {staffAppointments.map((appointment, aptIndex) => {
                             // Calculate position and width based on time
                             const startTime = appointment.time || '9:00 AM';
+                            console.log(`🔍 TIME DEBUG: ${appointment.customer_name} - Raw time: "${startTime}"`);
+                            console.log(`🔍 TIME DEBUG: Full appointment data:`, appointment);
+                            
                             const [time, period] = startTime.split(' ');
+                            console.log(`🔍 TIME DEBUG: Split time: "${time}", period: "${period}"`);
+                            
                             const [hours, minutes] = time.split(':');
+                            console.log(`🔍 TIME DEBUG: Hours: "${hours}", minutes: "${minutes}"`);
+                            
                             let hour24 = parseInt(hours);
+                            console.log(`🔍 TIME DEBUG: Parsed hour24 before conversion: ${hour24}`);
+                            
                             if (period === 'PM' && hour24 !== 12) hour24 += 12;
                             if (period === 'AM' && hour24 === 12) hour24 = 0;
+                            
+                            console.log(`🔍 TIME DEBUG: Final hour24 after conversion: ${hour24}`);
                             
                             const startHour = hour24;
                             const duration = appointment.duration || 60;
