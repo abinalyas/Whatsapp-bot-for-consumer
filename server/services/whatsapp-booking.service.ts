@@ -75,7 +75,14 @@ export class WhatsAppBookingService {
         
         case 'completed':
           // If conversation is completed, start a new one
+          console.log('🔄 Conversation completed, resetting to welcome');
           context.currentStep = 'welcome';
+          // Clear any previous appointment data
+          delete context.appointmentData;
+          delete context.selectedService;
+          delete context.selectedDate;
+          delete context.selectedTime;
+          delete context.selectedStaff;
           return await this.handleWelcome(messageText, context);
         
         default:

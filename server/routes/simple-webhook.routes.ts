@@ -205,14 +205,16 @@ export function createSimpleWebhookRoutes(): Router {
         }
       }
       
-      // If user sends "reset" or "start over", clear the conversation state
-      if (message.toLowerCase().includes('reset') || message.toLowerCase().includes('start over')) {
+      // If user sends "reset", "start over", "book", or "book appointment", clear the conversation state
+      const resetKeywords = ['reset', 'start over', 'book', 'book appointment', 'new booking'];
+      if (resetKeywords.some(keyword => message.toLowerCase().includes(keyword))) {
         clearConversationState(phoneNumber);
         bookingContext = {
           tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
           customerPhone: phoneNumber,
           currentStep: 'welcome'
         };
+        console.log(`🔄 Reset conversation state for ${phoneNumber} due to: ${message}`);
       }
 
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
@@ -227,9 +229,16 @@ export function createSimpleWebhookRoutes(): Router {
       // Update conversation state if successful
       if (result.success && result.nextStep) {
         bookingContext.currentStep = result.nextStep;
-        // Store a deep copy of the context to preserve all changes
-        conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
-        console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+        
+        // If booking is completed, clear the conversation state for fresh start
+        if (result.nextStep === 'completed') {
+          console.log(`🎉 Booking completed for ${phoneNumber}, clearing conversation state`);
+          clearConversationState(phoneNumber);
+        } else {
+          // Store a deep copy of the context to preserve all changes
+          conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
+          console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+        }
       }
 
       if (result.success) {
