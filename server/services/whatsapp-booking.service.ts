@@ -224,12 +224,18 @@ Please reply with the date number or date.`,
       if (!isNaN(dateNumber) && dateNumber >= 1 && dateNumber <= availableDates.length) {
         selectedDate = availableDates[dateNumber - 1];
       } else {
-        // Try to match by date string
-        for (const date of availableDates) {
-          if (messageText.includes(date.formatted.toLowerCase()) || 
-              messageText.includes(date.date)) {
-            selectedDate = date;
-            break;
+        // Handle common date keywords
+        if (messageText.includes('tomorrow') || messageText.includes('today')) {
+          selectedDate = availableDates[0]; // First available date (tomorrow)
+        } else {
+          // Try to match by date string
+          for (const date of availableDates) {
+            if (messageText.includes(date.formatted.toLowerCase()) || 
+                messageText.includes(date.date) ||
+                messageText.includes(date.formatted.split(',')[0].toLowerCase())) { // Match day name
+              selectedDate = date;
+              break;
+            }
           }
         }
       }
@@ -284,12 +290,54 @@ Please reply with the time slot number or time.`,
       if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
         selectedTime = availableSlots[timeNumber - 1].time;
       } else {
-        // Try to match by time string
-        for (const slot of availableSlots) {
-          if (messageText.includes(slot.time.toLowerCase()) || 
-              messageText.includes(slot.time.replace(':', ''))) {
-            selectedTime = slot.time;
-            break;
+        // Handle common time formats
+        const timePatterns = [
+          /(\d{1,2})\s*(am|pm)/i, // 10 am, 2 pm
+          /(\d{1,2}):(\d{2})\s*(am|pm)/i, // 10:30 am, 2:45 pm
+          /(\d{1,2}):(\d{2})/i, // 10:30, 14:30
+          /(\d{1,2})/i // 10, 14
+        ];
+        
+        let matchedTime = null;
+        for (const pattern of timePatterns) {
+          const match = messageText.match(pattern);
+          if (match) {
+            let hour = parseInt(match[1]);
+            let minute = match[2] ? parseInt(match[2]) : 0;
+            const period = match[3]?.toLowerCase();
+            
+            // Convert to 24-hour format if needed
+            if (period === 'pm' && hour !== 12) {
+              hour += 12;
+            } else if (period === 'am' && hour === 12) {
+              hour = 0;
+            }
+            
+            // Format as HH:MM
+            const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            
+            // Check if this time is available
+            for (const slot of availableSlots) {
+              if (slot.time === formattedTime) {
+                matchedTime = slot.time;
+                break;
+              }
+            }
+            
+            if (matchedTime) break;
+          }
+        }
+        
+        if (matchedTime) {
+          selectedTime = matchedTime;
+        } else {
+          // Try to match by time string (fallback)
+          for (const slot of availableSlots) {
+            if (messageText.includes(slot.time.toLowerCase()) || 
+                messageText.includes(slot.time.replace(':', ''))) {
+              selectedTime = slot.time;
+              break;
+            }
           }
         }
       }
