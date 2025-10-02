@@ -7247,10 +7247,14 @@ export default function SalonDashboard() {
         }
         
         // CRITICAL FIX: Always convert time to 24-hour format if it exists but is in 12-hour format
+        console.log('🕐 BEFORE CONVERSION - timeValue:', timeValue, 'contains AM/PM:', timeValue && (timeValue.includes('AM') || timeValue.includes('PM')));
         if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM'))) {
           const convertedTime = convertTo24HourFormat(timeValue);
           console.log('🕐 Converting existing time from 12-hour to 24-hour:', timeValue, '->', convertedTime);
           timeValue = convertedTime;
+          console.log('🕐 AFTER CONVERSION - timeValue:', timeValue);
+        } else {
+          console.log('🕐 NO CONVERSION NEEDED - timeValue:', timeValue);
         }
         
         // Final fallback - if still no time, use a reasonable default
