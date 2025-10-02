@@ -7272,6 +7272,7 @@ import { Router as Router5 } from "express";
 
 // server/services/whatsapp-booking.service.ts
 import { Pool as Pool7 } from "@neondatabase/serverless";
+import { randomUUID as randomUUID3 } from "crypto";
 var WhatsAppBookingService = class {
   pool;
   constructor() {
@@ -7779,27 +7780,27 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
    */
   async createAppointment(tenantId, appointmentData) {
     try {
+      const bookingId = randomUUID3();
+      const conversationId = randomUUID3();
       const result = await this.pool.query(`
-        INSERT INTO transactions (
-          tenant_id, transaction_type, customer_name, customer_phone, customer_email,
-          offering_id, staff_id, scheduled_at, duration_minutes,
-          amount, currency, notes, payment_status
-        ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO bookings (
+          id, conversation_id, service_id, phone_number, customer_name,
+          amount, status, appointment_date, appointment_time, notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
       `, [
-        tenantId,
-        appointmentData.customer_name,
-        appointmentData.customer_phone,
-        appointmentData.customer_email,
+        bookingId,
+        conversationId,
         appointmentData.service_id,
-        appointmentData.staff_id,
-        appointmentData.scheduled_at,
-        appointmentData.duration_minutes || 60,
+        appointmentData.customer_phone,
+        appointmentData.customer_name,
         appointmentData.amount,
-        appointmentData.currency,
-        appointmentData.notes,
-        appointmentData.payment_status
+        "confirmed",
+        appointmentData.scheduled_at,
+        appointmentData.selectedTime,
+        `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`
       ]);
+      console.log(`\u2705 Booking created successfully: ${bookingId}`);
       return result.rows[0]?.id || null;
     } catch (error) {
       console.error("Error creating appointment:", error);
