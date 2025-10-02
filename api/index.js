@@ -7976,6 +7976,8 @@ function createSimpleWebhookRoutes() {
           customerPhone: phoneNumber,
           currentStep: "welcome"
         };
+      } else {
+        bookingContext = JSON.parse(JSON.stringify(bookingContext));
       }
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
       const result = await bookingService.processBookingMessage(
@@ -7985,7 +7987,7 @@ function createSimpleWebhookRoutes() {
       );
       if (result.success && result.nextStep) {
         bookingContext.currentStep = result.nextStep;
-        conversationState.set(phoneNumber, bookingContext);
+        conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
         console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
       }
       if (result.success) {

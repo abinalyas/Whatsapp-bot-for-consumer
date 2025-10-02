@@ -155,6 +155,9 @@ export function createSimpleWebhookRoutes(): Router {
           customerPhone: phoneNumber,
           currentStep: 'welcome'
         };
+      } else {
+        // Create a deep copy to avoid modifying the stored state directly
+        bookingContext = JSON.parse(JSON.stringify(bookingContext));
       }
 
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
@@ -169,7 +172,8 @@ export function createSimpleWebhookRoutes(): Router {
       // Update conversation state if successful
       if (result.success && result.nextStep) {
         bookingContext.currentStep = result.nextStep;
-        conversationState.set(phoneNumber, bookingContext);
+        // Store a deep copy of the context to preserve all changes
+        conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
         console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
       }
 
