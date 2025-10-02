@@ -2718,7 +2718,7 @@ function StaffSection({
   );
 }
 
-function CalendarSection({ loadTodaysAppointments, appointments, setAppointments }) {
+function CalendarSection({ loadTodaysAppointments, appointments, setAppointments, handleEditAppointment }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
   console.log('📅 CALENDAR SECTION: Received props - appointments length:', appointments?.length || 0);
   console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
@@ -2828,7 +2828,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
     });
   };
 
-  const handleEditAppointment = async (appointment) => {
+  const handleEditAppointmentLocal = async (appointment) => {
     setEditingAppointment(appointment);
     
     // Load staff and services data for dropdowns
@@ -3730,7 +3730,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                         size="sm" 
                         variant="outline" 
                         className="w-full"
-                        onClick={() => handleEditAppointment(appointment)}
+                        onClick={() => (handleEditAppointment || handleEditAppointmentLocal)(appointment)}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
@@ -7494,6 +7494,7 @@ export default function SalonDashboard() {
           loadTodaysAppointments={loadTodaysAppointments}
           appointments={appointmentsToPass}
           setAppointments={handleSetAppointments}
+          handleEditAppointment={handleEditAppointment}
         />;
       case "payments":
         return <PaymentsSection />;
