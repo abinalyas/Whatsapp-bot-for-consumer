@@ -2958,21 +2958,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
     setShowCancelAppointmentModal(true);
   };
 
-  const handleCloseEditModal = () => {
-    setShowEditAppointmentModal(false);
-    // Don't set editingAppointment here - let main component handle it
-    setEditAppointment({
-      customerName: "",
-      phone: "",
-      email: "",
-      service: "",
-      staffMember: "",
-      date: "",
-      time: "",
-      status: "confirmed",
-      notes: ""
-    });
-  };
+  // handleCloseEditModal moved to exported component
 
 
   const handleCloseCancelModal = () => {
@@ -6126,6 +6112,23 @@ export default function SalonDashboard() {
   
   // Edit appointment modal state
   const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
+  
+  // Close edit modal function - moved from first component
+  const handleCloseEditModal = () => {
+    setShowEditAppointmentModal(false);
+    setEditingAppointment(null);
+    setEditAppointment({
+      customerName: "",
+      phone: "",
+      email: "",
+      service: "",
+      staffMember: "",
+      date: "",
+      time: "",
+      status: "confirmed",
+      notes: ""
+    });
+  };
   // editingAppointment state is already defined above
   const [editAppointment, setEditAppointment] = useState({
     customerName: "",
