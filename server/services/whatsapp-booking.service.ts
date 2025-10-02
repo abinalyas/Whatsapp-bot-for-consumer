@@ -321,9 +321,11 @@ Please reply with the time slot number or time.`,
       const timeNumber = parseInt(input);
       if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
         selectedTime = availableSlots[timeNumber - 1].time;
+        console.log(`🔍 Selected by number ${timeNumber}: ${selectedTime}`);
       } else {
         // Parse time from text input
         selectedTime = this.parseTimeFromText(input, availableSlots);
+        console.log(`🔍 Selected by text parsing "${input}": ${selectedTime}`);
       }
 
       if (!selectedTime) {
@@ -334,6 +336,7 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
+      console.log(`🔍 Final selected time stored in context: ${selectedTime}`);
       context.currentStep = 'staff_selection';
 
       // Get available staff for the selected time

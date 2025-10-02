@@ -270,8 +270,10 @@ Please reply with the time slot number or time.`,
           const timeNumber = parseInt(input);
           if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
             selectedTime = availableSlots[timeNumber - 1].time;
+            console.log(`\u{1F50D} Selected by number ${timeNumber}: ${selectedTime}`);
           } else {
             selectedTime = this.parseTimeFromText(input, availableSlots);
+            console.log(`\u{1F50D} Selected by text parsing "${input}": ${selectedTime}`);
           }
           if (!selectedTime) {
             return {
@@ -280,6 +282,7 @@ Please reply with the time slot number or time.`,
             };
           }
           context.selectedTime = selectedTime;
+          console.log(`\u{1F50D} Final selected time stored in context: ${selectedTime}`);
           context.currentStep = "staff_selection";
           const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
           return {
