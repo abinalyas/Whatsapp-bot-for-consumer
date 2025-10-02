@@ -7286,6 +7286,11 @@ var WhatsAppBookingService = class {
   async processBookingMessage(message, tenantId, context) {
     try {
       const messageText = message.text?.body?.toLowerCase().trim() || "";
+      console.log("\u{1F50D} processBookingMessage called with:", {
+        messageText,
+        currentStep: context.currentStep,
+        context: JSON.stringify(context, null, 2)
+      });
       switch (context.currentStep) {
         case "welcome":
           return await this.handleWelcome(messageText, context);

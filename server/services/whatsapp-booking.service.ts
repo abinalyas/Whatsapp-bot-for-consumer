@@ -48,6 +48,12 @@ export class WhatsAppBookingService {
   ): Promise<BookingResponse> {
     try {
       const messageText = message.text?.body?.toLowerCase().trim() || '';
+      
+      console.log('🔍 processBookingMessage called with:', {
+        messageText,
+        currentStep: context.currentStep,
+        context: JSON.stringify(context, null, 2)
+      });
 
       // Handle different booking steps
       switch (context.currentStep) {
