@@ -635,11 +635,22 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async createAppointment(tenantId: string, appointmentData: any): Promise<string | null> {
     try {
+      console.log('🔍 Creating appointment with data:', JSON.stringify(appointmentData, null, 2));
+      
       // Generate a unique booking ID
       const bookingId = randomUUID();
       
       // Create a conversation ID for this booking
       const conversationId = randomUUID();
+      
+      console.log(`📝 Inserting booking with ID: ${bookingId}`);
+      console.log(`📝 Conversation ID: ${conversationId}`);
+      console.log(`📝 Service ID: ${appointmentData.service_id}`);
+      console.log(`📝 Phone: ${appointmentData.customer_phone}`);
+      console.log(`📝 Name: ${appointmentData.customer_name}`);
+      console.log(`📝 Amount: ${appointmentData.amount}`);
+      console.log(`📝 Scheduled At: ${appointmentData.scheduled_at}`);
+      console.log(`📝 Selected Time: ${appointmentData.selectedTime}`);
       
       const result = await this.pool.query(`
         INSERT INTO bookings (
@@ -661,10 +672,13 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       ]);
 
       console.log(`✅ Booking created successfully: ${bookingId}`);
+      console.log(`📊 Query result:`, result.rows);
       return result.rows[0]?.id || null;
 
     } catch (error) {
-      console.error('Error creating appointment:', error);
+      console.error('❌ Error creating appointment:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Error stack:', error.stack);
       return null;
     }
   }

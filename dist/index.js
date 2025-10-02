@@ -7781,8 +7781,17 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
    */
   async createAppointment(tenantId, appointmentData) {
     try {
+      console.log("\u{1F50D} Creating appointment with data:", JSON.stringify(appointmentData, null, 2));
       const bookingId = randomUUID3();
       const conversationId = randomUUID3();
+      console.log(`\u{1F4DD} Inserting booking with ID: ${bookingId}`);
+      console.log(`\u{1F4DD} Conversation ID: ${conversationId}`);
+      console.log(`\u{1F4DD} Service ID: ${appointmentData.service_id}`);
+      console.log(`\u{1F4DD} Phone: ${appointmentData.customer_phone}`);
+      console.log(`\u{1F4DD} Name: ${appointmentData.customer_name}`);
+      console.log(`\u{1F4DD} Amount: ${appointmentData.amount}`);
+      console.log(`\u{1F4DD} Scheduled At: ${appointmentData.scheduled_at}`);
+      console.log(`\u{1F4DD} Selected Time: ${appointmentData.selectedTime}`);
       const result = await this.pool.query(`
         INSERT INTO bookings (
           id, conversation_id, service_id, phone_number, customer_name,
@@ -7802,9 +7811,12 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`
       ]);
       console.log(`\u2705 Booking created successfully: ${bookingId}`);
+      console.log(`\u{1F4CA} Query result:`, result.rows);
       return result.rows[0]?.id || null;
     } catch (error) {
-      console.error("Error creating appointment:", error);
+      console.error("\u274C Error creating appointment:", error);
+      console.error("\u274C Error details:", error.message);
+      console.error("\u274C Error stack:", error.stack);
       return null;
     }
   }
