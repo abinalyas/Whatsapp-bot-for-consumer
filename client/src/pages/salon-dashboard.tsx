@@ -2819,6 +2819,8 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
   };
 
   const handleEditAppointmentLocal = async (appointment) => {
+    console.log('🔧 CALENDAR SECTION: handleEditAppointmentLocal called with appointment:', appointment.id);
+    console.log('🔧 CALENDAR SECTION: handleEditAppointment prop function:', typeof handleEditAppointment);
     handleEditAppointment(appointment);
     
     // Load staff and services data for dropdowns
@@ -7059,6 +7061,8 @@ export default function SalonDashboard() {
 
   // Edit appointment handlers
   const handleEditAppointment = async (appointment) => {
+    console.log('🔧 MAIN COMPONENT: handleEditAppointment called with appointment:', appointment.id);
+    console.log('🔧 MAIN COMPONENT: setEditingAppointment function:', typeof setEditingAppointment);
     setEditingAppointment(appointment);
     
     // Load staff and services data for dropdowns
