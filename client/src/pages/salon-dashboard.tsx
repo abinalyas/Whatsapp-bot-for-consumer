@@ -7205,12 +7205,14 @@ export default function SalonDashboard() {
         
         // Extract time from scheduled_at if time field is not available or in wrong format
         let timeValue = appointment.time || "";
+        console.log('🕐 Initial time extraction - Full appointment data:', appointment);
         console.log('🕐 Initial time extraction:', {
           appointmentTime: appointment.time,
           scheduled_at: appointment.scheduled_at,
           appointmentTime_field: appointment.appointmentTime,
           appointment_time_field: appointment.appointment_time,
-          timeValue
+          timeValue,
+          allFields: Object.keys(appointment)
         });
         
         // First, try to extract from scheduled_at (most reliable)
