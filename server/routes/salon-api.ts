@@ -411,7 +411,7 @@ router.get('/appointments', async (req, res) => {
     
     let query = `
       SELECT 
-        t.id, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
+        t.id::text, t.transaction_number, t.customer_name, t.customer_phone, t.customer_email,
         t.scheduled_at, t.duration_minutes, t.amount, t.currency, t.payment_status,
         t.payment_method, t.notes, t.created_at, t.updated_at, t.staff_id,
         o.name as service_name, o.category as service_category,
@@ -423,9 +423,9 @@ router.get('/appointments', async (req, res) => {
       UNION ALL
       
       SELECT 
-        b.id, NULL as transaction_number, b.customer_name, b.phone_number as customer_phone, 
+        b.id::text, NULL as transaction_number, b.customer_name, b.phone_number as customer_phone, 
         NULL as customer_email, 
-        CONCAT(b.appointment_date, ' ', b.appointment_time)::timestamp as scheduled_at,
+        b.appointment_date as scheduled_at,
         60 as duration_minutes, b.amount, 'INR' as currency, 
         CASE WHEN b.status = 'confirmed' THEN 'paid' ELSE 'pending' END as payment_status,
         'UPI' as payment_method, b.notes, b.created_at, b.updated_at, NULL as staff_id,
