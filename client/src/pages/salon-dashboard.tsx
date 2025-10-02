@@ -3362,6 +3362,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                 {staffMembers.map((staff, index) => {
                   const staffAppointments = dayAppointments.filter(apt => apt.staff_name === staff);
                   console.log(`🔍 Timeline: Staff ${staff} has ${staffAppointments.length} appointments:`, staffAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, time: apt.time })));
+                  console.log(`🔍 Timeline: All dayAppointments for debugging:`, dayAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, staff: apt.staff_name, time: apt.time })));
                   
                   // Create hourly timeline (9 AM to 7 PM)
                   const hours = Array.from({ length: 11 }, (_, i) => i + 9); // 9 to 19 (9 AM to 7 PM)
@@ -3424,7 +3425,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                               return 'bg-gray-500';
                             };
                             
-                            console.log(`🔧 TIMELINE RENDER: Staff ${staff}, Appointment ${appointment.id}, Customer ${appointment.customer_name}, Time ${appointment.time}`);
+                            console.log(`🔧 TIMELINE RENDER: Staff ${staff}, Appointment ${appointment.id}, Customer ${appointment.customer_name}, Time ${appointment.time}, Position: ${position}, Width: ${width}`);
                             return (
                               <div
                                 key={`${staff}-${appointment.id}`}
@@ -6106,7 +6107,7 @@ export default function SalonDashboard() {
   
   // Edit appointment modal state
   const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState(null);
+  // editingAppointment state is already defined above
   const [editAppointment, setEditAppointment] = useState({
     customerName: "",
     phone: "",
