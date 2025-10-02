@@ -2958,7 +2958,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
 
   const handleCloseEditModal = () => {
     setShowEditAppointmentModal(false);
-    setEditingAppointment(null);
+    // Don't set editingAppointment here - let main component handle it
     setEditAppointment({
       customerName: "",
       phone: "",
@@ -3408,6 +3408,8 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                             const startHour = hour24;
                             const duration = appointment.duration || 60;
                             const endHour = startHour + Math.ceil(duration / 60);
+                            
+                            console.log(`🔧 TIME CALCULATION: ${appointment.customer_name} - Start: ${startTime} -> ${startHour}:00, Duration: ${duration}min, End: ${endHour}:00`);
                             
                             // Calculate position (0-10 for hours 9-19)
                             const position = Math.max(0, startHour - 9);
