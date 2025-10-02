@@ -2724,6 +2724,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
   console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
   console.log('📅 CALENDAR SECTION: loadTodaysAppointments function:', typeof loadTodaysAppointments);
   console.log('📅 CALENDAR SECTION: setAppointments function:', typeof setAppointments);
+  console.log('🔍 CALENDAR SECTION: handleEditAppointment prop:', typeof handleEditAppointment);
   
   const [viewMode, setViewMode] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -3730,7 +3731,13 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                         size="sm" 
                         variant="outline" 
                         className="w-full"
-                        onClick={() => (handleEditAppointment || handleEditAppointmentLocal)(appointment)}
+                        onClick={() => {
+                          console.log('🔍 EDIT BUTTON CLICKED - handleEditAppointment prop:', typeof handleEditAppointment);
+                          console.log('🔍 EDIT BUTTON CLICKED - handleEditAppointmentLocal:', typeof handleEditAppointmentLocal);
+                          const functionToCall = handleEditAppointment || handleEditAppointmentLocal;
+                          console.log('🔍 EDIT BUTTON CLICKED - Using function:', typeof functionToCall);
+                          functionToCall(appointment);
+                        }}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
