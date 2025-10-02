@@ -7798,6 +7798,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
 function createSimpleWebhookRoutes() {
   const router4 = Router5();
   const bookingService = new WhatsAppBookingService();
+  const conversationState = /* @__PURE__ */ new Map();
   router4.get("/whatsapp/simple", (req, res) => {
     try {
       const mode = req.query["hub.mode"];
@@ -7831,24 +7832,34 @@ function createSimpleWebhookRoutes() {
       for (const message of messages2) {
         try {
           console.log(`Processing message from ${message.from}: ${message.text?.body}`);
-          const bookingContext = {
-            tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
-            // Bella Salon tenant ID
-            customerPhone: message.from,
-            currentStep: "welcome"
-          };
+          let bookingContext = conversationState.get(message.from);
+          if (!bookingContext) {
+            bookingContext = {
+              tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+              // Bella Salon tenant ID
+              customerPhone: message.from,
+              currentStep: "welcome"
+            };
+          }
+          console.log(`Current conversation state for ${message.from}:`, bookingContext);
           const result = await bookingService.processBookingMessage(
             message,
             bookingContext.tenantId,
             bookingContext
           );
+          if (result.success && result.nextStep) {
+            bookingContext.currentStep = result.nextStep;
+            conversationState.set(message.from, bookingContext);
+            console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+          }
           if (result.success) {
             processedMessages.push({
               messageId: message.id,
               phoneNumber: message.from,
               response: result.message,
               nextStep: result.nextStep,
-              appointmentId: result.appointmentId
+              appointmentId: result.appointmentId,
+              currentStep: bookingContext.currentStep
             });
             console.log(`Generated response: ${result.message.substring(0, 100)}...`);
           } else {
@@ -7882,28 +7893,39 @@ function createSimpleWebhookRoutes() {
         });
       }
       console.log(`Test message from ${phoneNumber}: ${message}`);
-      const bookingContext = {
-        tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
-        // Bella Salon tenant ID
-        customerPhone: phoneNumber,
-        currentStep: "welcome"
-      };
+      let bookingContext = conversationState.get(phoneNumber);
+      if (!bookingContext) {
+        bookingContext = {
+          tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+          // Bella Salon tenant ID
+          customerPhone: phoneNumber,
+          currentStep: "welcome"
+        };
+      }
+      console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
       const result = await bookingService.processBookingMessage(
         { text: { body: message }, from: phoneNumber, id: "test", type: "text", timestamp: (/* @__PURE__ */ new Date()).toISOString() },
         bookingContext.tenantId,
         bookingContext
       );
+      if (result.success && result.nextStep) {
+        bookingContext.currentStep = result.nextStep;
+        conversationState.set(phoneNumber, bookingContext);
+        console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+      }
       if (result.success) {
         res.json({
           success: true,
           message: result.message,
           nextStep: result.nextStep,
-          appointmentId: result.appointmentId
+          appointmentId: result.appointmentId,
+          currentStep: bookingContext.currentStep
         });
       } else {
         res.status(500).json({
           success: false,
-          error: result.error || "Unknown error"
+          error: result.error || "Unknown error",
+          currentStep: bookingContext.currentStep
         });
       }
     } catch (error) {

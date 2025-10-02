@@ -9,6 +9,9 @@ import { WhatsAppBookingService } from '../services/whatsapp-booking.service';
 export function createSimpleWebhookRoutes(): Router {
   const router = Router();
   const bookingService = new WhatsAppBookingService();
+  
+  // Simple in-memory conversation state storage
+  const conversationState = new Map<string, any>();
 
   /**
    * Simple webhook verification (GET request from WhatsApp)
@@ -60,12 +63,19 @@ export function createSimpleWebhookRoutes(): Router {
         try {
           console.log(`Processing message from ${message.from}: ${message.text?.body}`);
           
-          // Initialize booking context
-          const bookingContext = {
-            tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
-            customerPhone: message.from,
-            currentStep: 'welcome'
-          };
+          // Get or create conversation state for this phone number
+          let bookingContext = conversationState.get(message.from);
+          
+          if (!bookingContext) {
+            // Initialize new conversation
+            bookingContext = {
+              tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+              customerPhone: message.from,
+              currentStep: 'welcome'
+            };
+          }
+
+          console.log(`Current conversation state for ${message.from}:`, bookingContext);
 
           // Process the message
           const result = await bookingService.processBookingMessage(
@@ -74,13 +84,21 @@ export function createSimpleWebhookRoutes(): Router {
             bookingContext
           );
 
+          // Update conversation state if successful
+          if (result.success && result.nextStep) {
+            bookingContext.currentStep = result.nextStep;
+            conversationState.set(message.from, bookingContext);
+            console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+          }
+
           if (result.success) {
             processedMessages.push({
               messageId: message.id,
               phoneNumber: message.from,
               response: result.message,
               nextStep: result.nextStep,
-              appointmentId: result.appointmentId
+              appointmentId: result.appointmentId,
+              currentStep: bookingContext.currentStep
             });
 
             console.log(`Generated response: ${result.message.substring(0, 100)}...`);
@@ -127,12 +145,19 @@ export function createSimpleWebhookRoutes(): Router {
 
       console.log(`Test message from ${phoneNumber}: ${message}`);
 
-      // Initialize booking context
-      const bookingContext = {
-        tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
-        customerPhone: phoneNumber,
-        currentStep: 'welcome'
-      };
+      // Get or create conversation state for this phone number
+      let bookingContext = conversationState.get(phoneNumber);
+      
+      if (!bookingContext) {
+        // Initialize new conversation
+        bookingContext = {
+          tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+          customerPhone: phoneNumber,
+          currentStep: 'welcome'
+        };
+      }
+
+      console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
 
       // Process the message
       const result = await bookingService.processBookingMessage(
@@ -141,17 +166,26 @@ export function createSimpleWebhookRoutes(): Router {
         bookingContext
       );
 
+      // Update conversation state if successful
+      if (result.success && result.nextStep) {
+        bookingContext.currentStep = result.nextStep;
+        conversationState.set(phoneNumber, bookingContext);
+        console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+      }
+
       if (result.success) {
         res.json({
           success: true,
           message: result.message,
           nextStep: result.nextStep,
-          appointmentId: result.appointmentId
+          appointmentId: result.appointmentId,
+          currentStep: bookingContext.currentStep
         });
       } else {
         res.status(500).json({
           success: false,
-          error: result.error || 'Unknown error'
+          error: result.error || 'Unknown error',
+          currentStep: bookingContext.currentStep
         });
       }
 
