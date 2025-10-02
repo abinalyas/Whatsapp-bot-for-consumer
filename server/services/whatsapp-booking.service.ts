@@ -544,17 +544,22 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getServices(tenantId: string): Promise<any[]> {
     try {
-      // Use the services table to match the bookings foreign key constraint
+      // Use Bella Salon services from services table (now has Bella Salon data)
       const result = await this.pool.query(`
         SELECT id, name, description, price, is_active
         FROM services 
-        WHERE is_active = true
+        WHERE is_active = true AND name IN (
+          'Bridal Makeup', 'Facial Cleanup', 'Gold Facial', 'Hair Coloring', 
+          'Hair Cut & Style', 'Hair Spa', 'Manicure', 'Party Makeup', 
+          'Pedicure', 'Threading'
+        )
         ORDER BY name
       `);
       
+      console.log(`📋 Found ${result.rows.length} Bella Salon services`);
       return result.rows;
     } catch (error) {
-      console.error('Error fetching services:', error);
+      console.error('Error fetching Bella Salon services:', error);
       return [];
     }
   }
@@ -564,7 +569,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getServiceById(tenantId: string, serviceId: string): Promise<any> {
     try {
-      // Use the services table to match the bookings foreign key constraint
+      // Use Bella Salon services from services table
       const result = await this.pool.query(`
         SELECT id, name, description, price, is_active
         FROM services 
@@ -573,7 +578,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       
       return result.rows[0] || null;
     } catch (error) {
-      console.error('Error fetching service:', error);
+      console.error('Error fetching Bella Salon service:', error);
       return null;
     }
   }
@@ -646,6 +651,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
         ORDER BY name
       `, [tenantId]);
 
+      console.log(`📋 Found ${result.rows.length} Bella Salon staff members`);
+      
       return result.rows.map(staff => ({
         id: staff.id,
         name: staff.name,
@@ -655,7 +662,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       }));
 
     } catch (error) {
-      console.error('Error fetching staff:', error);
+      console.error('Error fetching Bella Salon staff:', error);
       return [];
     }
   }

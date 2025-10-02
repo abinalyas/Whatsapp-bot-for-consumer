@@ -463,12 +463,17 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           const result = await this.pool.query(`
         SELECT id, name, description, price, is_active
         FROM services 
-        WHERE is_active = true
+        WHERE is_active = true AND name IN (
+          'Bridal Makeup', 'Facial Cleanup', 'Gold Facial', 'Hair Coloring', 
+          'Hair Cut & Style', 'Hair Spa', 'Manicure', 'Party Makeup', 
+          'Pedicure', 'Threading'
+        )
         ORDER BY name
       `);
+          console.log(`\u{1F4CB} Found ${result.rows.length} Bella Salon services`);
           return result.rows;
         } catch (error) {
-          console.error("Error fetching services:", error);
+          console.error("Error fetching Bella Salon services:", error);
           return [];
         }
       }
@@ -484,7 +489,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       `, [serviceId]);
           return result.rows[0] || null;
         } catch (error) {
-          console.error("Error fetching service:", error);
+          console.error("Error fetching Bella Salon service:", error);
           return null;
         }
       }
@@ -551,13 +556,14 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         WHERE tenant_id = $1 AND is_active = true
         ORDER BY name
       `, [tenantId]);
+          console.log(`\u{1F4CB} Found ${result.rows.length} Bella Salon staff members`);
           return result.rows.map((staff) => ({
             id: staff.id,
             name: staff.name,
             specialization: Array.isArray(staff.specializations) ? staff.specializations.join(", ") : "General Services"
           }));
         } catch (error) {
-          console.error("Error fetching staff:", error);
+          console.error("Error fetching Bella Salon staff:", error);
           return [];
         }
       }
