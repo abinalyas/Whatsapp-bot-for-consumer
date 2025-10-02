@@ -447,7 +447,7 @@ Please reply with the staff member number or name.`,
 • Date: ${context.selectedDate}
 • Time: ${context.selectedTime}
 • Staff: ${selectedStaff.name}
-• Price: ₹${service?.base_price}
+• Price: ₹${service?.price}
 • Duration: ${service?.duration_minutes} minutes
 
 Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
@@ -546,7 +546,20 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
     try {
       // Use Bella Salon services from services table (now has Bella Salon data)
       const result = await this.pool.query(`
-        SELECT id, name, description, price, is_active
+        SELECT id, name, description, price, is_active,
+               CASE 
+                 WHEN name = 'Bridal Makeup' THEN 180
+                 WHEN name = 'Facial Cleanup' THEN 45
+                 WHEN name = 'Gold Facial' THEN 60
+                 WHEN name = 'Hair Coloring' THEN 90
+                 WHEN name = 'Hair Cut & Style' THEN 45
+                 WHEN name = 'Hair Spa' THEN 75
+                 WHEN name = 'Manicure' THEN 30
+                 WHEN name = 'Party Makeup' THEN 90
+                 WHEN name = 'Pedicure' THEN 45
+                 WHEN name = 'Threading' THEN 15
+                 ELSE 60
+               END as duration_minutes
         FROM services 
         WHERE is_active = true AND name IN (
           'Bridal Makeup', 'Facial Cleanup', 'Gold Facial', 'Hair Coloring', 
@@ -571,7 +584,20 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
     try {
       // Use Bella Salon services from services table
       const result = await this.pool.query(`
-        SELECT id, name, description, price, is_active
+        SELECT id, name, description, price, is_active,
+               CASE 
+                 WHEN name = 'Bridal Makeup' THEN 180
+                 WHEN name = 'Facial Cleanup' THEN 45
+                 WHEN name = 'Gold Facial' THEN 60
+                 WHEN name = 'Hair Coloring' THEN 90
+                 WHEN name = 'Hair Cut & Style' THEN 45
+                 WHEN name = 'Hair Spa' THEN 75
+                 WHEN name = 'Manicure' THEN 30
+                 WHEN name = 'Party Makeup' THEN 90
+                 WHEN name = 'Pedicure' THEN 45
+                 WHEN name = 'Threading' THEN 15
+                 ELSE 60
+               END as duration_minutes
         FROM services 
         WHERE id = $1 AND is_active = true
       `, [serviceId]);
@@ -715,8 +741,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       const result = await this.pool.query(`
         INSERT INTO bookings (
           id, conversation_id, service_id, phone_number, customer_name,
-          amount, status, appointment_date, appointment_time, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          amount, status, appointment_date, appointment_time, notes, staff_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id
       `, [
         bookingId,
@@ -728,7 +754,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
         'confirmed',
         appointmentData.scheduled_at,
         appointmentData.selectedTime,
-        `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`
+        `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`,
+        appointmentData.staff_id
       ]);
 
       console.log(`✅ Booking created successfully: ${bookingId}`);

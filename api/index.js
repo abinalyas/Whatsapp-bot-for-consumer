@@ -376,7 +376,7 @@ Please reply with the staff member number or name.`,
 \u2022 Date: ${context.selectedDate}
 \u2022 Time: ${context.selectedTime}
 \u2022 Staff: ${selectedStaff.name}
-\u2022 Price: \u20B9${service?.base_price}
+\u2022 Price: \u20B9${service?.price}
 \u2022 Duration: ${service?.duration_minutes} minutes
 
 Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
@@ -461,7 +461,20 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       async getServices(tenantId) {
         try {
           const result = await this.pool.query(`
-        SELECT id, name, description, price, is_active
+        SELECT id, name, description, price, is_active,
+               CASE 
+                 WHEN name = 'Bridal Makeup' THEN 180
+                 WHEN name = 'Facial Cleanup' THEN 45
+                 WHEN name = 'Gold Facial' THEN 60
+                 WHEN name = 'Hair Coloring' THEN 90
+                 WHEN name = 'Hair Cut & Style' THEN 45
+                 WHEN name = 'Hair Spa' THEN 75
+                 WHEN name = 'Manicure' THEN 30
+                 WHEN name = 'Party Makeup' THEN 90
+                 WHEN name = 'Pedicure' THEN 45
+                 WHEN name = 'Threading' THEN 15
+                 ELSE 60
+               END as duration_minutes
         FROM services 
         WHERE is_active = true AND name IN (
           'Bridal Makeup', 'Facial Cleanup', 'Gold Facial', 'Hair Coloring', 
@@ -483,7 +496,20 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       async getServiceById(tenantId, serviceId) {
         try {
           const result = await this.pool.query(`
-        SELECT id, name, description, price, is_active
+        SELECT id, name, description, price, is_active,
+               CASE 
+                 WHEN name = 'Bridal Makeup' THEN 180
+                 WHEN name = 'Facial Cleanup' THEN 45
+                 WHEN name = 'Gold Facial' THEN 60
+                 WHEN name = 'Hair Coloring' THEN 90
+                 WHEN name = 'Hair Cut & Style' THEN 45
+                 WHEN name = 'Hair Spa' THEN 75
+                 WHEN name = 'Manicure' THEN 30
+                 WHEN name = 'Party Makeup' THEN 90
+                 WHEN name = 'Pedicure' THEN 45
+                 WHEN name = 'Threading' THEN 15
+                 ELSE 60
+               END as duration_minutes
         FROM services 
         WHERE id = $1 AND is_active = true
       `, [serviceId]);
@@ -606,8 +632,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           const result = await this.pool.query(`
         INSERT INTO bookings (
           id, conversation_id, service_id, phone_number, customer_name,
-          amount, status, appointment_date, appointment_time, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          amount, status, appointment_date, appointment_time, notes, staff_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id
       `, [
             bookingId,
@@ -619,7 +645,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
             "confirmed",
             appointmentData.scheduled_at,
             appointmentData.selectedTime,
-            `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`
+            `WhatsApp booking: ${appointmentData.service_name} with ${appointmentData.staff_name}`,
+            appointmentData.staff_id
           ]);
           console.log(`\u2705 Booking created successfully: ${bookingId}`);
           console.log(`\u{1F4CA} Query result:`, result.rows);
@@ -4655,24 +4682,26 @@ router2.get("/appointments", async (req, res) => {
         t.scheduled_at, t.duration_minutes, t.amount, t.currency, t.payment_status,
         t.payment_method, t.notes, t.created_at, t.updated_at, t.staff_id,
         o.name as service_name, o.category as service_category,
-        'transaction' as source
+        st.name as staff_name, 'transaction' as source
       FROM transactions t
       LEFT JOIN offerings o ON t.offering_id = o.id
+      LEFT JOIN staff st ON t.staff_id = st.id
       WHERE t.tenant_id = $1 AND t.transaction_type = 'booking'
       
       UNION ALL
       
-      SELECT 
-        b.id::text, NULL as transaction_number, b.customer_name, b.phone_number as customer_phone, 
-        NULL as customer_email, 
-        b.appointment_date as scheduled_at,
-        60 as duration_minutes, b.amount, 'INR' as currency, 
-        CASE WHEN b.status = 'confirmed' THEN 'paid' ELSE 'pending' END as payment_status,
-        'UPI' as payment_method, b.notes, b.created_at, b.updated_at, NULL as staff_id,
-        s.name as service_name, 'general' as service_category,
-        'whatsapp_bot' as source
+        SELECT 
+          b.id::text, NULL as transaction_number, b.customer_name, b.phone_number as customer_phone, 
+          NULL as customer_email, 
+          b.appointment_date as scheduled_at,
+          60 as duration_minutes, b.amount, 'INR' as currency, 
+          CASE WHEN b.status = 'confirmed' THEN 'paid' ELSE 'pending' END as payment_status,
+          'UPI' as payment_method, b.notes, b.created_at, b.updated_at, b.staff_id,
+          s.name as service_name, 'general' as service_category,
+          st.name as staff_name, 'whatsapp_bot' as source
       FROM bookings b
       LEFT JOIN services s ON b.service_id = s.id
+      LEFT JOIN staff st ON b.staff_id = st.id
       WHERE b.created_at >= CURRENT_DATE - INTERVAL '30 days'
         AND b.notes LIKE '%WhatsApp booking%'
     `;
