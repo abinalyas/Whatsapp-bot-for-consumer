@@ -325,9 +325,26 @@ Please reply with the time slot number or time.`,
         tenantId: context.tenantId
       });
       
+      // Check if selectedService is set
+      if (!context.selectedService) {
+        console.log('❌ No selectedService in context');
+        return {
+          success: false,
+          message: "I'm sorry, I couldn't find your selected service. Please start over by typing 'book appointment'."
+        };
+      }
+      
       const selectedService = await this.getServiceById(context.selectedService);
       console.log('🔍 Time selection - selected service:', selectedService?.name);
       console.log('🔍 Time selection - selected date:', context.selectedDate);
+      
+      if (!selectedService) {
+        console.log('❌ Could not find service by ID:', context.selectedService);
+        return {
+          success: false,
+          message: "I'm sorry, I couldn't find your selected service. Please start over by typing 'book appointment'."
+        };
+      }
       
       const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!, selectedService?.name);
       const availableSlots = availableTimeSlots.filter(slot => slot.available);
