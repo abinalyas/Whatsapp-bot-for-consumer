@@ -721,6 +721,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getStaffForService(tenantId: string, serviceName: string): Promise<Array<{ id: string; name: string; role: string }>> {
     try {
+      console.log('🔍 getStaffForService called with:', { tenantId, serviceName });
+      
       const result = await this.pool.query(`
         SELECT id, name, role
         FROM staff 
@@ -729,13 +731,18 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
         AND specializations @> $2::jsonb
       `, [tenantId, JSON.stringify([serviceName])]);
 
+      console.log('🔍 getStaffForService result:', { 
+        rowCount: result.rows.length,
+        staff: result.rows.map(s => s.name)
+      });
+
       return result.rows.map(staff => ({
         id: staff.id,
         name: staff.name,
         role: staff.role
       }));
     } catch (error) {
-      console.error('Error fetching staff for service:', error);
+      console.error('❌ Error fetching staff for service:', error);
       return [];
     }
   }
