@@ -193,7 +193,7 @@ Reply with the number or name of the service to book.`,
         // Show services again if no match found
         const serviceList = services.map((service, index) => {
           const emoji = this.getServiceEmoji(service.name, service.category);
-          return `${index + 1}. ${emoji} ${service.name} – ₹${service.base_price}`;
+          return `${index + 1}. ${emoji} ${service.name} – ₹${service.price}`;
         }).join('\n');
 
         return {
@@ -213,7 +213,7 @@ Reply with the number or name of the service to book.`,
           success: true,
           message: `Great choice! You selected: ${selectedService.name}
 💰 Price: ₹${selectedService.price}
-⏰ Duration: 45 minutes
+⏰ Duration: ${selectedService.duration_minutes} minutes
 
 When would you like to book this service?
 
