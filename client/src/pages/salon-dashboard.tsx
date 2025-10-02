@@ -473,7 +473,7 @@ function OverviewSection({
   console.log('🚀 MAIN COMPONENT: SalonDashboard component mounted/rendered');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState(null);
+  // editingAppointment state moved to exported component
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [allAppointments, setAllAppointments] = useState<any[]>([]); // Store all appointments for revenue calculation
@@ -618,7 +618,7 @@ function OverviewSection({
   const handleCloseModals = () => {
     setShowEditModal(false);
     setShowCancelModal(false);
-    setEditingAppointment(null);
+    // setEditingAppointment(null); // moved to exported component
     setCancellingAppointment(null);
   };
 
@@ -6120,6 +6120,9 @@ export default function SalonDashboard() {
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Edit appointment modal state - moved from first component
+  const [editingAppointment, setEditingAppointment] = useState(null);
   
   // Edit appointment modal state
   const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
