@@ -6296,10 +6296,24 @@ export default function SalonDashboard() {
           console.log('🚀 MAIN COMPONENT: Loaded staff data:', staffResult.data?.length || 0);
           console.log('🚀 MAIN COMPONENT: Loaded services data:', servicesResult.data?.length || 0);
           
+          // Create a staff lookup map for efficient mapping
+          const staffMap = new Map();
+          staffResult.data.forEach(staff => {
+            staffMap.set(staff.id, staff.name);
+          });
+          
+          // Create a service lookup map for efficient mapping
+          const serviceMap = new Map();
+          servicesResult.data.forEach(service => {
+            serviceMap.set(service.id, service);
+          });
+          
           // Transform appointments data to include staff names and calendar fields
           const transformedAppointments = appointmentsResult.data.map(apt => {
-            const staffName = staffResult.data.find(s => s.id === apt.staff_id)?.name || 'Unassigned';
-            const service = servicesResult.data.find(s => s.id === apt.service_id);
+            console.log('🔍 STAFF MAPPING: Appointment staff_id:', apt.staff_id, 'Available staff:', Array.from(staffMap.entries()));
+            const staffName = staffMap.get(apt.staff_id) || 'Unassigned';
+            console.log('🔍 STAFF MAPPING: Found staff name:', staffName);
+            const service = serviceMap.get(apt.service_id);
             
             // Calculate time for calendar display
             const appointmentDateTime = new Date(apt.scheduled_at || '');
