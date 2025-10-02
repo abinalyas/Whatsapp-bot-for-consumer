@@ -282,6 +282,42 @@ async function processDynamicWhatsAppMessage(from: string, messageText: string):
     
     if (!currentNode) {
       console.log("No matching node found for state:", conversation.currentState);
+      console.log("Delegating to simple webhook for better handling...");
+      
+      // Delegate to our working simple webhook
+      try {
+        const bookingService = new (await import('./services/whatsapp-booking.service')).WhatsAppBookingService();
+        
+        // Initialize booking context
+        const bookingContext = {
+          tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+          customerPhone: from,
+          currentStep: 'welcome'
+        };
+        
+        // Process the message with our working booking service
+        const result = await bookingService.processBookingMessage(
+          {
+            text: { body: messageContent },
+            from: from,
+            id: messageId,
+            type: 'text',
+            timestamp: new Date().toISOString()
+          },
+          bookingContext.tenantId,
+          bookingContext
+        );
+        
+        if (result.success && result.message) {
+          await sendWhatsAppMessage(from, result.message);
+          console.log("Successfully delegated to simple webhook");
+          return;
+        }
+      } catch (error) {
+        console.error("Error delegating to simple webhook:", error);
+      }
+      
+      // Fallback to original error message
       await sendWhatsAppMessage(from, "Sorry, I couldn't find the right response. Please start over.");
       return;
     }
