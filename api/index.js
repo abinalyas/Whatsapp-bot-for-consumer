@@ -63,8 +63,6 @@ var init_whatsapp_booking_service = __esm({
               return await this.handleDateSelection(messageText, context);
             case "time_selection":
               return await this.handleTimeSelection(messageText, context);
-            case "staff_selection":
-              return await this.handleStaffSelection(messageText, context);
             case "confirmation":
               return await this.handleConfirmation(messageText, context);
             case "completed":
@@ -280,19 +278,70 @@ Please reply with the time slot number or time.`,
             };
           }
           context.selectedTime = selectedTime;
-          context.currentStep = "staff_selection";
-          const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
+          
+          // Get the selected service to find appropriate staff
+          const selectedService = await this.getServiceById(context.selectedService);
+          
+          // Find staff who can perform this service
+          const skilledStaff = await this.getStaffForService(context.tenantId, selectedService?.name);
+          
+          if (skilledStaff.length === 0) {
+            return {
+              success: false,
+              message: "I'm sorry, no staff members are available for this service at this time. Please try a different time or service."
+            };
+          }
+          
+          // Check which skilled staff are available at this time
+          const availableStaff = await this.getAvailableStaffAtTime(context.tenantId, context.selectedDate, selectedTime, skilledStaff);
+          
+          if (availableStaff.length === 0) {
+            return {
+              success: false,
+              message: "I'm sorry, no staff members are available for this service at this time. Please try a different time."
+            };
+          }
+          
+          // Assign the first available staff member
+          const assignedStaff = availableStaff[0];
+          context.selectedStaff = assignedStaff.id;
+          context.currentStep = "confirmation";
+          
+          // Set appointment data for confirmation step
+          const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
+          const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+          const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
+          
+          context.appointmentData = {
+            customer_name: context.customerName || 'WhatsApp Customer',
+            customer_phone: context.customerPhone,
+            customer_email: context.customerEmail || '',
+            service_id: context.selectedService,
+            service_name: selectedService?.name || 'Unknown Service',
+            staff_id: assignedStaff.id,
+            staff_name: assignedStaff.name,
+            scheduled_at: utcDateTime.toISOString(),
+            selectedTime: selectedTime,
+            amount: selectedService?.price || 0,
+            currency: 'INR',
+            notes: 'Booked via WhatsApp Bot',
+            payment_status: 'pending'
+          };
+          
           return {
             success: true,
-            message: `Excellent! You selected: ${selectedTime}
+            message: `Perfect! You selected: ${selectedTime}
 
-Here are our available staff members:
+✅ **Appointment Summary:**
+• Service: ${selectedService?.name}
+• Date: ${context.selectedDate}
+• Time: ${selectedTime}
+• Staff: ${assignedStaff.name}
+• Price: ₹${selectedService?.price}
+• Duration: ${selectedService?.duration_minutes} minutes
 
-${availableStaff.map((staff, index) => `${index + 1}. ${staff.name} - ${staff.specialization}`).join("\n")}
-
-Please reply with the staff member number or name.`,
-            nextStep: "staff_selection",
-            options: availableStaff.map((staff) => staff.name)
+Please reply with "confirm" to book this appointment, or "change" to modify your selection.`,
+            nextStep: "confirmation"
           };
         } catch (error) {
           console.error("Error handling time selection:", error);
@@ -613,6 +662,62 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           return [];
         }
       }
+      /**
+       * Get staff who can perform a specific service
+       */
+      async getStaffForService(tenantId, serviceName) {
+        try {
+          const result = await this.pool.query(`
+            SELECT id, name, role
+            FROM staff 
+            WHERE tenant_id = $1 
+            AND is_active = true
+            AND specializations @> $2::jsonb
+          `, [tenantId, JSON.stringify([serviceName])]);
+
+          return result.rows.map(staff => ({
+            id: staff.id,
+            name: staff.name,
+            role: staff.role
+          }));
+        } catch (error) {
+          console.error('Error fetching staff for service:', error);
+          return [];
+        }
+      }
+
+      /**
+       * Get available staff at a specific time from a list of skilled staff
+       */
+      async getAvailableStaffAtTime(tenantId, date, time, skilledStaff) {
+        try {
+          if (skilledStaff.length === 0) {
+            return [];
+          }
+
+          // Check which skilled staff are already booked at this time
+          const staffIds = skilledStaff.map(staff => staff.id);
+          const bookedStaff = await this.pool.query(`
+            SELECT staff_id
+            FROM bookings 
+            WHERE appointment_date = $1 
+            AND appointment_time = $2
+            AND status != 'cancelled'
+            AND staff_id = ANY($3)
+          `, [date, time, staffIds]);
+
+          const bookedStaffIds = bookedStaff.rows.map(row => row.staff_id);
+
+          // Return staff who are not booked
+          return skilledStaff
+            .filter(staff => !bookedStaffIds.includes(staff.id))
+            .map(staff => ({ id: staff.id, name: staff.name }));
+        } catch (error) {
+          console.error('Error checking staff availability:', error);
+          return [];
+        }
+      }
+
       /**
        * Create appointment in database
        */
