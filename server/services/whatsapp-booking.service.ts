@@ -371,15 +371,12 @@ Please reply with the time slot number or time.`,
         
         if (matchedTime) {
           selectedTime = matchedTime;
-          console.log(`🔍 Using matched time: ${selectedTime}`);
         } else {
           // Try to match by time string (fallback)
-          console.log(`🔍 No pattern match, trying fallback for: ${messageText}`);
           for (const slot of availableSlots) {
             if (messageText.includes(slot.time.toLowerCase()) || 
                 messageText.includes(slot.time.replace(':', ''))) {
               selectedTime = slot.time;
-              console.log(`🔍 Fallback matched: ${selectedTime}`);
               break;
             }
           }
@@ -394,7 +391,6 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
-      console.log(`🔍 Final selected time: ${selectedTime}`);
       context.currentStep = 'staff_selection';
 
       // Get available staff for the selected time
@@ -459,11 +455,7 @@ Please reply with the staff member number or name.`,
       const service = await this.getServiceById(context.tenantId, context.selectedService!);
 
       // Create appointment data
-      // Convert time to proper format for Indian timezone (UTC+5:30)
       const appointmentDateTime = new Date(`${context.selectedDate}T${context.selectedTime}:00`);
-      // Adjust for Indian timezone offset (UTC+5:30)
-      const indianOffset = 5.5 * 60; // 5 hours 30 minutes in minutes
-      const utcDateTime = new Date(appointmentDateTime.getTime() - (indianOffset * 60 * 1000));
       
       context.appointmentData = {
         customer_name: context.customerName || 'WhatsApp Customer',
@@ -473,7 +465,7 @@ Please reply with the staff member number or name.`,
         service_name: service?.name || 'Unknown Service',
         staff_id: context.selectedStaff,
         staff_name: selectedStaff.name,
-        scheduled_at: utcDateTime.toISOString(),
+        scheduled_at: appointmentDateTime.toISOString(),
         selectedTime: context.selectedTime,
         amount: service?.price || 0,
         currency: 'INR',
