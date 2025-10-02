@@ -318,6 +318,9 @@ Please reply with the time slot number or time.`,
   private async handleTimeSelection(messageText: string, context: BookingContext): Promise<BookingResponse> {
     try {
       const selectedService = await this.getServiceById(context.selectedService);
+      console.log('🔍 Time selection - selected service:', selectedService?.name);
+      console.log('🔍 Time selection - selected date:', context.selectedDate);
+      
       const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!, selectedService?.name);
       const availableSlots = availableTimeSlots.filter(slot => slot.available);
       
