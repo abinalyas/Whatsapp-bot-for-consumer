@@ -112,7 +112,7 @@ export class WhatsAppBookingService {
         // Display services with emojis and pricing
         const serviceList = services.map((service, index) => {
           const emoji = this.getServiceEmoji(service.name, service.category);
-          return `${emoji} ${service.name} – ₹${service.base_price}`;
+          return `${emoji} ${service.name} – ₹${service.price}`;
         }).join('\n');
 
         return {
@@ -194,20 +194,20 @@ Reply with the number or name of the service to book.`,
       // Get available dates (next 7 days)
       const availableDates = this.getAvailableDates();
 
-      return {
-        success: true,
-        message: `Great choice! You selected: ${selectedService.name}
-💰 Price: ₹${selectedService.base_price}
-⏰ Duration: ${selectedService.duration_minutes} minutes
+        return {
+          success: true,
+          message: `Great choice! You selected: ${selectedService.name}
+💰 Price: ₹${selectedService.price}
+⏰ Duration: 45 minutes
 
 When would you like to book this service?
 
 ${availableDates.map((date, index) => `${index + 1}. ${date.formatted}`).join('\n')}
 
 Please reply with the date number or date.`,
-        nextStep: 'date_selection',
-        options: availableDates.map(date => date.formatted)
-      };
+          nextStep: 'date_selection',
+          options: availableDates.map(date => date.formatted)
+        };
 
     } catch (error) {
       console.error('Error handling service selection:', error);
@@ -432,7 +432,7 @@ Please reply with the staff member number or name.`,
         staff_name: selectedStaff.name,
         scheduled_at: appointmentDateTime.toISOString(),
         selectedTime: context.selectedTime,
-        amount: service?.base_price || 0,
+        amount: service?.price || 0,
         currency: 'INR',
         notes: 'Booked via WhatsApp Bot',
         payment_status: 'pending'
@@ -545,11 +545,11 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
   private async getServices(tenantId: string): Promise<any[]> {
     try {
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
-        ORDER BY display_order, name
-      `, [tenantId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE is_active = true
+        ORDER BY name
+      `);
       
       return result.rows;
     } catch (error) {
@@ -564,10 +564,10 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
   private async getServiceById(tenantId: string, serviceId: string): Promise<any> {
     try {
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service'
-      `, [tenantId, serviceId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE id = $1 AND is_active = true
+      `, [serviceId]);
       
       return result.rows[0] || null;
     } catch (error) {

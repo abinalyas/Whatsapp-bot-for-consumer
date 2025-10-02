@@ -7335,7 +7335,7 @@ var WhatsAppBookingService = class {
         }
         const serviceList = services2.map((service, index) => {
           const emoji = this.getServiceEmoji(service.name, service.category);
-          return `${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
+          return `${emoji} ${service.name} \u2013 \u20B9${service.price}`;
         }).join("\n");
         return {
           success: true,
@@ -7407,8 +7407,8 @@ Reply with the number or name of the service.`
       return {
         success: true,
         message: `Great choice! You selected: ${selectedService.name}
-\u{1F4B0} Price: \u20B9${selectedService.base_price}
-\u23F0 Duration: ${selectedService.duration_minutes} minutes
+\u{1F4B0} Price: \u20B9${selectedService.price}
+\u23F0 Duration: 45 minutes
 
 When would you like to book this service?
 
@@ -7599,7 +7599,7 @@ Please reply with the staff member number or name.`,
         staff_name: selectedStaff.name,
         scheduled_at: appointmentDateTime.toISOString(),
         selectedTime: context.selectedTime,
-        amount: service?.base_price || 0,
+        amount: service?.price || 0,
         currency: "INR",
         notes: "Booked via WhatsApp Bot",
         payment_status: "pending"
@@ -7698,11 +7698,11 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
   async getServices(tenantId) {
     try {
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
-        ORDER BY display_order, name
-      `, [tenantId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE is_active = true
+        ORDER BY name
+      `);
       return result.rows;
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -7715,10 +7715,10 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
   async getServiceById(tenantId, serviceId) {
     try {
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service'
-      `, [tenantId, serviceId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE id = $1 AND is_active = true
+      `, [serviceId]);
       return result.rows[0] || null;
     } catch (error) {
       console.error("Error fetching service:", error);
