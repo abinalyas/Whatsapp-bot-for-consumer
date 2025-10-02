@@ -4686,7 +4686,7 @@ router2.get("/appointments", async (req, res) => {
         st.name as staff_name, 'transaction' as source
       FROM transactions t
       LEFT JOIN offerings o ON t.offering_id = o.id
-      LEFT JOIN staff st ON t.staff_id = st.id
+      LEFT JOIN staff st ON t.staff_id::uuid = st.id
       WHERE t.tenant_id = $1 AND t.transaction_type = 'booking'
       
       UNION ALL
@@ -4702,7 +4702,7 @@ router2.get("/appointments", async (req, res) => {
           st.name as staff_name, 'whatsapp_bot' as source
       FROM bookings b
       LEFT JOIN services s ON b.service_id = s.id
-      LEFT JOIN staff st ON b.staff_id = st.id
+      LEFT JOIN staff st ON b.staff_id::uuid = st.id
       WHERE b.created_at >= CURRENT_DATE - INTERVAL '30 days'
         AND b.notes LIKE '%WhatsApp booking%'
     `;
