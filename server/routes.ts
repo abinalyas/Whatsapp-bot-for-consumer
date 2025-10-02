@@ -7,7 +7,10 @@ import { send } from "process";
 import botFlowRoutes from "./routes/bot-flow-builder.routes";
 import salonApiRoutes from "./routes/salon-api";
 import staffApiRoutes from "./routes/staff-api";
+import { createWebhookRoutes } from "./routes/webhook.routes";
 import { DynamicFlowProcessorService } from './services/dynamic-flow-processor.service';
+import { MessageProcessorService } from './services/message-processor.service';
+import { WhatsAppSenderService } from './services/whatsapp-sender.service';
 
 // WhatsApp webhook verification schema
 const webhookVerificationSchema = z.object({
@@ -1302,6 +1305,12 @@ We apologize for any inconvenience caused.`;
   
   // Staff API endpoints - handled by dedicated router
   app.use("/api/staff", staffApiRoutes);
+
+  // WhatsApp webhook routes - handled by dedicated router with message processor
+  const messageProcessor = new MessageProcessorService(process.env.DATABASE_URL || 'postgresql://localhost:5432/whatsapp_bot');
+  const whatsappSender = new WhatsAppSenderService();
+  const webhookRoutes = createWebhookRoutes(messageProcessor, whatsappSender);
+  app.use("/api/webhook", webhookRoutes);
 
   // Flow activation endpoints
   app.post("/api/bot-flows/:flowId/activate", async (req, res) => {

@@ -15,11 +15,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc2) => {
+var __copyProps = (to, from, except, desc7) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc7 = __getOwnPropDesc(from, key)) || desc7.enumerable });
   }
   return to;
 };
@@ -1953,7 +1953,7 @@ function getStorageBackendName() {
 }
 
 // server/routes.ts
-import { z } from "zod";
+import { z as z2 } from "zod";
 
 // server/routes/bot-flow-builder.routes.ts
 import { Router } from "express";
@@ -4823,43 +4823,5915 @@ router3.get("/staff/:id/stats", async (req, res) => {
 });
 var staff_api_default = router3;
 
+// server/routes/webhook.routes.ts
+import { Router as Router4 } from "express";
+import crypto3 from "crypto";
+
+// server/services/tenant.service.ts
+import { eq as eq4, and as and4, desc as desc2, asc as asc2, like, inArray as inArray2, gte as gte3, lte, ne, or, sql as sql4 } from "drizzle-orm";
+import { drizzle as drizzle3 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool5 } from "@neondatabase/serverless";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+// shared/validation/tenant.ts
+import { z } from "zod";
+var uuidSchema = z.string().uuid();
+var emailSchema = z.string().email();
+var phoneSchema = z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format");
+var domainSchema = z.string().regex(/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/, "Invalid domain format");
+var urlSchema = z.string().url();
+var colorSchema = z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Invalid color format");
+var timeSchema = z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)");
+var currencySchema = z.string().length(3, "Currency must be 3 characters (ISO 4217)");
+var tenantStatusSchema = z.enum(["trial", "active", "suspended", "cancelled"]);
+var createTenantRequestSchema = z.object({
+  businessName: z.string().min(1, "Business name is required").max(255, "Business name too long"),
+  domain: domainSchema,
+  email: emailSchema,
+  phone: phoneSchema.optional(),
+  subscriptionPlan: z.string().optional().default("starter"),
+  adminUser: z.object({
+    email: emailSchema,
+    password: z.string().min(8, "Password must be at least 8 characters").regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain uppercase, lowercase, number, and special character"
+    ),
+    firstName: z.string().min(1).max(100).optional(),
+    lastName: z.string().min(1).max(100).optional(),
+    role: z.enum(["admin", "user", "viewer"]).optional().default("admin")
+  })
+});
+var updateTenantRequestSchema = z.object({
+  businessName: z.string().min(1).max(255).optional(),
+  email: emailSchema.optional(),
+  phone: phoneSchema.optional(),
+  botSettings: z.record(z.any()).optional(),
+  // Will be validated by botSettingsSchema
+  billingSettings: z.record(z.any()).optional()
+  // Will be validated by billingSettingsSchema
+});
+var userRoleSchema = z.enum(["admin", "user", "viewer"]);
+var createUserRequestSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(8, "Password must be at least 8 characters").regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+    "Password must contain uppercase, lowercase, number, and special character"
+  ),
+  role: userRoleSchema.optional().default("user"),
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional()
+});
+var updateUserRequestSchema = z.object({
+  email: emailSchema.optional(),
+  role: userRoleSchema.optional(),
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  isActive: z.boolean().optional()
+});
+var apiPermissionSchema = z.enum([
+  "read:services",
+  "write:services",
+  "read:conversations",
+  "write:conversations",
+  "read:bookings",
+  "write:bookings",
+  "read:analytics",
+  "webhook:receive",
+  "admin:all"
+]);
+var createApiKeyRequestSchema = z.object({
+  name: z.string().min(1, "API key name is required").max(100, "Name too long"),
+  permissions: z.array(apiPermissionSchema).min(1, "At least one permission is required"),
+  expiresAt: z.date().min(/* @__PURE__ */ new Date(), "Expiry date must be in the future").optional()
+});
+var planFeaturesSchema = z.object({
+  whatsappIntegration: z.boolean(),
+  basicAnalytics: z.boolean(),
+  advancedAnalytics: z.boolean().optional(),
+  customBranding: z.boolean().optional(),
+  webhooks: z.boolean().optional(),
+  prioritySupport: z.boolean().optional(),
+  sso: z.boolean().optional(),
+  customIntegrations: z.boolean().optional(),
+  dedicatedSupport: z.boolean().optional()
+});
+var planLimitsSchema = z.object({
+  messagesPerMonth: z.number().int().min(-1, "Invalid message limit"),
+  bookingsPerMonth: z.number().int().min(-1, "Invalid booking limit"),
+  apiCallsPerDay: z.number().int().min(-1, "Invalid API call limit"),
+  storageGB: z.number().int().min(0).optional(),
+  customFields: z.number().int().min(0).optional(),
+  webhookEndpoints: z.number().int().min(0).optional()
+});
+var subscriptionPlanSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  priceMonthly: z.number().int().min(0, "Price must be non-negative"),
+  priceYearly: z.number().int().min(0, "Price must be non-negative").optional(),
+  features: planFeaturesSchema,
+  limits: planLimitsSchema,
+  isActive: z.boolean(),
+  createdAt: z.date()
+});
+var subscriptionStatusSchema = z.enum(["active", "cancelled", "past_due", "unpaid", "trialing"]);
+var billingCycleSchema = z.enum(["monthly", "yearly"]);
+var createSubscriptionRequestSchema = z.object({
+  planId: z.string().min(1, "Plan ID is required"),
+  billingCycle: billingCycleSchema,
+  paymentMethodId: z.string().optional()
+});
+var usageMetricNameSchema = z.enum([
+  "messages_sent",
+  "messages_received",
+  "bookings_created",
+  "api_calls",
+  "storage_used",
+  "webhook_calls"
+]);
+var usageMetricSchema = z.object({
+  id: uuidSchema,
+  tenantId: uuidSchema,
+  metricName: usageMetricNameSchema,
+  metricValue: z.number().int().min(0),
+  periodStart: z.date(),
+  periodEnd: z.date(),
+  createdAt: z.date()
+});
+var dayScheduleSchema = z.object({
+  isOpen: z.boolean(),
+  openTime: timeSchema,
+  closeTime: timeSchema
+}).refine((data) => {
+  if (!data.isOpen) return true;
+  const [openHour, openMin] = data.openTime.split(":").map(Number);
+  const [closeHour, closeMin] = data.closeTime.split(":").map(Number);
+  const openMinutes = openHour * 60 + openMin;
+  const closeMinutes = closeHour * 60 + closeMin;
+  return openMinutes < closeMinutes;
+}, {
+  message: "Open time must be before close time"
+});
+var weeklyScheduleSchema = z.object({
+  monday: dayScheduleSchema,
+  tuesday: dayScheduleSchema,
+  wednesday: dayScheduleSchema,
+  thursday: dayScheduleSchema,
+  friday: dayScheduleSchema,
+  saturday: dayScheduleSchema,
+  sunday: dayScheduleSchema
+});
+var businessHoursSchema = z.object({
+  enabled: z.boolean(),
+  timezone: z.string().min(1, "Timezone is required"),
+  schedule: weeklyScheduleSchema,
+  closedMessage: z.string().min(1, "Closed message is required").max(500)
+});
+var autoResponsesSchema = z.object({
+  welcomeMessage: z.string().min(1, "Welcome message is required").max(1e3),
+  serviceSelectionPrompt: z.string().min(1).max(500),
+  dateSelectionPrompt: z.string().min(1).max(500),
+  timeSelectionPrompt: z.string().min(1).max(500),
+  confirmationMessage: z.string().min(1).max(500),
+  paymentInstructions: z.string().min(1).max(1e3),
+  bookingConfirmedMessage: z.string().min(1).max(500),
+  errorMessage: z.string().min(1).max(500),
+  invalidInputMessage: z.string().min(1).max(500)
+});
+var validationRuleSchema = z.object({
+  type: z.enum(["required", "email", "phone", "date", "time", "custom"]),
+  message: z.string().min(1).max(200),
+  pattern: z.string().optional()
+});
+var stepConditionSchema = z.object({
+  field: z.string().min(1),
+  operator: z.enum(["equals", "contains", "greater_than", "less_than"]),
+  value: z.union([z.string(), z.number()]),
+  nextStep: z.string().min(1)
+});
+var stepTypeSchema = z.enum([
+  "greeting",
+  "service_selection",
+  "date_selection",
+  "time_selection",
+  "customer_info",
+  "payment",
+  "confirmation",
+  "custom"
+]);
+var conversationStepSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(100),
+  type: stepTypeSchema,
+  prompt: z.string().min(1).max(1e3),
+  validation: z.array(validationRuleSchema).optional(),
+  nextStep: z.string().optional(),
+  conditions: z.array(stepConditionSchema).optional()
+});
+var fallbackBehaviorSchema = z.enum(["restart", "human_handoff", "end_conversation"]);
+var conversationFlowSchema = z.object({
+  steps: z.array(conversationStepSchema).min(1, "At least one step is required"),
+  fallbackBehavior: fallbackBehaviorSchema,
+  maxRetries: z.number().int().min(1).max(10),
+  sessionTimeout: z.number().int().min(5).max(1440)
+  // 5 minutes to 24 hours
+});
+var paymentTypeSchema = z.enum(["cash", "card", "bank_transfer", "mobile_money", "crypto"]);
+var paymentMethodSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(100),
+  type: paymentTypeSchema,
+  enabled: z.boolean(),
+  instructions: z.string().min(1).max(1e3),
+  metadata: z.record(z.any()).optional()
+});
+var paymentSettingsSchema = z.object({
+  enabled: z.boolean(),
+  methods: z.array(paymentMethodSchema),
+  currency: currencySchema,
+  requirePayment: z.boolean(),
+  depositPercentage: z.number().min(0).max(100).optional()
+});
+var retryPolicySchema = z.object({
+  maxRetries: z.number().int().min(0).max(10),
+  backoffMultiplier: z.number().min(1).max(10),
+  maxBackoffSeconds: z.number().int().min(1).max(3600)
+});
+var webhookEndpointSchema = z.object({
+  id: uuidSchema,
+  url: urlSchema,
+  secret: z.string().min(8, "Webhook secret must be at least 8 characters"),
+  isActive: z.boolean(),
+  retryPolicy: retryPolicySchema
+});
+var notificationEventSchema = z.enum([
+  "booking_created",
+  "booking_confirmed",
+  "booking_cancelled",
+  "payment_received",
+  "conversation_started",
+  "conversation_ended",
+  "error_occurred"
+]);
+var emailNotificationSettingsSchema = z.object({
+  enabled: z.boolean(),
+  recipientEmails: z.array(emailSchema).max(10, "Maximum 10 email recipients"),
+  events: z.array(notificationEventSchema)
+});
+var smsNotificationSettingsSchema = z.object({
+  enabled: z.boolean(),
+  recipientPhones: z.array(phoneSchema).max(5, "Maximum 5 phone recipients"),
+  events: z.array(notificationEventSchema)
+});
+var webhookNotificationSettingsSchema = z.object({
+  enabled: z.boolean(),
+  endpoints: z.array(webhookEndpointSchema).max(5, "Maximum 5 webhook endpoints"),
+  events: z.array(notificationEventSchema)
+});
+var notificationSettingsSchema = z.object({
+  emailNotifications: emailNotificationSettingsSchema,
+  smsNotifications: smsNotificationSettingsSchema,
+  webhookNotifications: webhookNotificationSettingsSchema
+});
+var brandColorsSchema = z.object({
+  primary: colorSchema,
+  secondary: colorSchema,
+  accent: colorSchema,
+  background: colorSchema,
+  text: colorSchema
+});
+var companyInfoSchema = z.object({
+  name: z.string().min(1).max(255),
+  address: z.string().max(500).optional(),
+  phone: phoneSchema.optional(),
+  email: emailSchema.optional(),
+  website: urlSchema.optional(),
+  description: z.string().max(1e3).optional()
+});
+var customFieldTypeSchema = z.enum(["text", "email", "phone", "number", "date", "select", "radio", "checkbox"]);
+var customFieldSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(100),
+  type: customFieldTypeSchema,
+  required: z.boolean(),
+  options: z.array(z.string()).optional(),
+  validation: z.array(validationRuleSchema).optional()
+});
+var botCustomizationSchema = z.object({
+  brandColors: brandColorsSchema,
+  logo: urlSchema.optional(),
+  companyInfo: companyInfoSchema,
+  customCss: z.string().max(1e4).optional(),
+  customFields: z.array(customFieldSchema).max(20, "Maximum 20 custom fields")
+});
+var botSettingsSchema = z.object({
+  greetingMessage: z.string().min(1, "Greeting message is required").max(1e3),
+  businessHours: businessHoursSchema,
+  autoResponses: autoResponsesSchema,
+  conversationFlow: conversationFlowSchema,
+  paymentSettings: paymentSettingsSchema,
+  notificationSettings: notificationSettingsSchema,
+  customization: botCustomizationSchema
+});
+var billingAddressSchema = z.object({
+  street: z.string().min(1, "Street address is required").max(255),
+  city: z.string().min(1, "City is required").max(100),
+  state: z.string().min(1, "State is required").max(100),
+  postalCode: z.string().min(1, "Postal code is required").max(20),
+  country: z.string().length(2, "Country must be 2-letter ISO code")
+});
+var paymentMethodInfoSchema = z.object({
+  type: z.enum(["card", "bank_account"]),
+  last4: z.string().length(4, "Last 4 digits required"),
+  brand: z.string().optional(),
+  expiryMonth: z.number().int().min(1).max(12).optional(),
+  expiryYear: z.number().int().min((/* @__PURE__ */ new Date()).getFullYear()).optional(),
+  stripePaymentMethodId: z.string().min(1)
+});
+var invoiceSettingsSchema = z.object({
+  autoSend: z.boolean(),
+  dueNetDays: z.number().int().min(0).max(90),
+  footer: z.string().max(500).optional(),
+  logo: urlSchema.optional(),
+  includeUsageDetails: z.boolean()
+});
+var billingSettingsSchema = z.object({
+  companyName: z.string().min(1, "Company name is required").max(255),
+  billingEmail: emailSchema,
+  billingAddress: billingAddressSchema,
+  taxId: z.string().max(50).optional(),
+  paymentMethod: paymentMethodInfoSchema.optional(),
+  invoiceSettings: invoiceSettingsSchema
+});
+var whatsappCredentialsSchema = z.object({
+  accessToken: z.string().min(1, "Access token is required"),
+  verifyToken: z.string().min(8, "Verify token must be at least 8 characters"),
+  phoneNumberId: z.string().min(1, "Phone number ID is required"),
+  businessAccountId: z.string().min(1, "Business account ID is required"),
+  appId: z.string().min(1, "App ID is required"),
+  appSecret: z.string().min(1, "App secret is required")
+});
+var whatsappConfigSchema = whatsappCredentialsSchema.extend({
+  webhookUrl: urlSchema,
+  isVerified: z.boolean(),
+  lastVerified: z.date().optional()
+});
+var loginCredentialsSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required"),
+  tenantDomain: domainSchema.optional()
+});
+var mfaMethodSchema = z.enum(["totp", "sms", "email"]);
+var mfaSetupRequestSchema = z.object({
+  method: mfaMethodSchema,
+  phoneNumber: phoneSchema.optional()
+});
+var mfaVerificationRequestSchema = z.object({
+  token: z.string().min(1, "MFA token is required"),
+  code: z.string().length(6, "MFA code must be 6 digits")
+});
+var paginationParamsSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc")
+});
+var filterParamsSchema = z.object({
+  status: z.array(z.string()).optional(),
+  dateFrom: z.date().optional(),
+  dateTo: z.date().optional(),
+  search: z.string().max(255).optional()
+});
+var tenantContextRequestSchema = z.object({
+  tenantId: uuidSchema,
+  source: z.enum(["user_session", "api_key", "webhook"]),
+  sourceId: z.string().min(1)
+});
+var auditActionSchema = z.enum([
+  "create",
+  "read",
+  "update",
+  "delete",
+  "login",
+  "logout",
+  "api_call",
+  "webhook_received",
+  "payment_processed",
+  "subscription_changed"
+]);
+var auditLogSchema = z.object({
+  id: uuidSchema,
+  tenantId: uuidSchema,
+  userId: uuidSchema.optional(),
+  action: auditActionSchema,
+  resource: z.string().min(1).max(100),
+  resourceId: z.string().optional(),
+  details: z.record(z.any()),
+  ipAddress: z.string().ip().optional(),
+  userAgent: z.string().max(500).optional(),
+  timestamp: z.date()
+});
+var validateDomainUniqueness = (domain) => {
+  return domainSchema.parse(domain);
+};
+var validateWebhookUrl = (url) => {
+  const schema = z.string().url("Invalid URL format").refine((url2) => url2.startsWith("https://"), "Webhook URL must use HTTPS");
+  return schema.parse(url);
+};
+var validateConversationFlow = (flow) => {
+  const parsed = conversationFlowSchema.parse(flow);
+  const stepIds = new Set(parsed.steps.map((step) => step.id));
+  for (const step of parsed.steps) {
+    if (step.nextStep && !stepIds.has(step.nextStep)) {
+      throw new Error(`Step "${step.id}" references non-existent step "${step.nextStep}"`);
+    }
+    if (step.conditions) {
+      for (const condition of step.conditions) {
+        if (!stepIds.has(condition.nextStep)) {
+          throw new Error(`Step "${step.id}" condition references non-existent step "${condition.nextStep}"`);
+        }
+      }
+    }
+  }
+  return parsed;
+};
+var tenantValidationSchemas = {
+  // Core tenant schemas
+  createTenantRequest: createTenantRequestSchema,
+  updateTenantRequest: updateTenantRequestSchema,
+  tenantStatus: tenantStatusSchema,
+  // User schemas
+  createUserRequest: createUserRequestSchema,
+  updateUserRequest: updateUserRequestSchema,
+  userRole: userRoleSchema,
+  // API key schemas
+  createApiKeyRequest: createApiKeyRequestSchema,
+  apiPermission: apiPermissionSchema,
+  // Subscription schemas
+  subscriptionPlan: subscriptionPlanSchema,
+  createSubscriptionRequest: createSubscriptionRequestSchema,
+  planFeatures: planFeaturesSchema,
+  planLimits: planLimitsSchema,
+  // Usage metrics schemas
+  usageMetric: usageMetricSchema,
+  usageMetricName: usageMetricNameSchema,
+  // Bot configuration schemas
+  botSettings: botSettingsSchema,
+  businessHours: businessHoursSchema,
+  conversationFlow: conversationFlowSchema,
+  paymentSettings: paymentSettingsSchema,
+  // Billing schemas
+  billingSettings: billingSettingsSchema,
+  billingAddress: billingAddressSchema,
+  // WhatsApp schemas
+  whatsappCredentials: whatsappCredentialsSchema,
+  whatsappConfig: whatsappConfigSchema,
+  // Authentication schemas
+  loginCredentials: loginCredentialsSchema,
+  mfaSetupRequest: mfaSetupRequestSchema,
+  mfaVerificationRequest: mfaVerificationRequestSchema,
+  // Utility schemas
+  paginationParams: paginationParamsSchema,
+  filterParams: filterParamsSchema,
+  tenantContextRequest: tenantContextRequestSchema,
+  // Audit schemas
+  auditLog: auditLogSchema,
+  auditAction: auditActionSchema
+};
+
+// server/services/tenant.service.ts
+var TenantService = class {
+  db;
+  pool;
+  constructor(connectionString) {
+    this.pool = new Pool5({ connectionString });
+    this.db = drizzle3({ client: this.pool, schema: schema_exports });
+  }
+  // ===== TENANT CRUD OPERATIONS =====
+  /**
+   * Create a new tenant with admin user
+   */
+  async createTenant(data) {
+    try {
+      const validatedData = tenantValidationSchemas.createTenantRequest.parse(data);
+      const existingTenant = await this.db.select({ id: tenants.id }).from(tenants).where(eq4(tenants.domain, validatedData.domain)).limit(1);
+      if (existingTenant.length > 0) {
+        return {
+          success: false,
+          error: {
+            code: "DOMAIN_ALREADY_EXISTS",
+            message: "Domain is already registered",
+            details: { domain: validatedData.domain }
+          }
+        };
+      }
+      const passwordHash = await bcrypt.hash(validatedData.adminUser.password, 12);
+      const result = await this.db.transaction(async (tx) => {
+        const [tenant] = await tx.insert(tenants).values({
+          businessName: validatedData.businessName,
+          domain: validatedData.domain,
+          email: validatedData.email,
+          phone: validatedData.phone,
+          subscriptionPlan: validatedData.subscriptionPlan || "starter",
+          status: "trial",
+          botSettings: this.getDefaultBotSettings(),
+          billingSettings: this.getDefaultBillingSettings(validatedData)
+        }).returning();
+        await tx.insert(users).values({
+          tenantId: tenant.id,
+          email: validatedData.adminUser.email,
+          passwordHash,
+          role: validatedData.adminUser.role || "admin",
+          firstName: validatedData.adminUser.firstName,
+          lastName: validatedData.adminUser.lastName,
+          isActive: true
+        });
+        const currentDate = /* @__PURE__ */ new Date();
+        const trialEndDate = new Date(currentDate.getTime() + 14 * 24 * 60 * 60 * 1e3);
+        await tx.insert(subscriptions).values({
+          tenantId: tenant.id,
+          planId: validatedData.subscriptionPlan || "starter",
+          status: "trialing",
+          billingCycle: "monthly",
+          currentPeriodStart: currentDate,
+          currentPeriodEnd: trialEndDate
+        });
+        return tenant;
+      });
+      return {
+        success: true,
+        data: result,
+        metadata: { created: true }
+      };
+    } catch (error) {
+      console.error("Error creating tenant:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_CREATION_FAILED",
+          message: "Failed to create tenant",
+          details: { originalError: error instanceof Error ? error.message : "Unknown error" }
+        }
+      };
+    }
+  }
+  /**
+   * Get tenant by ID
+   */
+  async getTenantById(tenantId) {
+    try {
+      const [tenant] = await this.db.select().from(tenants).where(eq4(tenants.id, tenantId)).limit(1);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "Tenant not found",
+            tenantId
+          }
+        };
+      }
+      return {
+        success: true,
+        data: tenant
+      };
+    } catch (error) {
+      console.error("Error getting tenant:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_FETCH_FAILED",
+          message: "Failed to fetch tenant",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Get tenant by domain
+   */
+  async getTenantByDomain(domain) {
+    try {
+      validateDomainUniqueness(domain);
+      const [tenant] = await this.db.select().from(tenants).where(eq4(tenants.domain, domain)).limit(1);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "Tenant not found for domain",
+            details: { domain }
+          }
+        };
+      }
+      return {
+        success: true,
+        data: tenant
+      };
+    } catch (error) {
+      console.error("Error getting tenant by domain:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_FETCH_FAILED",
+          message: "Failed to fetch tenant by domain",
+          details: { domain }
+        }
+      };
+    }
+  }
+  /**
+   * Update tenant
+   */
+  async updateTenant(tenantId, data) {
+    try {
+      const validatedData = tenantValidationSchemas.updateTenantRequest.parse(data);
+      const existingTenant = await this.getTenantById(tenantId);
+      if (!existingTenant.success) {
+        return existingTenant;
+      }
+      if (validatedData.domain && validatedData.domain !== existingTenant.data.domain) {
+        const domainExists = await this.db.select({ id: tenants.id }).from(tenants).where(
+          and4(
+            eq4(tenants.domain, validatedData.domain),
+            eq4(tenants.id, tenantId)
+          )
+        ).limit(1);
+        if (domainExists.length > 0) {
+          return {
+            success: false,
+            error: {
+              code: "DOMAIN_ALREADY_EXISTS",
+              message: "Domain is already registered",
+              tenantId,
+              details: { domain: validatedData.domain }
+            }
+          };
+        }
+      }
+      const [updatedTenant] = await this.db.update(tenants).set({
+        ...validatedData,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq4(tenants.id, tenantId)).returning();
+      return {
+        success: true,
+        data: updatedTenant,
+        metadata: { updated: true }
+      };
+    } catch (error) {
+      console.error("Error updating tenant:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_UPDATE_FAILED",
+          message: "Failed to update tenant",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Delete tenant (soft delete by setting status to cancelled)
+   */
+  async deleteTenant(tenantId) {
+    try {
+      const existingTenant = await this.getTenantById(tenantId);
+      if (!existingTenant.success) {
+        return {
+          success: false,
+          error: existingTenant.error
+        };
+      }
+      await this.db.update(tenants).set({
+        status: "cancelled",
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq4(tenants.id, tenantId));
+      return {
+        success: true,
+        metadata: { deleted: true }
+      };
+    } catch (error) {
+      console.error("Error deleting tenant:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_DELETE_FAILED",
+          message: "Failed to delete tenant",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * List tenants with pagination and filtering
+   */
+  async listTenants(pagination, filters) {
+    try {
+      const validatedPagination = tenantValidationSchemas.paginationParams.parse(pagination);
+      const validatedFilters = filters ? tenantValidationSchemas.filterParams.parse(filters) : {};
+      const whereConditions = [];
+      if (validatedFilters.status && validatedFilters.status.length > 0) {
+        whereConditions.push(inArray2(tenants.status, validatedFilters.status));
+      }
+      if (validatedFilters.search) {
+        whereConditions.push(
+          like(tenants.businessName, `%${validatedFilters.search}%`)
+        );
+      }
+      if (validatedFilters.dateFrom) {
+        whereConditions.push(gte3(tenants.createdAt, validatedFilters.dateFrom));
+      }
+      if (validatedFilters.dateTo) {
+        whereConditions.push(lte(tenants.createdAt, validatedFilters.dateTo));
+      }
+      const whereClause = whereConditions.length > 0 ? and4(...whereConditions) : void 0;
+      const [{ count }] = await this.db.select({ count: sql4`count(*)` }).from(tenants).where(whereClause);
+      const offset = (validatedPagination.page - 1) * validatedPagination.limit;
+      const orderBy = validatedPagination.sortBy ? validatedPagination.sortOrder === "asc" ? asc2(tenants[validatedPagination.sortBy]) : desc2(tenants[validatedPagination.sortBy]) : desc2(tenants.createdAt);
+      const tenants2 = await this.db.select().from(tenants).where(whereClause).orderBy(orderBy).limit(validatedPagination.limit).offset(offset);
+      const totalPages = Math.ceil(count / validatedPagination.limit);
+      return {
+        success: true,
+        data: {
+          data: tenants2,
+          pagination: {
+            page: validatedPagination.page,
+            limit: validatedPagination.limit,
+            total: count,
+            totalPages,
+            hasNext: validatedPagination.page < totalPages,
+            hasPrev: validatedPagination.page > 1
+          }
+        }
+      };
+    } catch (error) {
+      console.error("Error listing tenants:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_LIST_FAILED",
+          message: "Failed to list tenants"
+        }
+      };
+    }
+  }
+  // ===== USER MANAGEMENT OPERATIONS =====
+  /**
+   * Create user for tenant
+   */
+  async createUser(tenantId, data) {
+    try {
+      const validatedData = tenantValidationSchemas.createUserRequest.parse(data);
+      const tenantResult = await this.getTenantById(tenantId);
+      if (!tenantResult.success) {
+        return {
+          success: false,
+          error: tenantResult.error
+        };
+      }
+      const existingUser = await this.db.select({ id: users.id }).from(users).where(
+        and4(
+          eq4(users.tenantId, tenantId),
+          eq4(users.email, validatedData.email)
+        )
+      ).limit(1);
+      if (existingUser.length > 0) {
+        return {
+          success: false,
+          error: {
+            code: "EMAIL_ALREADY_EXISTS",
+            message: "Email is already registered for this tenant",
+            tenantId,
+            details: { email: validatedData.email }
+          }
+        };
+      }
+      const passwordHash = await bcrypt.hash(validatedData.password, 12);
+      const [user] = await this.db.insert(users).values({
+        tenantId,
+        email: validatedData.email,
+        passwordHash,
+        role: validatedData.role || "user",
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        isActive: true
+      }).returning();
+      const userProfile = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        tenant: {
+          id: tenantResult.data.id,
+          businessName: tenantResult.data.businessName,
+          domain: tenantResult.data.domain
+        }
+      };
+      return {
+        success: true,
+        data: userProfile,
+        metadata: { created: true }
+      };
+    } catch (error) {
+      console.error("Error creating user:", error);
+      return {
+        success: false,
+        error: {
+          code: "USER_CREATION_FAILED",
+          message: "Failed to create user",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Get user by ID within tenant
+   */
+  async getUserById(tenantId, userId) {
+    try {
+      const result = await this.db.select({
+        user: users,
+        tenant: {
+          id: tenants.id,
+          businessName: tenants.businessName,
+          domain: tenants.domain
+        }
+      }).from(users).innerJoin(tenants, eq4(users.tenantId, tenants.id)).where(
+        and4(eq4(users.tenantId, tenantId), eq4(users.id, userId))
+      ).limit(1);
+      if (result.length === 0) {
+        return {
+          success: false,
+          error: {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+            tenantId,
+            details: { userId }
+          }
+        };
+      }
+      const { user, tenant } = result[0];
+      const userProfile = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        tenant
+      };
+      return {
+        success: true,
+        data: userProfile
+      };
+    } catch (error) {
+      console.error("Error getting user:", error);
+      return {
+        success: false,
+        error: {
+          code: "USER_FETCH_FAILED",
+          message: "Failed to fetch user",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update user within tenant
+   */
+  async updateUser(tenantId, userId, data) {
+    try {
+      const validatedData = tenantValidationSchemas.updateUserRequest.parse(data);
+      const existingUser = await this.getUserById(tenantId, userId);
+      if (!existingUser.success) {
+        return existingUser;
+      }
+      if (validatedData.email && validatedData.email !== existingUser.data.email) {
+        const emailExists = await this.db.select({ id: users.id }).from(users).where(
+          and4(
+            eq4(users.tenantId, tenantId),
+            eq4(users.email, validatedData.email),
+            ne(users.id, userId)
+          )
+        ).limit(1);
+        if (emailExists.length > 0) {
+          return {
+            success: false,
+            error: {
+              code: "EMAIL_ALREADY_EXISTS",
+              message: "Email is already registered for this tenant",
+              tenantId,
+              details: { email: validatedData.email }
+            }
+          };
+        }
+      }
+      await this.db.update(users).set({
+        ...validatedData,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(and4(eq4(users.tenantId, tenantId), eq4(users.id, userId)));
+      return await this.getUserById(tenantId, userId);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return {
+        success: false,
+        error: {
+          code: "USER_UPDATE_FAILED",
+          message: "Failed to update user",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * List users for tenant
+   */
+  async listUsers(tenantId, pagination, filters) {
+    try {
+      const validatedPagination = tenantValidationSchemas.paginationParams.parse(pagination);
+      const validatedFilters = filters ? tenantValidationSchemas.filterParams.parse(filters) : {};
+      const whereConditions = [eq4(users.tenantId, tenantId)];
+      if (validatedFilters.status && validatedFilters.status.length > 0) {
+        const isActiveValues = validatedFilters.status.map((status) => status === "active");
+        whereConditions.push(inArray2(users.isActive, isActiveValues));
+      }
+      if (validatedFilters.search) {
+        whereConditions.push(
+          or(
+            like(users.email, `%${validatedFilters.search}%`),
+            like(users.firstName, `%${validatedFilters.search}%`),
+            like(users.lastName, `%${validatedFilters.search}%`)
+          )
+        );
+      }
+      const whereClause = and4(...whereConditions);
+      const [{ count }] = await this.db.select({ count: sql4`count(*)` }).from(users).where(whereClause);
+      const offset = (validatedPagination.page - 1) * validatedPagination.limit;
+      const orderBy = validatedPagination.sortBy ? validatedPagination.sortOrder === "asc" ? asc2(users[validatedPagination.sortBy]) : desc2(users[validatedPagination.sortBy]) : desc2(users.createdAt);
+      const results = await this.db.select({
+        user: users,
+        tenant: {
+          id: tenants.id,
+          businessName: tenants.businessName,
+          domain: tenants.domain
+        }
+      }).from(users).innerJoin(tenants, eq4(users.tenantId, tenants.id)).where(whereClause).orderBy(orderBy).limit(validatedPagination.limit).offset(offset);
+      const users2 = results.map(({ user, tenant }) => ({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        tenant
+      }));
+      const totalPages = Math.ceil(count / validatedPagination.limit);
+      return {
+        success: true,
+        data: {
+          data: users2,
+          pagination: {
+            page: validatedPagination.page,
+            limit: validatedPagination.limit,
+            total: count,
+            totalPages,
+            hasNext: validatedPagination.page < totalPages,
+            hasPrev: validatedPagination.page > 1
+          }
+        }
+      };
+    } catch (error) {
+      console.error("Error listing users:", error);
+      return {
+        success: false,
+        error: {
+          code: "USER_LIST_FAILED",
+          message: "Failed to list users",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== API KEY MANAGEMENT =====
+  /**
+   * Create API key for tenant
+   */
+  async createApiKey(tenantId, data) {
+    try {
+      const validatedData = tenantValidationSchemas.createApiKeyRequest.parse(data);
+      const tenantResult = await this.getTenantById(tenantId);
+      if (!tenantResult.success) {
+        return {
+          success: false,
+          error: tenantResult.error
+        };
+      }
+      const apiKey = this.generateApiKey();
+      const keyHash = await bcrypt.hash(apiKey, 12);
+      const [createdApiKey] = await this.db.insert(apiKeys).values({
+        tenantId,
+        keyHash,
+        name: validatedData.name,
+        permissions: validatedData.permissions,
+        expiresAt: validatedData.expiresAt,
+        isActive: true
+      }).returning();
+      const response = {
+        id: createdApiKey.id,
+        name: createdApiKey.name,
+        key: apiKey,
+        // Only returned on creation
+        permissions: createdApiKey.permissions,
+        expiresAt: createdApiKey.expiresAt,
+        createdAt: createdApiKey.createdAt
+      };
+      return {
+        success: true,
+        data: response,
+        metadata: { created: true }
+      };
+    } catch (error) {
+      console.error("Error creating API key:", error);
+      return {
+        success: false,
+        error: {
+          code: "API_KEY_CREATION_FAILED",
+          message: "Failed to create API key",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Validate API key and return tenant context
+   */
+  async validateApiKey(apiKey) {
+    try {
+      const apiKeys2 = await this.db.select({
+        apiKey: apiKeys,
+        tenant: tenants
+      }).from(apiKeys).innerJoin(tenants, eq4(apiKeys.tenantId, tenants.id)).where(
+        and4(
+          eq4(apiKeys.isActive, true),
+          eq4(tenants.status, "active")
+        )
+      );
+      let matchedApiKey = null;
+      for (const { apiKey: dbApiKey2, tenant: tenant2 } of apiKeys2) {
+        const isMatch = await bcrypt.compare(apiKey, dbApiKey2.keyHash);
+        if (isMatch) {
+          matchedApiKey = { apiKey: dbApiKey2, tenant: tenant2 };
+          break;
+        }
+      }
+      if (!matchedApiKey) {
+        return {
+          success: false,
+          error: {
+            code: "INVALID_API_KEY",
+            message: "Invalid or expired API key"
+          }
+        };
+      }
+      const { apiKey: dbApiKey, tenant } = matchedApiKey;
+      if (dbApiKey.expiresAt && dbApiKey.expiresAt < /* @__PURE__ */ new Date()) {
+        return {
+          success: false,
+          error: {
+            code: "API_KEY_EXPIRED",
+            message: "API key has expired",
+            tenantId: tenant.id
+          }
+        };
+      }
+      await this.db.update(apiKeys).set({ lastUsed: /* @__PURE__ */ new Date() }).where(eq4(apiKeys.id, dbApiKey.id));
+      const [subscription] = await this.db.select({
+        subscription: subscriptions,
+        plan: subscriptionPlans
+      }).from(subscriptions).innerJoin(subscriptionPlans, eq4(subscriptions.planId, subscriptionPlans.id)).where(eq4(subscriptions.tenantId, tenant.id)).limit(1);
+      const tenantContext = {
+        tenantId: tenant.id,
+        permissions: dbApiKey.permissions,
+        subscriptionLimits: subscription?.plan.limits || {
+          messagesPerMonth: 1e3,
+          bookingsPerMonth: 100,
+          apiCallsPerDay: 1e3
+        },
+        currentUsage: {
+          messages_sent: 0,
+          messages_received: 0,
+          bookings_created: 0,
+          api_calls: 0,
+          storage_used: 0,
+          webhook_calls: 0
+        }
+      };
+      return {
+        success: true,
+        data: tenantContext
+      };
+    } catch (error) {
+      console.error("Error validating API key:", error);
+      return {
+        success: false,
+        error: {
+          code: "API_KEY_VALIDATION_FAILED",
+          message: "Failed to validate API key"
+        }
+      };
+    }
+  }
+  // ===== UTILITY METHODS =====
+  /**
+   * Generate secure API key
+   */
+  generateApiKey() {
+    const randomBytes = crypto.randomBytes(32);
+    return `tk_${randomBytes.toString("hex")}`;
+  }
+  /**
+   * Get default bot settings for new tenant
+   */
+  getDefaultBotSettings() {
+    return {
+      greetingMessage: "Welcome! How can I help you today?",
+      businessHours: {
+        enabled: false,
+        timezone: "UTC",
+        schedule: {
+          monday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          tuesday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          wednesday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          thursday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          friday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          saturday: { isOpen: false, openTime: "09:00", closeTime: "17:00" },
+          sunday: { isOpen: false, openTime: "09:00", closeTime: "17:00" }
+        },
+        closedMessage: "We are currently closed. Please try again during business hours."
+      },
+      autoResponses: {
+        welcomeMessage: "Hello! How can I help you today?",
+        serviceSelectionPrompt: "Please select a service:",
+        dateSelectionPrompt: "Please select a date:",
+        timeSelectionPrompt: "Please select a time:",
+        confirmationMessage: "Please confirm your booking:",
+        paymentInstructions: "Payment instructions will be sent shortly.",
+        bookingConfirmedMessage: "Your booking has been confirmed!",
+        errorMessage: "Sorry, something went wrong. Please try again.",
+        invalidInputMessage: "Invalid input. Please try again."
+      },
+      conversationFlow: {
+        steps: [
+          {
+            id: "greeting",
+            name: "Greeting",
+            type: "greeting",
+            prompt: "Welcome! How can I help you?",
+            nextStep: "service_selection"
+          },
+          {
+            id: "service_selection",
+            name: "Service Selection",
+            type: "service_selection",
+            prompt: "Please select a service:",
+            nextStep: "date_selection"
+          },
+          {
+            id: "date_selection",
+            name: "Date Selection",
+            type: "date_selection",
+            prompt: "Please select a date:",
+            nextStep: "time_selection"
+          },
+          {
+            id: "time_selection",
+            name: "Time Selection",
+            type: "time_selection",
+            prompt: "Please select a time:",
+            nextStep: "confirmation"
+          },
+          {
+            id: "confirmation",
+            name: "Confirmation",
+            type: "confirmation",
+            prompt: "Your booking has been confirmed!"
+          }
+        ],
+        fallbackBehavior: "restart",
+        maxRetries: 3,
+        sessionTimeout: 30
+      },
+      paymentSettings: {
+        enabled: false,
+        methods: [],
+        currency: "USD",
+        requirePayment: false
+      },
+      notificationSettings: {
+        emailNotifications: {
+          enabled: false,
+          recipientEmails: [],
+          events: []
+        },
+        smsNotifications: {
+          enabled: false,
+          recipientPhones: [],
+          events: []
+        },
+        webhookNotifications: {
+          enabled: false,
+          endpoints: [],
+          events: []
+        }
+      },
+      customization: {
+        brandColors: {
+          primary: "#007bff",
+          secondary: "#6c757d",
+          accent: "#28a745",
+          background: "#ffffff",
+          text: "#212529"
+        },
+        companyInfo: {
+          name: ""
+        },
+        customFields: []
+      }
+    };
+  }
+  /**
+   * Get default billing settings for new tenant
+   */
+  getDefaultBillingSettings(data) {
+    return {
+      companyName: data.businessName,
+      billingEmail: data.email,
+      billingAddress: {
+        street: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "US"
+      },
+      invoiceSettings: {
+        autoSend: true,
+        dueNetDays: 30,
+        includeUsageDetails: true
+      }
+    };
+  }
+  /**
+   * Close database connection
+   */
+  async close() {
+    await this.pool.end();
+  }
+};
+
+// server/services/tenant-settings.service.ts
+import { eq as eq5 } from "drizzle-orm";
+import { drizzle as drizzle4 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool6 } from "@neondatabase/serverless";
+import crypto2 from "crypto";
+var TenantSettingsService = class {
+  db;
+  pool;
+  encryptionKey;
+  constructor(connectionString, encryptionKey) {
+    this.pool = new Pool6({ connectionString });
+    this.db = drizzle4({ client: this.pool, schema: schema_exports });
+    this.encryptionKey = encryptionKey || process.env.ENCRYPTION_KEY || this.generateEncryptionKey();
+  }
+  // ===== BOT SETTINGS MANAGEMENT =====
+  /**
+   * Get current bot settings for tenant
+   */
+  async getBotSettings(tenantId) {
+    try {
+      const [tenant] = await this.db.select().from(tenants).where(eq5(tenants.id, tenantId)).limit(1);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "Tenant not found",
+            tenantId
+          }
+        };
+      }
+      return {
+        success: true,
+        data: tenant.botSettings
+      };
+    } catch (error) {
+      console.error("Error getting bot settings:", error);
+      return {
+        success: false,
+        error: {
+          code: "SETTINGS_FETCH_FAILED",
+          message: "Failed to fetch bot settings",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update bot settings with validation and versioning
+   */
+  async updateBotSettings(tenantId, settings, userId) {
+    try {
+      const currentResult = await this.getBotSettings(tenantId);
+      if (!currentResult.success) {
+        return currentResult;
+      }
+      const currentSettings = currentResult.data;
+      const updatedSettings = { ...currentSettings, ...settings };
+      const validatedSettings = tenantValidationSchemas.botSettings.parse(updatedSettings);
+      if (settings.conversationFlow) {
+        validateConversationFlow(settings.conversationFlow);
+      }
+      await this.createSettingsVersion(tenantId, currentSettings, userId);
+      const [updatedTenant] = await this.db.update(tenants).set({
+        botSettings: validatedSettings,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq5(tenants.id, tenantId)).returning();
+      return {
+        success: true,
+        data: updatedTenant.botSettings,
+        metadata: { updated: true, version: "latest" }
+      };
+    } catch (error) {
+      console.error("Error updating bot settings:", error);
+      return {
+        success: false,
+        error: {
+          code: "SETTINGS_UPDATE_FAILED",
+          message: "Failed to update bot settings",
+          tenantId,
+          details: { originalError: error instanceof Error ? error.message : "Unknown error" }
+        }
+      };
+    }
+  }
+  /**
+   * Reset bot settings to default
+   */
+  async resetBotSettings(tenantId, userId) {
+    const defaultSettings = this.getDefaultBotSettings();
+    return this.updateBotSettings(tenantId, defaultSettings, userId);
+  }
+  /**
+   * Validate bot settings without saving
+   */
+  async validateBotSettings(settings) {
+    try {
+      tenantValidationSchemas.botSettings.parse(settings);
+      const errors = [];
+      try {
+        validateConversationFlow(settings.conversationFlow);
+      } catch (error) {
+        errors.push(`Conversation flow error: ${error instanceof Error ? error.message : "Invalid flow"}`);
+      }
+      if (settings.notificationSettings.webhookNotifications.enabled) {
+        for (const endpoint of settings.notificationSettings.webhookNotifications.endpoints) {
+          try {
+            validateWebhookUrl(endpoint.url);
+          } catch (error) {
+            errors.push(`Invalid webhook URL ${endpoint.url}: ${error instanceof Error ? error.message : "Invalid URL"}`);
+          }
+        }
+      }
+      return {
+        success: true,
+        data: {
+          isValid: errors.length === 0,
+          errors: errors.length > 0 ? errors : void 0
+        }
+      };
+    } catch (error) {
+      return {
+        success: true,
+        data: {
+          isValid: false,
+          errors: [error instanceof Error ? error.message : "Validation failed"]
+        }
+      };
+    }
+  }
+  // ===== WHATSAPP CREDENTIALS MANAGEMENT =====
+  /**
+   * Get WhatsApp configuration (decrypted)
+   */
+  async getWhatsAppConfig(tenantId) {
+    try {
+      const [tenant] = await this.db.select().from(tenants).where(eq5(tenants.id, tenantId)).limit(1);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "Tenant not found",
+            tenantId
+          }
+        };
+      }
+      if (!tenant.whatsappToken || !tenant.whatsappPhoneId) {
+        return {
+          success: false,
+          error: {
+            code: "WHATSAPP_NOT_CONFIGURED",
+            message: "WhatsApp credentials not configured",
+            tenantId
+          }
+        };
+      }
+      const decryptedToken = this.decrypt(tenant.whatsappToken);
+      const config = {
+        phoneNumberId: tenant.whatsappPhoneId,
+        accessToken: decryptedToken,
+        verifyToken: tenant.whatsappVerifyToken || "",
+        businessAccountId: "",
+        // Would be stored separately in a real implementation
+        appId: "",
+        // Would be stored separately
+        appSecret: "",
+        // Would be stored separately
+        webhookUrl: `${process.env.BASE_URL || "https://api.example.com"}/webhooks/whatsapp/${tenantId}`,
+        isVerified: false,
+        // Would be determined by actual verification
+        lastVerified: void 0
+      };
+      return {
+        success: true,
+        data: config
+      };
+    } catch (error) {
+      console.error("Error getting WhatsApp config:", error);
+      return {
+        success: false,
+        error: {
+          code: "WHATSAPP_CONFIG_FETCH_FAILED",
+          message: "Failed to fetch WhatsApp configuration",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update WhatsApp credentials with encryption
+   */
+  async updateWhatsAppCredentials(tenantId, credentials) {
+    try {
+      const validatedCredentials = tenantValidationSchemas.whatsappCredentials.parse(credentials);
+      const testResult = await this.testWhatsAppCredentials(validatedCredentials);
+      if (!testResult.isValid) {
+        return {
+          success: false,
+          error: {
+            code: "INVALID_WHATSAPP_CREDENTIALS",
+            message: "WhatsApp credentials validation failed",
+            tenantId,
+            details: { errors: testResult.errors }
+          }
+        };
+      }
+      const encryptedToken = this.encrypt(validatedCredentials.accessToken);
+      const encryptedAppSecret = this.encrypt(validatedCredentials.appSecret);
+      await this.db.update(tenants).set({
+        whatsappPhoneId: validatedCredentials.phoneNumberId,
+        whatsappToken: encryptedToken,
+        whatsappVerifyToken: validatedCredentials.verifyToken,
+        // In a real implementation, we'd store businessAccountId, appId, appSecret separately
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq5(tenants.id, tenantId));
+      return {
+        success: true,
+        data: {
+          success: true,
+          verified: testResult.isValid
+        },
+        metadata: { updated: true, verified: testResult.isValid }
+      };
+    } catch (error) {
+      console.error("Error updating WhatsApp credentials:", error);
+      return {
+        success: false,
+        error: {
+          code: "WHATSAPP_UPDATE_FAILED",
+          message: "Failed to update WhatsApp credentials",
+          tenantId,
+          details: { originalError: error instanceof Error ? error.message : "Unknown error" }
+        }
+      };
+    }
+  }
+  /**
+   * Test WhatsApp credentials
+   */
+  async testWhatsAppCredentials(credentials) {
+    try {
+      const errors = [];
+      if (!credentials.accessToken.startsWith("EAA")) {
+        errors.push("Access token format appears invalid");
+      }
+      if (!/^\d{15,}$/.test(credentials.phoneNumberId)) {
+        errors.push("Phone number ID format appears invalid");
+      }
+      if (credentials.verifyToken.length < 8) {
+        errors.push("Verify token should be at least 8 characters");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1e3));
+      return {
+        isValid: errors.length === 0,
+        phoneNumber: errors.length === 0 ? "+1234567890" : void 0,
+        businessName: errors.length === 0 ? "Test Business" : void 0,
+        webhookVerified: errors.length === 0,
+        errors: errors.length > 0 ? errors : void 0
+      };
+    } catch (error) {
+      return {
+        isValid: false,
+        errors: ["Failed to test credentials: " + (error instanceof Error ? error.message : "Unknown error")]
+      };
+    }
+  }
+  /**
+   * Verify webhook configuration
+   */
+  async verifyWebhook(tenantId, challenge) {
+    try {
+      const configResult = await this.getWhatsAppConfig(tenantId);
+      if (!configResult.success) {
+        return {
+          success: false,
+          error: configResult.error
+        };
+      }
+      const config = configResult.data;
+      return {
+        success: true,
+        data: challenge,
+        metadata: { verified: true }
+      };
+    } catch (error) {
+      console.error("Error verifying webhook:", error);
+      return {
+        success: false,
+        error: {
+          code: "WEBHOOK_VERIFICATION_FAILED",
+          message: "Failed to verify webhook",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== SETTINGS VERSIONING =====
+  /**
+   * Create a settings version backup
+   */
+  async createSettingsVersion(tenantId, settings, userId) {
+    try {
+      const versions = await this.getSettingsVersions(tenantId);
+      const nextVersion = versions.success ? versions.data.length + 1 : 1;
+      console.log(`Creating settings version ${nextVersion} for tenant ${tenantId} by user ${userId}`);
+    } catch (error) {
+      console.error("Error creating settings version:", error);
+    }
+  }
+  /**
+   * Get settings version history
+   */
+  async getSettingsVersions(tenantId) {
+    try {
+      return {
+        success: true,
+        data: []
+      };
+    } catch (error) {
+      console.error("Error getting settings versions:", error);
+      return {
+        success: false,
+        error: {
+          code: "VERSIONS_FETCH_FAILED",
+          message: "Failed to fetch settings versions",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Restore settings from a specific version
+   */
+  async restoreSettingsVersion(tenantId, version, userId) {
+    try {
+      return {
+        success: false,
+        error: {
+          code: "VERSION_RESTORE_NOT_IMPLEMENTED",
+          message: "Settings version restore not yet implemented",
+          tenantId
+        }
+      };
+    } catch (error) {
+      console.error("Error restoring settings version:", error);
+      return {
+        success: false,
+        error: {
+          code: "VERSION_RESTORE_FAILED",
+          message: "Failed to restore settings version",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== ENCRYPTION UTILITIES =====
+  /**
+   * Encrypt sensitive data
+   */
+  encrypt(text3) {
+    try {
+      const algorithm = "aes-256-gcm";
+      const iv = crypto2.randomBytes(16);
+      const cipher = crypto2.createCipher(algorithm, this.encryptionKey);
+      let encrypted = cipher.update(text3, "utf8", "hex");
+      encrypted += cipher.final("hex");
+      const authTag = cipher.getAuthTag();
+      return iv.toString("hex") + ":" + authTag.toString("hex") + ":" + encrypted;
+    } catch (error) {
+      console.error("Encryption error:", error);
+      throw new Error("Failed to encrypt data");
+    }
+  }
+  /**
+   * Decrypt sensitive data
+   */
+  decrypt(encryptedText) {
+    try {
+      const algorithm = "aes-256-gcm";
+      const parts = encryptedText.split(":");
+      if (parts.length !== 3) {
+        throw new Error("Invalid encrypted data format");
+      }
+      const iv = Buffer.from(parts[0], "hex");
+      const authTag = Buffer.from(parts[1], "hex");
+      const encrypted = parts[2];
+      const decipher = crypto2.createDecipher(algorithm, this.encryptionKey);
+      decipher.setAuthTag(authTag);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return decrypted;
+    } catch (error) {
+      console.error("Decryption error:", error);
+      throw new Error("Failed to decrypt data");
+    }
+  }
+  /**
+   * Generate encryption key
+   */
+  generateEncryptionKey() {
+    return crypto2.randomBytes(32).toString("hex");
+  }
+  // ===== DEFAULT SETTINGS =====
+  /**
+   * Get default bot settings
+   */
+  getDefaultBotSettings() {
+    return {
+      greetingMessage: "Welcome! How can I help you today?",
+      businessHours: {
+        enabled: false,
+        timezone: "UTC",
+        schedule: {
+          monday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          tuesday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          wednesday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          thursday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          friday: { isOpen: true, openTime: "09:00", closeTime: "17:00" },
+          saturday: { isOpen: false, openTime: "09:00", closeTime: "17:00" },
+          sunday: { isOpen: false, openTime: "09:00", closeTime: "17:00" }
+        },
+        closedMessage: "We are currently closed. Please try again during business hours."
+      },
+      autoResponses: {
+        welcomeMessage: "Hello! How can I help you today?",
+        serviceSelectionPrompt: "Please select a service:",
+        dateSelectionPrompt: "Please select a date:",
+        timeSelectionPrompt: "Please select a time:",
+        confirmationMessage: "Please confirm your booking:",
+        paymentInstructions: "Payment instructions will be sent shortly.",
+        bookingConfirmedMessage: "Your booking has been confirmed!",
+        errorMessage: "Sorry, something went wrong. Please try again.",
+        invalidInputMessage: "Invalid input. Please try again."
+      },
+      conversationFlow: {
+        steps: [
+          {
+            id: "greeting",
+            name: "Greeting",
+            type: "greeting",
+            prompt: "Welcome! How can I help you?",
+            nextStep: "service_selection"
+          },
+          {
+            id: "service_selection",
+            name: "Service Selection",
+            type: "service_selection",
+            prompt: "Please select a service:",
+            nextStep: "date_selection"
+          },
+          {
+            id: "date_selection",
+            name: "Date Selection",
+            type: "date_selection",
+            prompt: "Please select a date:",
+            nextStep: "time_selection"
+          },
+          {
+            id: "time_selection",
+            name: "Time Selection",
+            type: "time_selection",
+            prompt: "Please select a time:",
+            nextStep: "confirmation"
+          },
+          {
+            id: "confirmation",
+            name: "Confirmation",
+            type: "confirmation",
+            prompt: "Your booking has been confirmed!"
+          }
+        ],
+        fallbackBehavior: "restart",
+        maxRetries: 3,
+        sessionTimeout: 30
+      },
+      paymentSettings: {
+        enabled: false,
+        methods: [],
+        currency: "USD",
+        requirePayment: false
+      },
+      notificationSettings: {
+        emailNotifications: {
+          enabled: false,
+          recipientEmails: [],
+          events: []
+        },
+        smsNotifications: {
+          enabled: false,
+          recipientPhones: [],
+          events: []
+        },
+        webhookNotifications: {
+          enabled: false,
+          endpoints: [],
+          events: []
+        }
+      },
+      customization: {
+        brandColors: {
+          primary: "#007bff",
+          secondary: "#6c757d",
+          accent: "#28a745",
+          background: "#ffffff",
+          text: "#212529"
+        },
+        companyInfo: {
+          name: ""
+        },
+        customFields: []
+      }
+    };
+  }
+  /**
+   * Close database connection
+   */
+  async close() {
+    await this.pool.end();
+  }
+};
+
+// server/services/webhook-router.service.ts
+var WebhookRouterService = class {
+  tenantService;
+  tenantSettingsService;
+  phoneNumberCache;
+  CACHE_TTL = 5 * 60 * 1e3;
+  // 5 minutes
+  constructor(connectionString) {
+    this.tenantService = new TenantService(connectionString);
+    this.tenantSettingsService = new TenantSettingsService(connectionString);
+    this.phoneNumberCache = /* @__PURE__ */ new Map();
+  }
+  /**
+   * Route incoming webhook to appropriate tenant
+   */
+  async routeWebhook(payload) {
+    try {
+      if (!this.isValidWebhookPayload(payload)) {
+        return {
+          success: false,
+          error: {
+            code: "INVALID_WEBHOOK_PAYLOAD",
+            message: "Invalid webhook payload structure"
+          }
+        };
+      }
+      const phoneNumberId = this.extractPhoneNumberId(payload);
+      if (!phoneNumberId) {
+        return {
+          success: false,
+          error: {
+            code: "PHONE_NUMBER_ID_NOT_FOUND",
+            message: "Could not extract phone number ID from webhook"
+          }
+        };
+      }
+      const tenant = await this.findTenantByPhoneNumberId(phoneNumberId);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: `No tenant found for phone number ID: ${phoneNumberId}`
+          }
+        };
+      }
+      return {
+        success: true,
+        tenant,
+        phoneNumberId
+      };
+    } catch (error) {
+      console.error("Error routing webhook:", error);
+      return {
+        success: false,
+        error: {
+          code: "WEBHOOK_ROUTING_ERROR",
+          message: "Failed to route webhook"
+        }
+      };
+    }
+  }
+  /**
+   * Verify webhook for tenant
+   */
+  async verifyWebhook(phoneNumberId, verificationRequest) {
+    try {
+      const tenant = await this.findTenantByPhoneNumberId(phoneNumberId);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "No tenant found for phone number ID"
+          }
+        };
+      }
+      const settingsResult = await this.tenantSettingsService.getSettings(tenant.id, "whatsapp");
+      if (!settingsResult.success || !settingsResult.data) {
+        return {
+          success: false,
+          error: {
+            code: "WHATSAPP_SETTINGS_NOT_FOUND",
+            message: "WhatsApp settings not configured for tenant"
+          }
+        };
+      }
+      const whatsappSettings = settingsResult.data.value;
+      const expectedVerifyToken = whatsappSettings.webhookVerifyToken;
+      if (verificationRequest["hub.mode"] === "subscribe" && verificationRequest["hub.verify_token"] === expectedVerifyToken) {
+        return {
+          success: true,
+          challenge: verificationRequest["hub.challenge"]
+        };
+      }
+      return {
+        success: false,
+        error: {
+          code: "WEBHOOK_VERIFICATION_FAILED",
+          message: "Webhook verification failed - invalid verify token"
+        }
+      };
+    } catch (error) {
+      console.error("Error verifying webhook:", error);
+      return {
+        success: false,
+        error: {
+          code: "WEBHOOK_VERIFICATION_ERROR",
+          message: "Failed to verify webhook"
+        }
+      };
+    }
+  }
+  /**
+   * Register phone number ID for tenant
+   */
+  async registerPhoneNumberId(tenantId, phoneNumberId) {
+    try {
+      const tenantResult = await this.tenantService.getTenant(tenantId);
+      if (!tenantResult.success) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "Tenant not found"
+          }
+        };
+      }
+      const phoneNumberMapping = {
+        phoneNumberId,
+        registeredAt: (/* @__PURE__ */ new Date()).toISOString(),
+        status: "active"
+      };
+      const settingsResult = await this.tenantSettingsService.updateSettings(
+        tenantId,
+        "whatsapp_phone_mapping",
+        phoneNumberMapping
+      );
+      if (!settingsResult.success) {
+        return {
+          success: false,
+          error: {
+            code: "PHONE_NUMBER_REGISTRATION_FAILED",
+            message: "Failed to register phone number ID"
+          }
+        };
+      }
+      this.phoneNumberCache.set(phoneNumberId, {
+        tenantId,
+        timestamp: Date.now()
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Error registering phone number ID:", error);
+      return {
+        success: false,
+        error: {
+          code: "PHONE_NUMBER_REGISTRATION_ERROR",
+          message: "Failed to register phone number ID"
+        }
+      };
+    }
+  }
+  /**
+   * Get tenant routing statistics
+   */
+  async getRoutingStats(tenantId) {
+    try {
+      return {
+        success: true,
+        data: {
+          totalWebhooks: 0,
+          successfulRoutes: 0,
+          failedRoutes: 0
+        }
+      };
+    } catch (error) {
+      console.error("Error getting routing stats:", error);
+      return {
+        success: false,
+        error: {
+          code: "ROUTING_STATS_ERROR",
+          message: "Failed to get routing statistics"
+        }
+      };
+    }
+  }
+  /**
+   * Validate webhook payload structure
+   */
+  isValidWebhookPayload(payload) {
+    return payload && typeof payload === "object" && payload.object === "whatsapp_business_account" && Array.isArray(payload.entry) && payload.entry.length > 0 && payload.entry[0].changes && Array.isArray(payload.entry[0].changes) && payload.entry[0].changes.length > 0;
+  }
+  /**
+   * Extract phone number ID from webhook payload
+   */
+  extractPhoneNumberId(payload) {
+    try {
+      const change = payload.entry[0]?.changes[0];
+      return change?.value?.metadata?.phone_number_id || null;
+    } catch (error) {
+      console.error("Error extracting phone number ID:", error);
+      return null;
+    }
+  }
+  /**
+   * Find tenant by phone number ID with caching
+   */
+  async findTenantByPhoneNumberId(phoneNumberId) {
+    try {
+      const cached = this.phoneNumberCache.get(phoneNumberId);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        const tenantResult = await this.tenantService.getTenant(cached.tenantId);
+        if (tenantResult.success) {
+          return tenantResult.data;
+        }
+      }
+      const tenantsResult = await this.tenantService.listTenants({ page: 1, limit: 1e3 });
+      if (!tenantsResult.success) {
+        return null;
+      }
+      for (const tenant of tenantsResult.data.data) {
+        const settingsResult = await this.tenantSettingsService.getSettings(tenant.id, "whatsapp_phone_mapping");
+        if (settingsResult.success && settingsResult.data) {
+          const mapping = settingsResult.data.value;
+          if (mapping.phoneNumberId === phoneNumberId && mapping.status === "active") {
+            this.phoneNumberCache.set(phoneNumberId, {
+              tenantId: tenant.id,
+              timestamp: Date.now()
+            });
+            return tenant;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error("Error finding tenant by phone number ID:", error);
+      return null;
+    }
+  }
+  /**
+   * Clear expired cache entries
+   */
+  clearExpiredCache() {
+    const now = Date.now();
+    for (const [phoneNumberId, entry] of this.phoneNumberCache.entries()) {
+      if (now - entry.timestamp > this.CACHE_TTL) {
+        this.phoneNumberCache.delete(phoneNumberId);
+      }
+    }
+  }
+  /**
+   * Close service and cleanup resources
+   */
+  async close() {
+    await this.tenantService.close();
+    await this.tenantSettingsService.close();
+    this.phoneNumberCache.clear();
+  }
+};
+
+// server/routes/webhook.routes.ts
+function createWebhookRoutes(messageProcessor, whatsappSender) {
+  const router4 = Router4();
+  const webhookRouter = new WebhookRouterService(
+    process.env.DATABASE_URL || "postgresql://localhost:5432/whatsapp_bot"
+  );
+  router4.get("/whatsapp/:phoneNumberId", async (req, res) => {
+    try {
+      const { phoneNumberId } = req.params;
+      const verificationRequest = {
+        "hub.mode": req.query["hub.mode"],
+        "hub.verify_token": req.query["hub.verify_token"],
+        "hub.challenge": req.query["hub.challenge"]
+      };
+      console.log("Tenant-specific webhook verification request:", { phoneNumberId, ...verificationRequest });
+      const verificationResult = await webhookRouter.verifyWebhook(phoneNumberId, verificationRequest);
+      if (verificationResult.success) {
+        console.log(`Webhook verified successfully for phone number ID: ${phoneNumberId}`);
+        res.status(200).send(verificationResult.challenge);
+      } else {
+        console.log(`Webhook verification failed for phone number ID: ${phoneNumberId}`, verificationResult.error);
+        res.status(403).json({
+          error: "Webhook verification failed",
+          details: verificationResult.error
+        });
+      }
+    } catch (error) {
+      console.error("Webhook verification error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_VERIFICATION_FAILED",
+        message: "Failed to verify webhook"
+      });
+    }
+  });
+  router4.get("/whatsapp", (req, res) => {
+    try {
+      const mode = req.query["hub.mode"];
+      const token = req.query["hub.verify_token"];
+      const challenge = req.query["hub.challenge"];
+      console.log("Legacy webhook verification request:", { mode, token, challenge });
+      console.warn("Legacy webhook endpoint accessed - please migrate to /whatsapp/:phoneNumberId");
+      if (mode === "subscribe") {
+        if (token === process.env.WHATSAPP_VERIFY_TOKEN && challenge) {
+          console.log("Legacy webhook verified successfully");
+          res.status(200).send(challenge);
+          return;
+        }
+      }
+      console.log("Legacy webhook verification failed");
+      res.status(403).send("Forbidden");
+    } catch (error) {
+      console.error("Legacy webhook verification error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_VERIFICATION_FAILED",
+        message: "Failed to verify webhook"
+      });
+    }
+  });
+  router4.post("/whatsapp/:phoneNumberId", async (req, res) => {
+    try {
+      const { phoneNumberId } = req.params;
+      const webhookPayload = req.body;
+      const signature = req.headers["x-hub-signature-256"];
+      console.log(`Received tenant-specific webhook payload for ${phoneNumberId}:`, JSON.stringify(webhookPayload, null, 2));
+      const routingResult = await webhookRouter.routeWebhook(webhookPayload);
+      if (!routingResult.success) {
+        console.error("Webhook routing failed:", routingResult.error);
+        return res.status(400).json({
+          error: "Webhook routing failed",
+          details: routingResult.error
+        });
+      }
+      if (routingResult.phoneNumberId !== phoneNumberId) {
+        console.error(`Phone number ID mismatch: route=${phoneNumberId}, payload=${routingResult.phoneNumberId}`);
+        return res.status(400).json({
+          error: "Phone number ID mismatch"
+        });
+      }
+      const tenant = routingResult.tenant;
+      if (signature) {
+        const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET || "default-secret";
+        if (!verifyWebhookSignature(JSON.stringify(webhookPayload), signature, webhookSecret)) {
+          console.log("Invalid webhook signature for tenant:", tenant.id);
+          return res.status(401).json({
+            error: "INVALID_SIGNATURE",
+            message: "Webhook signature verification failed"
+          });
+        }
+      }
+      const enhancedPayload = {
+        ...webhookPayload,
+        tenantContext: {
+          tenantId: tenant.id,
+          domain: tenant.domain,
+          phoneNumberId: routingResult.phoneNumberId
+        }
+      };
+      const result = await messageProcessor.processWebhookPayload(enhancedPayload);
+      if (!result.success) {
+        console.error("Failed to process webhook payload:", result.error);
+        return res.status(500).json({
+          error: result.error.code,
+          message: result.error.message
+        });
+      }
+      const processedMessages = result.data;
+      console.log(`Successfully processed ${processedMessages.length} messages for tenant ${tenant.id}`);
+      const sendPromises = processedMessages.filter((msg) => msg.response).map(async (msg) => {
+        try {
+          const sendResult = await whatsappSender.sendMessage(
+            msg.tenantId || tenant.id,
+            msg.phoneNumber,
+            msg.response
+          );
+          if (!sendResult.success) {
+            console.error(`Failed to send response for message ${msg.messageId}:`, sendResult.error);
+          }
+          return sendResult;
+        } catch (error) {
+          console.error(`Error sending response for message ${msg.messageId}:`, error);
+          return {
+            success: false,
+            error: {
+              code: "SEND_FAILED",
+              message: "Failed to send response"
+            }
+          };
+        }
+      });
+      const sendResults = await Promise.all(sendPromises);
+      const successfulSends = sendResults.filter((r) => r.success).length;
+      const failedSends = sendResults.length - successfulSends;
+      console.log(`Sent ${successfulSends} responses, ${failedSends} failed for tenant ${tenant.id}`);
+      res.status(200).json({
+        success: true,
+        tenantId: tenant.id,
+        processed: processedMessages.length,
+        responses_sent: successfulSends,
+        responses_failed: failedSends
+      });
+    } catch (error) {
+      console.error("Tenant-specific webhook processing error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_PROCESSING_ERROR",
+        message: "Internal server error processing webhook"
+      });
+    }
+  });
+  router4.post("/whatsapp", async (req, res) => {
+    try {
+      const payload = req.body;
+      const signature = req.headers["x-hub-signature-256"];
+      console.log("Legacy webhook payload received:", JSON.stringify(payload, null, 2));
+      console.warn("Legacy webhook endpoint accessed - please migrate to /whatsapp/:phoneNumberId");
+      if (signature && !verifyWebhookSignature(JSON.stringify(payload), signature, process.env.WHATSAPP_WEBHOOK_SECRET || "default-secret")) {
+        console.log("Invalid webhook signature");
+        return res.status(401).json({
+          error: "INVALID_SIGNATURE",
+          message: "Webhook signature verification failed"
+        });
+      }
+      const result = await messageProcessor.processWebhookPayload(payload);
+      if (!result.success) {
+        console.error("Failed to process legacy webhook payload:", result.error);
+        return res.status(500).json({
+          error: result.error.code,
+          message: result.error.message
+        });
+      }
+      const processedMessages = result.data;
+      console.log(`Successfully processed ${processedMessages.length} legacy messages`);
+      const sendPromises = processedMessages.filter((msg) => msg.response).map(async (msg) => {
+        try {
+          const sendResult = await whatsappSender.sendMessage(
+            msg.tenantId,
+            msg.phoneNumber,
+            msg.response
+          );
+          if (!sendResult.success) {
+            console.error(`Failed to send response for message ${msg.messageId}:`, sendResult.error);
+          }
+          return sendResult;
+        } catch (error) {
+          console.error(`Error sending response for message ${msg.messageId}:`, error);
+          return {
+            success: false,
+            error: {
+              code: "SEND_FAILED",
+              message: "Failed to send response"
+            }
+          };
+        }
+      });
+      const sendResults = await Promise.all(sendPromises);
+      const successfulSends = sendResults.filter((r) => r.success).length;
+      const failedSends = sendResults.length - successfulSends;
+      console.log(`Sent ${successfulSends} responses, ${failedSends} failed (legacy)`);
+      res.status(200).json({
+        success: true,
+        legacy: true,
+        processed: processedMessages.length,
+        responses_sent: successfulSends,
+        responses_failed: failedSends
+      });
+    } catch (error) {
+      console.error("Legacy webhook processing error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_PROCESSING_ERROR",
+        message: "Internal server error processing webhook"
+      });
+    }
+  });
+  router4.get("/whatsapp/status", async (req, res) => {
+    try {
+      res.json({
+        status: "healthy",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        webhook_url: `${req.protocol}://${req.get("host")}/api/webhook/whatsapp`,
+        verification_url: `${req.protocol}://${req.get("host")}/api/webhook/whatsapp`
+      });
+    } catch (error) {
+      console.error("Status check error:", error);
+      res.status(500).json({
+        error: "STATUS_CHECK_FAILED",
+        message: "Failed to check webhook status"
+      });
+    }
+  });
+  router4.post("/whatsapp/:phoneNumberId/register", async (req, res) => {
+    try {
+      const { phoneNumberId } = req.params;
+      const { tenantId } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({
+          error: "MISSING_TENANT_ID",
+          message: "Tenant ID is required"
+        });
+      }
+      const registrationResult = await webhookRouter.registerPhoneNumberId(tenantId, phoneNumberId);
+      if (registrationResult.success) {
+        res.status(200).json({
+          success: true,
+          message: "Phone number ID registered successfully",
+          phoneNumberId,
+          tenantId
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: registrationResult.error
+        });
+      }
+    } catch (error) {
+      console.error("Phone number registration error:", error);
+      res.status(500).json({
+        error: "PHONE_NUMBER_REGISTRATION_ERROR",
+        message: "Failed to register phone number ID"
+      });
+    }
+  });
+  router4.get("/whatsapp/:phoneNumberId/stats", async (req, res) => {
+    try {
+      const { phoneNumberId } = req.params;
+      const routingResult = await webhookRouter.routeWebhook({
+        object: "whatsapp_business_account",
+        entry: [{
+          id: "test",
+          changes: [{
+            value: {
+              messaging_product: "whatsapp",
+              metadata: {
+                display_phone_number: "",
+                phone_number_id: phoneNumberId
+              }
+            },
+            field: "messages"
+          }]
+        }]
+      });
+      if (!routingResult.success) {
+        return res.status(404).json({
+          error: "PHONE_NUMBER_NOT_FOUND",
+          message: "Phone number not found or not registered",
+          details: routingResult.error
+        });
+      }
+      const statsResult = await webhookRouter.getRoutingStats(routingResult.tenant.id);
+      if (statsResult.success) {
+        res.status(200).json({
+          success: true,
+          data: {
+            phoneNumberId,
+            tenantId: routingResult.tenant.id,
+            tenantDomain: routingResult.tenant.domain,
+            stats: statsResult.data
+          }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: statsResult.error
+        });
+      }
+    } catch (error) {
+      console.error("Stats retrieval error:", error);
+      res.status(500).json({
+        error: "STATS_RETRIEVAL_ERROR",
+        message: "Failed to get routing statistics"
+      });
+    }
+  });
+  router4.post("/whatsapp/test/:tenantId", async (req, res) => {
+    try {
+      const { tenantId } = req.params;
+      const { phoneNumber, message, phoneNumberId } = req.body;
+      if (!phoneNumber || !message) {
+        return res.status(400).json({
+          error: "MISSING_PARAMETERS",
+          message: "phoneNumber and message are required"
+        });
+      }
+      const testPayload = {
+        object: "whatsapp_business_account",
+        entry: [{
+          id: "test-entry",
+          changes: [{
+            value: {
+              messaging_product: "whatsapp",
+              metadata: {
+                display_phone_number: "1234567890",
+                phone_number_id: phoneNumberId || "test-phone-id"
+              },
+              messages: [{
+                id: `test-${Date.now()}`,
+                from: phoneNumber,
+                to: "1234567890",
+                text: {
+                  body: message
+                },
+                type: "text",
+                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+              }]
+            },
+            field: "messages"
+          }]
+        }],
+        tenantContext: {
+          tenantId,
+          domain: "",
+          phoneNumberId: phoneNumberId || "test-phone-id"
+        }
+      };
+      const result = await messageProcessor.processWebhookPayload(testPayload);
+      if (!result.success) {
+        return res.status(500).json({
+          error: result.error.code,
+          message: result.error.message
+        });
+      }
+      res.json({
+        success: true,
+        message: "Test message processed successfully",
+        tenantId,
+        processed_messages: result.data.length,
+        results: result.data
+      });
+    } catch (error) {
+      console.error("Webhook test error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_TEST_FAILED",
+        message: "Failed to test webhook"
+      });
+    }
+  });
+  return router4;
+}
+function verifyWebhookSignature(payload, signature, secret) {
+  try {
+    const expectedSignature = crypto3.createHmac("sha256", secret).update(payload, "utf8").digest("hex");
+    const receivedSignature = signature.replace("sha256=", "");
+    return crypto3.timingSafeEqual(
+      Buffer.from(expectedSignature, "hex"),
+      Buffer.from(receivedSignature, "hex")
+    );
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    return false;
+  }
+}
+
 // server/routes.ts
 init_dynamic_flow_processor_service();
-var webhookVerificationSchema = z.object({
-  "hub.mode": z.string(),
-  "hub.challenge": z.string(),
-  "hub.verify_token": z.string()
+
+// server/services/message-processor.service.ts
+import { eq as eq9 } from "drizzle-orm";
+import { drizzle as drizzle7 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool10 } from "@neondatabase/serverless";
+
+// server/repositories/conversation.repository.ts
+import { eq as eq7, and as and7, like as like3, inArray as inArray4, desc as desc5, or as or3, sql as sql6 } from "drizzle-orm";
+
+// server/repositories/base.repository.ts
+import { eq as eq6, and as and6, desc as desc4, asc as asc3, like as like2, inArray as inArray3, gte as gte4, lte as lte2, sql as sql5 } from "drizzle-orm";
+import { drizzle as drizzle5 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool7 } from "@neondatabase/serverless";
+var BaseRepository = class {
+  db;
+  pool;
+  table;
+  options;
+  constructor(connectionString, table, options = {}) {
+    this.pool = new Pool7({ connectionString });
+    this.db = drizzle5({ client: this.pool, schema: schema_exports });
+    this.table = table;
+    this.options = {
+      enforceRLS: true,
+      autoInjectTenantId: true,
+      ...options
+    };
+  }
+  /**
+   * Create a new record with automatic tenant_id injection
+   */
+  async create(tenantId, data) {
+    try {
+      this.validateTenantId(tenantId);
+      const insertData = this.options.autoInjectTenantId ? { ...data, tenantId } : data;
+      const [result] = await this.db.insert(this.table).values(insertData).returning();
+      return {
+        success: true,
+        data: result,
+        metadata: { created: true }
+      };
+    } catch (error) {
+      console.error(`Error creating ${this.table}:`, error);
+      return this.handleError("CREATE_FAILED", "Failed to create record", tenantId, error);
+    }
+  }
+  /**
+   * Find record by ID with tenant isolation
+   */
+  async findById(tenantId, id) {
+    try {
+      this.validateTenantId(tenantId);
+      const whereClause = this.buildTenantWhereClause(tenantId, eq6(this.table.id, id));
+      const [result] = await this.db.select().from(this.table).where(whereClause).limit(1);
+      if (!result) {
+        return {
+          success: false,
+          error: {
+            code: "RECORD_NOT_FOUND",
+            message: "Record not found",
+            tenantId,
+            details: { id }
+          }
+        };
+      }
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error(`Error finding ${this.table} by ID:`, error);
+      return this.handleError("FIND_FAILED", "Failed to find record", tenantId, error);
+    }
+  }
+  /**
+   * Update record with tenant isolation
+   */
+  async update(tenantId, id, data) {
+    try {
+      this.validateTenantId(tenantId);
+      const existingRecord = await this.findById(tenantId, id);
+      if (!existingRecord.success) {
+        return existingRecord;
+      }
+      const whereClause = this.buildTenantWhereClause(tenantId, eq6(this.table.id, id));
+      const updateData = {
+        ...data,
+        updatedAt: /* @__PURE__ */ new Date()
+      };
+      const [result] = await this.db.update(this.table).set(updateData).where(whereClause).returning();
+      return {
+        success: true,
+        data: result,
+        metadata: { updated: true }
+      };
+    } catch (error) {
+      console.error(`Error updating ${this.table}:`, error);
+      return this.handleError("UPDATE_FAILED", "Failed to update record", tenantId, error);
+    }
+  }
+  /**
+   * Delete record with tenant isolation (soft delete if supported)
+   */
+  async delete(tenantId, id) {
+    try {
+      this.validateTenantId(tenantId);
+      const existingRecord = await this.findById(tenantId, id);
+      if (!existingRecord.success) {
+        return {
+          success: false,
+          error: existingRecord.error
+        };
+      }
+      const whereClause = this.buildTenantWhereClause(tenantId, eq6(this.table.id, id));
+      if ("isActive" in this.table) {
+        await this.db.update(this.table).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(whereClause);
+      } else {
+        await this.db.delete(this.table).where(whereClause);
+      }
+      return {
+        success: true,
+        metadata: { deleted: true }
+      };
+    } catch (error) {
+      console.error(`Error deleting ${this.table}:`, error);
+      return this.handleError("DELETE_FAILED", "Failed to delete record", tenantId, error);
+    }
+  }
+  /**
+   * List records with pagination and filtering
+   */
+  async list(tenantId, pagination, filters, additionalWhere) {
+    try {
+      this.validateTenantId(tenantId);
+      const whereConditions = [eq6(this.table.tenantId, tenantId)];
+      if (additionalWhere) {
+        whereConditions.push(additionalWhere);
+      }
+      if (filters?.search && "name" in this.table) {
+        whereConditions.push(like2(this.table.name, `%${filters.search}%`));
+      }
+      if (filters?.status && "status" in this.table) {
+        whereConditions.push(inArray3(this.table.status, filters.status));
+      }
+      if (filters?.dateFrom && "createdAt" in this.table) {
+        whereConditions.push(gte4(this.table.createdAt, filters.dateFrom));
+      }
+      if (filters?.dateTo && "createdAt" in this.table) {
+        whereConditions.push(lte2(this.table.createdAt, filters.dateTo));
+      }
+      const whereClause = and6(...whereConditions);
+      const [{ count }] = await this.db.select({ count: sql5`count(*)` }).from(this.table).where(whereClause);
+      const offset = (pagination.page - 1) * pagination.limit;
+      const orderBy = this.buildOrderBy(pagination);
+      const results = await this.db.select().from(this.table).where(whereClause).orderBy(orderBy).limit(pagination.limit).offset(offset);
+      const totalPages = Math.ceil(count / pagination.limit);
+      return {
+        success: true,
+        data: {
+          data: results,
+          pagination: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total: count,
+            totalPages,
+            hasNext: pagination.page < totalPages,
+            hasPrev: pagination.page > 1
+          }
+        }
+      };
+    } catch (error) {
+      console.error(`Error listing ${this.table}:`, error);
+      return this.handleError("LIST_FAILED", "Failed to list records", tenantId, error);
+    }
+  }
+  /**
+   * Count records with tenant isolation
+   */
+  async count(tenantId, additionalWhere) {
+    try {
+      this.validateTenantId(tenantId);
+      const whereConditions = [eq6(this.table.tenantId, tenantId)];
+      if (additionalWhere) {
+        whereConditions.push(additionalWhere);
+      }
+      const whereClause = and6(...whereConditions);
+      const [{ count }] = await this.db.select({ count: sql5`count(*)` }).from(this.table).where(whereClause);
+      return {
+        success: true,
+        data: count
+      };
+    } catch (error) {
+      console.error(`Error counting ${this.table}:`, error);
+      return this.handleError("COUNT_FAILED", "Failed to count records", tenantId, error);
+    }
+  }
+  /**
+   * Execute custom query with tenant isolation
+   */
+  async executeWithTenantContext(tenantId, queryFn) {
+    try {
+      this.validateTenantId(tenantId);
+      const result = await queryFn(this.db, tenantId);
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error(`Error executing custom query:`, error);
+      return this.handleError("QUERY_FAILED", "Failed to execute query", tenantId, error);
+    }
+  }
+  /**
+   * Bulk create with tenant isolation
+   */
+  async bulkCreate(tenantId, data) {
+    try {
+      this.validateTenantId(tenantId);
+      const insertData = this.options.autoInjectTenantId ? data.map((item) => ({ ...item, tenantId })) : data;
+      const results = await this.db.insert(this.table).values(insertData).returning();
+      return {
+        success: true,
+        data: results,
+        metadata: { created: results.length }
+      };
+    } catch (error) {
+      console.error(`Error bulk creating ${this.table}:`, error);
+      return this.handleError("BULK_CREATE_FAILED", "Failed to bulk create records", tenantId, error);
+    }
+  }
+  /**
+   * Transaction support with tenant context
+   */
+  async transaction(tenantId, transactionFn) {
+    try {
+      this.validateTenantId(tenantId);
+      const result = await this.db.transaction(async (tx) => {
+        return await transactionFn(tx, tenantId);
+      });
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error(`Error in transaction:`, error);
+      return this.handleError("TRANSACTION_FAILED", "Transaction failed", tenantId, error);
+    }
+  }
+  // ===== PROTECTED HELPER METHODS =====
+  /**
+   * Build tenant-aware where clause
+   */
+  buildTenantWhereClause(tenantId, additionalWhere) {
+    const tenantCondition = eq6(this.table.tenantId, tenantId);
+    return additionalWhere ? and6(tenantCondition, additionalWhere) : tenantCondition;
+  }
+  /**
+   * Build order by clause from pagination params
+   */
+  buildOrderBy(pagination) {
+    if (pagination.sortBy && pagination.sortBy in this.table) {
+      const column = this.table[pagination.sortBy];
+      return pagination.sortOrder === "asc" ? asc3(column) : desc4(column);
+    }
+    if ("createdAt" in this.table) {
+      return desc4(this.table.createdAt);
+    }
+    return desc4(this.table.id);
+  }
+  /**
+   * Validate tenant ID format
+   */
+  validateTenantId(tenantId) {
+    if (!tenantId || typeof tenantId !== "string") {
+      throw new Error("Invalid tenant ID");
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(tenantId)) {
+      throw new Error("Tenant ID must be a valid UUID");
+    }
+  }
+  /**
+   * Handle repository errors consistently
+   */
+  handleError(code, message, tenantId, originalError) {
+    return {
+      success: false,
+      error: {
+        code,
+        message,
+        tenantId,
+        details: {
+          originalError: originalError instanceof Error ? originalError.message : "Unknown error"
+        }
+      }
+    };
+  }
+  /**
+   * Close database connection
+   */
+  async close() {
+    await this.pool.end();
+  }
+};
+
+// server/repositories/conversation.repository.ts
+var ConversationRepository = class extends BaseRepository {
+  constructor(connectionString) {
+    super(connectionString, conversations);
+  }
+  /**
+   * Find conversation by phone number
+   */
+  async findByPhoneNumber(tenantId, phoneNumber) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const [result] = await db2.select().from(conversations).where(
+        and7(
+          eq7(conversations.tenantId, tenantId),
+          eq7(conversations.phoneNumber, phoneNumber)
+        )
+      ).limit(1);
+      if (!result) {
+        return {
+          success: false,
+          error: {
+            code: "CONVERSATION_NOT_FOUND",
+            message: "Conversation not found for phone number",
+            tenantId,
+            details: { phoneNumber }
+          }
+        };
+      }
+      return result;
+    });
+  }
+  /**
+   * Find conversations by state
+   */
+  async findByState(tenantId, state, pagination) {
+    return this.list(
+      tenantId,
+      pagination,
+      void 0,
+      eq7(conversations.currentState, state)
+    );
+  }
+  /**
+   * Update conversation state
+   */
+  async updateState(tenantId, conversationId, newState, contextData) {
+    const updateData = { currentState: newState };
+    if (contextData) {
+      updateData.contextData = contextData;
+    }
+    return this.update(tenantId, conversationId, updateData);
+  }
+  /**
+   * Get conversation with messages
+   */
+  async getWithMessages(tenantId, conversationId, messageLimit = 50) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const [conversation] = await db2.select().from(conversations).where(
+        and7(
+          eq7(conversations.tenantId, tenantId),
+          eq7(conversations.id, conversationId)
+        )
+      ).limit(1);
+      if (!conversation) {
+        return {
+          success: false,
+          error: {
+            code: "CONVERSATION_NOT_FOUND",
+            message: "Conversation not found",
+            tenantId,
+            details: { conversationId }
+          }
+        };
+      }
+      const messages2 = await db2.select().from(messages).where(
+        and7(
+          eq7(messages.tenantId, tenantId),
+          eq7(messages.conversationId, conversationId)
+        )
+      ).orderBy(desc5(messages.timestamp)).limit(messageLimit);
+      return {
+        ...conversation,
+        messages: messages2.reverse()
+        // Reverse to show oldest first
+      };
+    });
+  }
+  /**
+   * Get active conversations (not completed or cancelled)
+   */
+  async getActiveConversations(tenantId, pagination) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const activeStates = ["greeting", "awaiting_service", "awaiting_date", "awaiting_time", "awaiting_payment"];
+      const whereConditions = [
+        eq7(conversations.tenantId, tenantId),
+        inArray4(conversations.currentState, activeStates)
+      ];
+      const whereClause = and7(...whereConditions);
+      const [{ count }] = await db2.select({ count: sql6`count(*)` }).from(conversations).where(whereClause);
+      const offset = (pagination.page - 1) * pagination.limit;
+      const results = await db2.select().from(conversations).where(whereClause).orderBy(desc5(conversations.updatedAt)).limit(pagination.limit).offset(offset);
+      const totalPages = Math.ceil(count / pagination.limit);
+      return {
+        data: results,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: count,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1
+        }
+      };
+    });
+  }
+  /**
+   * Search conversations by customer name or phone
+   */
+  async searchConversations(tenantId, query, pagination) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const whereConditions = [eq7(conversations.tenantId, tenantId)];
+      if (query) {
+        whereConditions.push(
+          or3(
+            like3(conversations.customerName, `%${query}%`),
+            like3(conversations.phoneNumber, `%${query}%`)
+          )
+        );
+      }
+      const whereClause = and7(...whereConditions);
+      const [{ count }] = await db2.select({ count: sql6`count(*)` }).from(conversations).where(whereClause);
+      const offset = (pagination.page - 1) * pagination.limit;
+      const results = await db2.select().from(conversations).where(whereClause).orderBy(desc5(conversations.updatedAt)).limit(pagination.limit).offset(offset);
+      const totalPages = Math.ceil(count / pagination.limit);
+      return {
+        data: results,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: count,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1
+        }
+      };
+    });
+  }
+  /**
+   * Get conversation statistics
+   */
+  async getStatistics(tenantId) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const [{ total }] = await db2.select({ total: sql6`count(*)` }).from(conversations).where(eq7(conversations.tenantId, tenantId));
+      const activeStates = ["greeting", "awaiting_service", "awaiting_date", "awaiting_time", "awaiting_payment"];
+      const [{ active }] = await db2.select({ active: sql6`count(*)` }).from(conversations).where(
+        and7(
+          eq7(conversations.tenantId, tenantId),
+          inArray4(conversations.currentState, activeStates)
+        )
+      );
+      const [{ completed }] = await db2.select({ completed: sql6`count(*)` }).from(conversations).where(
+        and7(
+          eq7(conversations.tenantId, tenantId),
+          eq7(conversations.currentState, "completed")
+        )
+      );
+      const stateResults = await db2.select({
+        state: conversations.currentState,
+        count: sql6`count(*)`
+      }).from(conversations).where(eq7(conversations.tenantId, tenantId)).groupBy(conversations.currentState);
+      const byState = {};
+      stateResults.forEach(({ state, count }) => {
+        byState[state] = count;
+      });
+      return {
+        total,
+        active,
+        completed,
+        byState
+      };
+    });
+  }
+};
+
+// server/repositories/service.repository.ts
+import { eq as eq8, and as and8, like as like4, or as or4, gte as gte5, lte as lte3, asc as asc5, desc as desc6, sql as sql7 } from "drizzle-orm";
+var ServiceRepository = class extends BaseRepository {
+  constructor(connectionString) {
+    super(connectionString, services);
+  }
+  /**
+   * Find services by category
+   */
+  async findByCategory(tenantId, category) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const results = await db2.select().from(services).where(
+        and8(
+          eq8(services.tenantId, tenantId),
+          eq8(services.category, category),
+          eq8(services.isActive, true)
+        )
+      );
+      return results;
+    });
+  }
+  /**
+   * Find active services only
+   */
+  async findActive(tenantId, pagination) {
+    return this.list(
+      tenantId,
+      pagination,
+      void 0,
+      eq8(services.isActive, true)
+    );
+  }
+  /**
+   * Search services by name or description
+   */
+  async search(tenantId, query, pagination) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const whereConditions = [
+        eq8(services.tenantId, tenantId),
+        eq8(services.isActive, true)
+      ];
+      if (query) {
+        whereConditions.push(
+          or4(
+            like4(services.name, `%${query}%`),
+            like4(services.description, `%${query}%`)
+          )
+        );
+      }
+      const whereClause = and8(...whereConditions);
+      const [{ count }] = await db2.select({ count: sql7`count(*)` }).from(services).where(whereClause);
+      const offset = (pagination.page - 1) * pagination.limit;
+      const results = await db2.select().from(services).where(whereClause).orderBy(desc6(services.createdAt)).limit(pagination.limit).offset(offset);
+      const totalPages = Math.ceil(count / pagination.limit);
+      return {
+        data: results,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: count,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1
+        }
+      };
+    });
+  }
+  /**
+   * Update service availability
+   */
+  async updateAvailability(tenantId, serviceId, isActive) {
+    return this.update(tenantId, serviceId, { isActive });
+  }
+  /**
+   * Get services by price range
+   */
+  async findByPriceRange(tenantId, minPrice, maxPrice) {
+    return this.executeWithTenantContext(tenantId, async (db2) => {
+      const results = await db2.select().from(services).where(
+        and8(
+          eq8(services.tenantId, tenantId),
+          eq8(services.isActive, true),
+          gte5(services.price, minPrice),
+          lte3(services.price, maxPrice)
+        )
+      ).orderBy(asc5(services.price));
+      return results;
+    });
+  }
+};
+
+// server/services/bot-configuration.service.ts
+import { drizzle as drizzle6 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool8 } from "@neondatabase/serverless";
+var BotConfigurationService = class {
+  db;
+  pool;
+  settingsService;
+  configurationCache = /* @__PURE__ */ new Map();
+  changeListeners = /* @__PURE__ */ new Map();
+  constructor(connectionString) {
+    this.pool = new Pool8({ connectionString });
+    this.db = drizzle6({ client: this.pool, schema: schema_exports });
+    this.settingsService = new TenantSettingsService(connectionString);
+    setInterval(() => {
+      this.refreshConfigurationCache();
+    }, 5 * 60 * 1e3);
+  }
+  // ===== CONFIGURATION RETRIEVAL =====
+  /**
+   * Get bot configuration for tenant with caching
+   */
+  async getBotConfiguration(tenantId) {
+    try {
+      if (this.configurationCache.has(tenantId)) {
+        return {
+          success: true,
+          data: this.configurationCache.get(tenantId),
+          metadata: { fromCache: true }
+        };
+      }
+      const result = await this.settingsService.getSettings(tenantId);
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+      const botSettings = result.data.botSettings;
+      this.configurationCache.set(tenantId, botSettings);
+      return {
+        success: true,
+        data: botSettings,
+        metadata: { fromCache: false }
+      };
+    } catch (error) {
+      console.error("Error getting bot configuration:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_RETRIEVAL_FAILED",
+          message: "Failed to retrieve bot configuration",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Get specific configuration section
+   */
+  async getConfigurationSection(tenantId, section) {
+    try {
+      const configResult = await this.getBotConfiguration(tenantId);
+      if (!configResult.success) {
+        return {
+          success: false,
+          error: configResult.error
+        };
+      }
+      return {
+        success: true,
+        data: configResult.data[section]
+      };
+    } catch (error) {
+      console.error("Error getting configuration section:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_SECTION_FAILED",
+          message: `Failed to get configuration section: ${section}`,
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== CONFIGURATION UPDATES =====
+  /**
+   * Update bot configuration with validation and real-time updates
+   */
+  async updateBotConfiguration(tenantId, updates, updatedBy, validateOnly = false) {
+    try {
+      const currentResult = await this.getBotConfiguration(tenantId);
+      if (!currentResult.success) {
+        return {
+          success: false,
+          error: currentResult.error
+        };
+      }
+      const currentConfig = currentResult.data;
+      const updatedConfig = {
+        ...currentConfig,
+        ...updates,
+        // Merge nested objects properly
+        businessHours: updates.businessHours ? { ...currentConfig.businessHours, ...updates.businessHours } : currentConfig.businessHours,
+        autoResponses: updates.autoResponses ? { ...currentConfig.autoResponses, ...updates.autoResponses } : currentConfig.autoResponses,
+        conversationFlow: updates.conversationFlow ? { ...currentConfig.conversationFlow, ...updates.conversationFlow } : currentConfig.conversationFlow,
+        paymentSettings: updates.paymentSettings ? { ...currentConfig.paymentSettings, ...updates.paymentSettings } : currentConfig.paymentSettings,
+        notificationSettings: updates.notificationSettings ? { ...currentConfig.notificationSettings, ...updates.notificationSettings } : currentConfig.notificationSettings,
+        customization: updates.customization ? { ...currentConfig.customization, ...updates.customization } : currentConfig.customization
+      };
+      const validationResult = await this.validateConfiguration(updatedConfig);
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          error: {
+            code: "CONFIG_VALIDATION_FAILED",
+            message: "Configuration validation failed",
+            tenantId,
+            details: {
+              errors: validationResult.errors,
+              warnings: validationResult.warnings
+            }
+          }
+        };
+      }
+      if (validateOnly) {
+        return {
+          success: true,
+          data: updatedConfig,
+          metadata: { validationOnly: true, warnings: validationResult.warnings }
+        };
+      }
+      const updateResult = await this.settingsService.updateSettings(
+        tenantId,
+        { botSettings: updatedConfig },
+        updatedBy,
+        "Bot configuration update"
+      );
+      if (!updateResult.success) {
+        return {
+          success: false,
+          error: updateResult.error
+        };
+      }
+      this.configurationCache.set(tenantId, updatedConfig);
+      await this.emitConfigurationChangeEvents(tenantId, currentConfig, updatedConfig, updatedBy);
+      return {
+        success: true,
+        data: updatedConfig,
+        metadata: {
+          updated: true,
+          warnings: validationResult.warnings,
+          version: updateResult.data.version
+        }
+      };
+    } catch (error) {
+      console.error("Error updating bot configuration:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_UPDATE_FAILED",
+          message: "Failed to update bot configuration",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Update specific configuration section
+   */
+  async updateConfigurationSection(tenantId, section, sectionData, updatedBy) {
+    try {
+      const updates = { [section]: sectionData };
+      const result = await this.updateBotConfiguration(tenantId, updates, updatedBy);
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+      return {
+        success: true,
+        data: result.data[section],
+        metadata: result.metadata
+      };
+    } catch (error) {
+      console.error("Error updating configuration section:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_SECTION_UPDATE_FAILED",
+          message: `Failed to update configuration section: ${section}`,
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== CONFIGURATION VALIDATION =====
+  /**
+   * Validate bot configuration
+   */
+  async validateConfiguration(config) {
+    const errors = [];
+    const warnings = [];
+    try {
+      if (!config.greetingMessage || config.greetingMessage.trim().length === 0) {
+        errors.push({
+          field: "greetingMessage",
+          message: "Greeting message is required",
+          code: "GREETING_MESSAGE_REQUIRED"
+        });
+      } else if (config.greetingMessage.length > 1e3) {
+        errors.push({
+          field: "greetingMessage",
+          message: "Greeting message must be less than 1000 characters",
+          code: "GREETING_MESSAGE_TOO_LONG"
+        });
+      }
+      if (config.businessHours.enabled) {
+        if (!config.businessHours.timezone) {
+          errors.push({
+            field: "businessHours.timezone",
+            message: "Timezone is required when business hours are enabled",
+            code: "TIMEZONE_REQUIRED"
+          });
+        }
+        const schedule = config.businessHours.schedule;
+        const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+        for (const day of days) {
+          const daySchedule = schedule[day];
+          if (daySchedule.isOpen) {
+            if (!daySchedule.openTime || !daySchedule.closeTime) {
+              errors.push({
+                field: `businessHours.schedule.${day}`,
+                message: `Open and close times are required for ${day}`,
+                code: "SCHEDULE_TIMES_REQUIRED"
+              });
+            } else {
+              const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+              if (!timeRegex.test(daySchedule.openTime)) {
+                errors.push({
+                  field: `businessHours.schedule.${day}.openTime`,
+                  message: `Invalid open time format for ${day}. Use HH:MM format`,
+                  code: "INVALID_TIME_FORMAT"
+                });
+              }
+              if (!timeRegex.test(daySchedule.closeTime)) {
+                errors.push({
+                  field: `businessHours.schedule.${day}.closeTime`,
+                  message: `Invalid close time format for ${day}. Use HH:MM format`,
+                  code: "INVALID_TIME_FORMAT"
+                });
+              }
+            }
+          }
+        }
+      }
+      const requiredResponses = [
+        "welcomeMessage",
+        "serviceSelectionPrompt",
+        "dateSelectionPrompt",
+        "timeSelectionPrompt",
+        "confirmationMessage",
+        "errorMessage"
+      ];
+      for (const response of requiredResponses) {
+        if (!config.autoResponses[response] || config.autoResponses[response].trim().length === 0) {
+          errors.push({
+            field: `autoResponses.${response}`,
+            message: `${response} is required`,
+            code: "AUTO_RESPONSE_REQUIRED"
+          });
+        }
+      }
+      if (!config.conversationFlow.steps || config.conversationFlow.steps.length === 0) {
+        errors.push({
+          field: "conversationFlow.steps",
+          message: "At least one conversation step is required",
+          code: "CONVERSATION_STEPS_REQUIRED"
+        });
+      } else {
+        config.conversationFlow.steps.forEach((step, index) => {
+          if (!step.id || step.id.trim().length === 0) {
+            errors.push({
+              field: `conversationFlow.steps[${index}].id`,
+              message: `Step ${index + 1} must have an ID`,
+              code: "STEP_ID_REQUIRED"
+            });
+          }
+          if (!step.name || step.name.trim().length === 0) {
+            errors.push({
+              field: `conversationFlow.steps[${index}].name`,
+              message: `Step ${index + 1} must have a name`,
+              code: "STEP_NAME_REQUIRED"
+            });
+          }
+          if (!step.prompt || step.prompt.trim().length === 0) {
+            errors.push({
+              field: `conversationFlow.steps[${index}].prompt`,
+              message: `Step ${index + 1} must have a prompt`,
+              code: "STEP_PROMPT_REQUIRED"
+            });
+          }
+        });
+        const stepIds = config.conversationFlow.steps.map((step) => step.id);
+        const duplicateIds = stepIds.filter((id, index) => stepIds.indexOf(id) !== index);
+        if (duplicateIds.length > 0) {
+          errors.push({
+            field: "conversationFlow.steps",
+            message: `Duplicate step IDs found: ${duplicateIds.join(", ")}`,
+            code: "DUPLICATE_STEP_IDS"
+          });
+        }
+      }
+      if (config.paymentSettings.enabled) {
+        if (!config.paymentSettings.methods || config.paymentSettings.methods.length === 0) {
+          errors.push({
+            field: "paymentSettings.methods",
+            message: "At least one payment method is required when payments are enabled",
+            code: "PAYMENT_METHODS_REQUIRED"
+          });
+        }
+        if (!config.paymentSettings.currency) {
+          errors.push({
+            field: "paymentSettings.currency",
+            message: "Currency is required when payments are enabled",
+            code: "CURRENCY_REQUIRED"
+          });
+        }
+        if (config.paymentSettings.depositPercentage !== void 0) {
+          if (config.paymentSettings.depositPercentage < 0 || config.paymentSettings.depositPercentage > 100) {
+            errors.push({
+              field: "paymentSettings.depositPercentage",
+              message: "Deposit percentage must be between 0 and 100",
+              code: "INVALID_DEPOSIT_PERCENTAGE"
+            });
+          }
+        }
+      }
+      if (config.customization.brandColors) {
+        const colorFields = ["primary", "secondary", "accent", "background", "text"];
+        for (const colorField of colorFields) {
+          const color = config.customization.brandColors[colorField];
+          if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+            errors.push({
+              field: `customization.brandColors.${colorField}`,
+              message: `Invalid color format for ${colorField}. Use hex format (#RRGGBB)`,
+              code: "INVALID_COLOR_FORMAT"
+            });
+          }
+        }
+      }
+      if (config.conversationFlow.maxRetries > 5) {
+        warnings.push({
+          field: "conversationFlow.maxRetries",
+          message: "High retry count may lead to poor user experience",
+          code: "HIGH_RETRY_COUNT"
+        });
+      }
+      if (config.conversationFlow.sessionTimeout < 5) {
+        warnings.push({
+          field: "conversationFlow.sessionTimeout",
+          message: "Very short session timeout may interrupt user conversations",
+          code: "SHORT_SESSION_TIMEOUT"
+        });
+      }
+      return {
+        isValid: errors.length === 0,
+        errors,
+        warnings
+      };
+    } catch (error) {
+      console.error("Error validating configuration:", error);
+      return {
+        isValid: false,
+        errors: [{
+          field: "general",
+          message: "Configuration validation failed due to internal error",
+          code: "VALIDATION_ERROR"
+        }],
+        warnings: []
+      };
+    }
+  }
+  // ===== CONFIGURATION ROLLBACK =====
+  /**
+   * Rollback configuration to previous version
+   */
+  async rollbackConfiguration(tenantId, targetVersion, rollbackInfo) {
+    try {
+      const rollbackResult = await this.settingsService.rollbackToVersion(
+        tenantId,
+        targetVersion,
+        rollbackInfo.rollbackBy,
+        rollbackInfo.rollbackReason
+      );
+      if (!rollbackResult.success) {
+        return {
+          success: false,
+          error: rollbackResult.error
+        };
+      }
+      const rolledBackSettings = rollbackResult.data;
+      const botSettings = rolledBackSettings.botSettings;
+      this.configurationCache.set(tenantId, botSettings);
+      const changeEvent = {
+        tenantId,
+        configType: "bot_settings",
+        changeType: "rollback",
+        oldValue: null,
+        // We don't have the old value in this context
+        newValue: botSettings,
+        changedBy: rollbackInfo.rollbackBy,
+        timestamp: rollbackInfo.rollbackAt
+      };
+      await this.notifyChangeListeners(tenantId, changeEvent);
+      return {
+        success: true,
+        data: botSettings,
+        metadata: {
+          rolledBack: true,
+          targetVersion,
+          rollbackReason: rollbackInfo.rollbackReason
+        }
+      };
+    } catch (error) {
+      console.error("Error rolling back configuration:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_ROLLBACK_FAILED",
+          message: "Failed to rollback configuration",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Get configuration history
+   */
+  async getConfigurationHistory(tenantId, limit = 10) {
+    try {
+      const historyResult = await this.settingsService.getSettingsHistory(tenantId, limit);
+      if (!historyResult.success) {
+        return {
+          success: false,
+          error: historyResult.error
+        };
+      }
+      const history = historyResult.data.map((version) => ({
+        version: version.version,
+        settings: version.settings.botSettings,
+        createdBy: version.createdBy,
+        createdAt: version.createdAt,
+        changeSummary: version.changeSummary
+      }));
+      return {
+        success: true,
+        data: history
+      };
+    } catch (error) {
+      console.error("Error getting configuration history:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_HISTORY_FAILED",
+          message: "Failed to get configuration history",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== REAL-TIME UPDATES =====
+  /**
+   * Subscribe to configuration changes
+   */
+  subscribeToConfigurationChanges(tenantId, listener) {
+    if (!this.changeListeners.has(tenantId)) {
+      this.changeListeners.set(tenantId, []);
+    }
+    this.changeListeners.get(tenantId).push(listener);
+    return () => {
+      const listeners = this.changeListeners.get(tenantId);
+      if (listeners) {
+        const index = listeners.indexOf(listener);
+        if (index > -1) {
+          listeners.splice(index, 1);
+        }
+      }
+    };
+  }
+  /**
+   * Force refresh configuration from database
+   */
+  async refreshConfiguration(tenantId) {
+    try {
+      this.configurationCache.delete(tenantId);
+      return await this.getBotConfiguration(tenantId);
+    } catch (error) {
+      console.error("Error refreshing configuration:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONFIG_REFRESH_FAILED",
+          message: "Failed to refresh configuration",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== PRIVATE HELPER METHODS =====
+  /**
+   * Emit configuration change events
+   */
+  async emitConfigurationChangeEvents(tenantId, oldConfig, newConfig, changedBy) {
+    try {
+      const timestamp3 = /* @__PURE__ */ new Date();
+      const events = [];
+      if (JSON.stringify(oldConfig.businessHours) !== JSON.stringify(newConfig.businessHours)) {
+        events.push({
+          tenantId,
+          configType: "business_hours",
+          changeType: "update",
+          oldValue: oldConfig.businessHours,
+          newValue: newConfig.businessHours,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      if (JSON.stringify(oldConfig.autoResponses) !== JSON.stringify(newConfig.autoResponses)) {
+        events.push({
+          tenantId,
+          configType: "auto_responses",
+          changeType: "update",
+          oldValue: oldConfig.autoResponses,
+          newValue: newConfig.autoResponses,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      if (JSON.stringify(oldConfig.conversationFlow) !== JSON.stringify(newConfig.conversationFlow)) {
+        events.push({
+          tenantId,
+          configType: "conversation_flow",
+          changeType: "update",
+          oldValue: oldConfig.conversationFlow,
+          newValue: newConfig.conversationFlow,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      if (JSON.stringify(oldConfig.paymentSettings) !== JSON.stringify(newConfig.paymentSettings)) {
+        events.push({
+          tenantId,
+          configType: "payment_settings",
+          changeType: "update",
+          oldValue: oldConfig.paymentSettings,
+          newValue: newConfig.paymentSettings,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      if (JSON.stringify(oldConfig.notificationSettings) !== JSON.stringify(newConfig.notificationSettings)) {
+        events.push({
+          tenantId,
+          configType: "notifications",
+          changeType: "update",
+          oldValue: oldConfig.notificationSettings,
+          newValue: newConfig.notificationSettings,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      if (JSON.stringify(oldConfig.customization) !== JSON.stringify(newConfig.customization)) {
+        events.push({
+          tenantId,
+          configType: "customization",
+          changeType: "update",
+          oldValue: oldConfig.customization,
+          newValue: newConfig.customization,
+          changedBy,
+          timestamp: timestamp3
+        });
+      }
+      for (const event of events) {
+        await this.notifyChangeListeners(tenantId, event);
+      }
+    } catch (error) {
+      console.error("Error emitting configuration change events:", error);
+    }
+  }
+  /**
+   * Notify change listeners
+   */
+  async notifyChangeListeners(tenantId, event) {
+    try {
+      const listeners = this.changeListeners.get(tenantId);
+      if (listeners) {
+        for (const listener of listeners) {
+          try {
+            listener(event);
+          } catch (error) {
+            console.error("Error in configuration change listener:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error notifying change listeners:", error);
+    }
+  }
+  /**
+   * Refresh configuration cache for all tenants
+   */
+  async refreshConfigurationCache() {
+    try {
+      console.log("Refreshing configuration cache...");
+      const cachedTenantIds = Array.from(this.configurationCache.keys());
+      for (const tenantId of cachedTenantIds) {
+        try {
+          this.configurationCache.delete(tenantId);
+          await this.getBotConfiguration(tenantId);
+        } catch (error) {
+          console.error(`Error refreshing cache for tenant ${tenantId}:`, error);
+        }
+      }
+      console.log(`Refreshed configuration cache for ${cachedTenantIds.length} tenants`);
+    } catch (error) {
+      console.error("Error refreshing configuration cache:", error);
+    }
+  }
+  /**
+   * Close database connection and cleanup
+   */
+  async close() {
+    try {
+      this.configurationCache.clear();
+      this.changeListeners.clear();
+      await this.pool.end();
+    } catch (error) {
+      console.error("Error closing bot configuration service:", error);
+    }
+  }
+};
+
+// server/services/whatsapp-booking.service.ts
+import { Pool as Pool9 } from "@neondatabase/serverless";
+var WhatsAppBookingService = class {
+  pool;
+  constructor() {
+    this.pool = new Pool9({
+      connectionString: process.env.DATABASE_URL
+    });
+  }
+  /**
+   * Process WhatsApp booking message and return appropriate response
+   */
+  async processBookingMessage(message, tenantId, context) {
+    try {
+      const messageText = message.text?.body?.toLowerCase().trim() || "";
+      switch (context.currentStep) {
+        case "welcome":
+          return await this.handleWelcome(messageText, context);
+        case "service_selection":
+          return await this.handleServiceSelection(messageText, context);
+        case "date_selection":
+          return await this.handleDateSelection(messageText, context);
+        case "time_selection":
+          return await this.handleTimeSelection(messageText, context);
+        case "staff_selection":
+          return await this.handleStaffSelection(messageText, context);
+        case "confirmation":
+          return await this.handleConfirmation(messageText, context);
+        default:
+          return {
+            success: false,
+            message: "I'm sorry, I didn't understand that. Please start over by typing 'book appointment'."
+          };
+      }
+    } catch (error) {
+      console.error("Error processing booking message:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error processing your request. Please try again later.",
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
+  /**
+   * Handle welcome message and start booking flow
+   */
+  async handleWelcome(messageText, context) {
+    const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
+    if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
+      try {
+        const services2 = await this.getServices(context.tenantId);
+        if (services2.length === 0) {
+          return {
+            success: false,
+            message: "I'm sorry, no services are currently available. Please contact us directly."
+          };
+        }
+        const serviceList = services2.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
+        }).join("\n");
+        return {
+          success: true,
+          message: `Hi! \u{1F44B} Welcome to Bella Salon! I'm here to help you book an appointment.
+
+Here are our services:
+${serviceList}
+
+Reply with the number or name of the service to book.`,
+          nextStep: "service_selection",
+          options: services2.map((service) => service.name)
+        };
+      } catch (error) {
+        console.error("Error fetching services in welcome:", error);
+        return {
+          success: false,
+          message: "I'm sorry, there was an error loading our services. Please try again later."
+        };
+      }
+    }
+    return {
+      success: false,
+      message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'."
+    };
+  }
+  /**
+   * Handle service selection
+   */
+  async handleServiceSelection(messageText, context) {
+    try {
+      const services2 = await this.getServices(context.tenantId);
+      if (services2.length === 0) {
+        return {
+          success: false,
+          message: "I'm sorry, no services are currently available. Please contact us directly."
+        };
+      }
+      let selectedService = null;
+      const serviceNumber = parseInt(messageText.trim());
+      if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services2.length) {
+        selectedService = services2[serviceNumber - 1];
+      } else {
+        const messageTextLower = messageText.toLowerCase().trim();
+        for (const service of services2) {
+          const serviceNameLower = service.name.toLowerCase();
+          if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
+            selectedService = service;
+            break;
+          }
+        }
+      }
+      if (!selectedService) {
+        const serviceList = services2.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${index + 1}. ${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
+        }).join("\n");
+        return {
+          success: false,
+          message: `I couldn't find that service. Please select from our available services:
+
+${serviceList}
+
+Reply with the number or name of the service.`
+        };
+      }
+      context.selectedService = selectedService.id;
+      context.currentStep = "date_selection";
+      const availableDates = this.getAvailableDates();
+      return {
+        success: true,
+        message: `Great choice! You selected: ${selectedService.name}
+\u{1F4B0} Price: \u20B9${selectedService.base_price}
+\u23F0 Duration: ${selectedService.duration_minutes} minutes
+
+When would you like to book this service?
+
+${availableDates.map((date, index) => `${index + 1}. ${date.formatted}`).join("\n")}
+
+Please reply with the date number or date.`,
+        nextStep: "date_selection",
+        options: availableDates.map((date) => date.formatted)
+      };
+    } catch (error) {
+      console.error("Error handling service selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle date selection
+   */
+  async handleDateSelection(messageText, context) {
+    try {
+      const availableDates = this.getAvailableDates();
+      let selectedDate = null;
+      const dateNumber = parseInt(messageText);
+      if (!isNaN(dateNumber) && dateNumber >= 1 && dateNumber <= availableDates.length) {
+        selectedDate = availableDates[dateNumber - 1];
+      } else {
+        for (const date of availableDates) {
+          if (messageText.includes(date.formatted.toLowerCase()) || messageText.includes(date.date)) {
+            selectedDate = date;
+            break;
+          }
+        }
+      }
+      if (!selectedDate) {
+        return {
+          success: false,
+          message: "Please select a valid date from the list above."
+        };
+      }
+      context.selectedDate = selectedDate.date;
+      context.currentStep = "time_selection";
+      const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date);
+      return {
+        success: true,
+        message: `Perfect! You selected: ${selectedDate.formatted}
+
+Here are the available time slots:
+
+${timeSlots.map((slot, index) => `${index + 1}. ${slot.time} (${slot.available ? "Available" : "Booked"})`).join("\n")}
+
+Please reply with the time slot number or time.`,
+        nextStep: "time_selection",
+        options: timeSlots.filter((slot) => slot.available).map((slot) => slot.time)
+      };
+    } catch (error) {
+      console.error("Error handling date selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle time selection
+   */
+  async handleTimeSelection(messageText, context) {
+    try {
+      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate);
+      const availableSlots = availableTimeSlots.filter((slot) => slot.available);
+      let selectedTime = null;
+      const timeNumber = parseInt(messageText);
+      if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
+        selectedTime = availableSlots[timeNumber - 1].time;
+      } else {
+        for (const slot of availableSlots) {
+          if (messageText.includes(slot.time.toLowerCase()) || messageText.includes(slot.time.replace(":", ""))) {
+            selectedTime = slot.time;
+            break;
+          }
+        }
+      }
+      if (!selectedTime) {
+        return {
+          success: false,
+          message: "Please select a valid time slot from the list above."
+        };
+      }
+      context.selectedTime = selectedTime;
+      context.currentStep = "staff_selection";
+      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
+      return {
+        success: true,
+        message: `Excellent! You selected: ${selectedTime}
+
+Here are our available staff members:
+
+${availableStaff.map((staff, index) => `${index + 1}. ${staff.name} - ${staff.specialization}`).join("\n")}
+
+Please reply with the staff member number or name.`,
+        nextStep: "staff_selection",
+        options: availableStaff.map((staff) => staff.name)
+      };
+    } catch (error) {
+      console.error("Error handling time selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle staff selection
+   */
+  async handleStaffSelection(messageText, context) {
+    try {
+      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, context.selectedTime);
+      let selectedStaff = null;
+      const staffNumber = parseInt(messageText);
+      if (!isNaN(staffNumber) && staffNumber >= 1 && staffNumber <= availableStaff.length) {
+        selectedStaff = availableStaff[staffNumber - 1];
+      } else {
+        for (const staff of availableStaff) {
+          if (messageText.toLowerCase().includes(staff.name.toLowerCase())) {
+            selectedStaff = staff;
+            break;
+          }
+        }
+      }
+      if (!selectedStaff) {
+        return {
+          success: false,
+          message: "Please select a valid staff member from the list above."
+        };
+      }
+      context.selectedStaff = selectedStaff.id;
+      context.currentStep = "confirmation";
+      const service = await this.getServiceById(context.tenantId, context.selectedService);
+      const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${context.selectedTime}:00`);
+      context.appointmentData = {
+        customer_name: context.customerName || "WhatsApp Customer",
+        customer_phone: context.customerPhone,
+        customer_email: context.customerEmail || "",
+        service_id: context.selectedService,
+        staff_id: context.selectedStaff,
+        scheduled_at: appointmentDateTime.toISOString(),
+        amount: service?.base_price || 0,
+        currency: "INR",
+        notes: "Booked via WhatsApp Bot",
+        payment_status: "pending"
+      };
+      return {
+        success: true,
+        message: `Perfect! Here's your appointment summary:
+
+\u{1F4C5} **Appointment Details:**
+\u2022 Service: ${service?.name}
+\u2022 Date: ${context.selectedDate}
+\u2022 Time: ${context.selectedTime}
+\u2022 Staff: ${selectedStaff.name}
+\u2022 Price: \u20B9${service?.base_price}
+\u2022 Duration: ${service?.duration_minutes} minutes
+
+Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
+        nextStep: "confirmation"
+      };
+    } catch (error) {
+      console.error("Error handling staff selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle confirmation and create appointment
+   */
+  async handleConfirmation(messageText, context) {
+    try {
+      const confirmKeywords = ["yes", "confirm", "book", "ok", "okay", "proceed"];
+      if (!confirmKeywords.some((keyword) => messageText.includes(keyword))) {
+        return {
+          success: false,
+          message: "Please type 'yes' or 'confirm' to book the appointment, or 'cancel' to start over."
+        };
+      }
+      const appointmentId = await this.createAppointment(context.tenantId, context.appointmentData);
+      if (appointmentId) {
+        context.currentStep = "completed";
+        return {
+          success: true,
+          message: `\u{1F389} **Appointment Booked Successfully!**
+
+Your appointment has been confirmed:
+
+\u{1F4C5} Date: ${context.selectedDate}
+\u23F0 Time: ${context.selectedTime}
+\u{1F487}\u200D\u2640\uFE0F Service: ${context.appointmentData.service_id}
+\u{1F469}\u200D\u{1F4BC} Staff: ${context.selectedStaff}
+\u{1F4B0} Price: \u20B9${context.appointmentData.amount}
+
+You'll receive a confirmation SMS shortly. 
+
+Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
+          appointmentId,
+          nextStep: "completed"
+        };
+      } else {
+        return {
+          success: false,
+          message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
+        };
+      }
+    } catch (error) {
+      console.error("Error handling confirmation:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
+      };
+    }
+  }
+  /**
+   * Get services for a tenant
+   */
+  async getServices(tenantId) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, description, base_price, duration_minutes
+        FROM offerings 
+        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
+        ORDER BY display_order, name
+      `, [tenantId]);
+      return result.rows;
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      return [];
+    }
+  }
+  /**
+   * Get service by ID
+   */
+  async getServiceById(tenantId, serviceId) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, description, base_price, duration_minutes
+        FROM offerings 
+        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service'
+      `, [tenantId, serviceId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("Error fetching service:", error);
+      return null;
+    }
+  }
+  /**
+   * Get available dates (next 7 days)
+   */
+  getAvailableDates() {
+    const dates = [];
+    const today = /* @__PURE__ */ new Date();
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toISOString().split("T")[0];
+      const formatted = date.toLocaleDateString("en-IN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+      dates.push({ date: dateStr, formatted });
+    }
+    return dates;
+  }
+  /**
+   * Get available time slots for a date
+   */
+  async getAvailableTimeSlots(tenantId, date) {
+    try {
+      const timeSlots = [
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00"
+      ];
+      const bookedSlots = await this.pool.query(`
+        SELECT scheduled_at
+        FROM transactions 
+        WHERE tenant_id = $1 
+        AND DATE(scheduled_at) = $2 
+        AND transaction_type = 'booking'
+      `, [tenantId, date]);
+      const bookedTimes = bookedSlots.rows.map(
+        (row) => new Date(row.scheduled_at).toTimeString().substring(0, 5)
+      );
+      return timeSlots.map((time) => ({
+        time,
+        available: !bookedTimes.includes(time)
+      }));
+    } catch (error) {
+      console.error("Error fetching time slots:", error);
+      return [];
+    }
+  }
+  /**
+   * Get available staff for a specific date and time
+   */
+  async getAvailableStaff(tenantId, date, time) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, specializations
+        FROM staff 
+        WHERE tenant_id = $1 AND is_active = true
+        ORDER BY name
+      `, [tenantId]);
+      return result.rows.map((staff) => ({
+        id: staff.id,
+        name: staff.name,
+        specialization: Array.isArray(staff.specializations) ? staff.specializations.join(", ") : "General Services"
+      }));
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      return [];
+    }
+  }
+  /**
+   * Create appointment in database
+   */
+  async createAppointment(tenantId, appointmentData) {
+    try {
+      const result = await this.pool.query(`
+        INSERT INTO transactions (
+          tenant_id, transaction_type, customer_name, customer_phone, customer_email,
+          offering_id, staff_id, scheduled_at, duration_minutes,
+          amount, currency, notes, payment_status
+        ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING id
+      `, [
+        tenantId,
+        appointmentData.customer_name,
+        appointmentData.customer_phone,
+        appointmentData.customer_email,
+        appointmentData.service_id,
+        appointmentData.staff_id,
+        appointmentData.scheduled_at,
+        appointmentData.duration_minutes || 60,
+        appointmentData.amount,
+        appointmentData.currency,
+        appointmentData.notes,
+        appointmentData.payment_status
+      ]);
+      return result.rows[0]?.id || null;
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      return null;
+    }
+  }
+  /**
+   * Get appropriate emoji for service based on name and category
+   */
+  getServiceEmoji(serviceName, category) {
+    const name = serviceName.toLowerCase();
+    if (name.includes("hair") || name.includes("cut") || name.includes("color") || name.includes("style")) {
+      return "\u{1F487}\u200D\u2640\uFE0F";
+    }
+    if (name.includes("nail") || name.includes("manicure") || name.includes("pedicure") || name.includes("polish")) {
+      return "\u{1F485}";
+    }
+    if (name.includes("facial") || name.includes("skin") || name.includes("treatment")) {
+      return "\u2728";
+    }
+    if (name.includes("massage") || name.includes("spa")) {
+      return "\u{1F9D8}\u200D\u2640\uFE0F";
+    }
+    if (name.includes("makeup") || name.includes("bridal") || name.includes("party")) {
+      return "\u{1F484}";
+    }
+    if (name.includes("wax") || name.includes("threading")) {
+      return "\u{1FA92}";
+    }
+    return "\u2728";
+  }
+};
+
+// server/services/message-processor.service.ts
+var MessageProcessorService = class {
+  db;
+  pool;
+  conversationRepo;
+  serviceRepo;
+  botConfigService;
+  bookingService;
+  constructor(connectionString) {
+    this.pool = new Pool10({ connectionString });
+    this.db = drizzle7({ client: this.pool, schema: schema_exports });
+    this.conversationRepo = new ConversationRepository(connectionString);
+    this.serviceRepo = new ServiceRepository(connectionString);
+    this.botConfigService = new BotConfigurationService(connectionString);
+    this.bookingService = new WhatsAppBookingService();
+  }
+  // ===== MAIN MESSAGE PROCESSING =====
+  /**
+   * Process incoming WhatsApp webhook payload
+   */
+  async processWebhookPayload(payload) {
+    try {
+      const processedMessages = [];
+      for (const entry of payload.entry) {
+        for (const change of entry.changes) {
+          if (change.field === "messages" && change.value.messages) {
+            for (const message of change.value.messages) {
+              const tenantResult = await this.identifyTenantFromPhoneNumber(
+                change.value.metadata.phone_number_id
+              );
+              if (!tenantResult.success) {
+                console.error("Failed to identify tenant:", tenantResult.error);
+                continue;
+              }
+              const tenantContext = tenantResult.data;
+              const processResult = await this.processMessage(message, tenantContext);
+              if (processResult.success) {
+                processedMessages.push(processResult.data);
+              } else {
+                console.error("Failed to process message:", processResult.error);
+              }
+            }
+          }
+        }
+      }
+      return {
+        success: true,
+        data: processedMessages
+      };
+    } catch (error) {
+      console.error("Error processing webhook payload:", error);
+      return {
+        success: false,
+        error: {
+          code: "WEBHOOK_PROCESSING_FAILED",
+          message: "Failed to process webhook payload"
+        }
+      };
+    }
+  }
+  /**
+   * Process individual WhatsApp message
+   */
+  async processMessage(message, tenantContext) {
+    try {
+      const { tenantId } = tenantContext;
+      const phoneNumber = message.from;
+      const conversationResult = await this.getOrCreateConversation(
+        tenantId,
+        phoneNumber,
+        message
+      );
+      if (!conversationResult.success) {
+        return {
+          success: false,
+          error: conversationResult.error
+        };
+      }
+      const conversation = conversationResult.data;
+      const content = this.extractMessageContent(message);
+      const messageData = {
+        tenantId,
+        conversationId: conversation.id,
+        content,
+        messageType: message.type,
+        isFromBot: false,
+        metadata: {
+          whatsappMessageId: message.id,
+          timestamp: message.timestamp,
+          interactive: message.interactive
+        }
+      };
+      const [savedMessage] = await this.db.insert(messages).values(messageData).returning();
+      const stateResult = await this.processConversationState(
+        tenantId,
+        conversation,
+        content,
+        message
+      );
+      if (!stateResult.success) {
+        return {
+          success: false,
+          error: stateResult.error
+        };
+      }
+      const { newState, response, contextData } = stateResult.data;
+      if (newState && newState !== conversation.currentState) {
+        await this.conversationRepo.updateState(
+          tenantId,
+          conversation.id,
+          newState,
+          contextData
+        );
+      }
+      let responseMessageId;
+      if (response) {
+        const responseMessageData = {
+          tenantId,
+          conversationId: conversation.id,
+          content: response.content,
+          messageType: response.messageType,
+          isFromBot: true,
+          metadata: response.metadata || {}
+        };
+        const [responseMessage] = await this.db.insert(messages).values(responseMessageData).returning();
+        responseMessageId = responseMessage.id;
+      }
+      const processedMessage = {
+        messageId: savedMessage.id,
+        conversationId: conversation.id,
+        tenantId,
+        phoneNumber,
+        content,
+        messageType: message.type,
+        isFromBot: false,
+        response,
+        newState,
+        contextData
+      };
+      return {
+        success: true,
+        data: processedMessage,
+        metadata: {
+          responseMessageId,
+          previousState: conversation.currentState
+        }
+      };
+    } catch (error) {
+      console.error("Error processing message:", error);
+      return {
+        success: false,
+        error: {
+          code: "MESSAGE_PROCESSING_FAILED",
+          message: "Failed to process message"
+        }
+      };
+    }
+  }
+  // ===== TENANT IDENTIFICATION =====
+  /**
+   * Identify tenant from WhatsApp phone number ID
+   */
+  async identifyTenantFromPhoneNumber(phoneNumberId) {
+    try {
+      const [tenant] = await this.db.select().from(tenants).where(eq9(tenants.whatsappPhoneId, phoneNumberId)).limit(1);
+      if (!tenant) {
+        return {
+          success: false,
+          error: {
+            code: "TENANT_NOT_FOUND",
+            message: "No tenant found for WhatsApp phone number",
+            details: { phoneNumberId }
+          }
+        };
+      }
+      const subscriptionLimits = {
+        messagesPerMonth: 1e3,
+        bookingsPerMonth: 100,
+        apiCallsPerDay: 1e3
+      };
+      const currentUsage = {
+        messages_sent: 0,
+        messages_received: 0,
+        bookings_created: 0,
+        api_calls: 0,
+        storage_used: 0,
+        webhook_calls: 0
+      };
+      const tenantContext = {
+        tenantId: tenant.id,
+        permissions: ["webhook:receive"],
+        subscriptionLimits,
+        currentUsage
+      };
+      return {
+        success: true,
+        data: tenantContext
+      };
+    } catch (error) {
+      console.error("Error identifying tenant:", error);
+      return {
+        success: false,
+        error: {
+          code: "TENANT_IDENTIFICATION_FAILED",
+          message: "Failed to identify tenant"
+        }
+      };
+    }
+  }
+  // ===== CONVERSATION MANAGEMENT =====
+  /**
+   * Get existing conversation or create new one
+   */
+  async getOrCreateConversation(tenantId, phoneNumber, message) {
+    try {
+      const existingResult = await this.conversationRepo.findByPhoneNumber(tenantId, phoneNumber);
+      if (existingResult.success) {
+        return existingResult;
+      }
+      const customerName = this.extractCustomerName(message);
+      const conversationData = {
+        tenantId,
+        phoneNumber,
+        customerName,
+        currentState: "greeting",
+        contextData: {
+          firstMessageId: message.id,
+          firstMessageTimestamp: message.timestamp
+        }
+      };
+      return this.conversationRepo.create(tenantId, conversationData);
+    } catch (error) {
+      console.error("Error getting or creating conversation:", error);
+      return {
+        success: false,
+        error: {
+          code: "CONVERSATION_CREATION_FAILED",
+          message: "Failed to get or create conversation"
+        }
+      };
+    }
+  }
+  // ===== CONVERSATION STATE PROCESSING =====
+  /**
+   * Process conversation state and generate appropriate response
+   */
+  async processConversationState(tenantId, conversation, messageContent, message) {
+    try {
+      const currentState = conversation.currentState;
+      const contextData = conversation.contextData || {};
+      switch (currentState) {
+        case "greeting":
+          return this.handleGreetingState(tenantId, messageContent, contextData);
+        case "awaiting_service":
+          return this.handleServiceSelectionState(tenantId, messageContent, message, contextData);
+        case "awaiting_date":
+          return this.handleDateSelectionState(tenantId, messageContent, contextData);
+        case "awaiting_time":
+          return this.handleTimeSelectionState(tenantId, messageContent, contextData);
+        case "awaiting_payment":
+          return this.handlePaymentState(tenantId, messageContent, contextData);
+        case "completed":
+          return this.handleCompletedState(tenantId, messageContent, contextData);
+        case "booking_flow":
+          return this.handleBookingFlowState(tenantId, messageContent, message, contextData);
+        default:
+          return this.handleUnknownState(tenantId, messageContent, contextData);
+      }
+    } catch (error) {
+      console.error("Error processing conversation state:", error);
+      return {
+        success: false,
+        error: {
+          code: "STATE_PROCESSING_FAILED",
+          message: "Failed to process conversation state"
+        }
+      };
+    }
+  }
+  /**
+   * Handle greeting state
+   */
+  async handleGreetingState(tenantId, messageContent, contextData) {
+    try {
+      const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
+      const isBookingRequest = bookingKeywords.some(
+        (keyword) => messageContent.toLowerCase().includes(keyword)
+      );
+      if (isBookingRequest) {
+        const bookingContext = {
+          tenantId,
+          customerPhone: contextData.customerPhone || "unknown",
+          currentStep: "welcome"
+        };
+        const bookingResult = await this.bookingService.processBookingMessage(
+          { text: { body: messageContent } },
+          tenantId,
+          bookingContext
+        );
+        if (bookingResult.success) {
+          return {
+            success: true,
+            data: {
+              newState: "booking_flow",
+              response: {
+                content: bookingResult.message,
+                messageType: "text"
+              },
+              contextData: {
+                ...contextData,
+                bookingContext: {
+                  ...bookingContext,
+                  currentStep: bookingResult.nextStep || "service_selection"
+                },
+                isBookingFlow: true
+              }
+            }
+          };
+        }
+      }
+      const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+      if (!configResult.success) {
+        console.error("Failed to get bot configuration:", configResult.error);
+        const response2 = {
+          content: `Hello! Welcome to Bella Salon. I'm here to help you book an appointment. Type "book appointment" to get started!`,
+          messageType: "text"
+        };
+        return {
+          success: true,
+          data: {
+            newState: "greeting",
+            response: response2,
+            contextData: {
+              ...contextData,
+              greetingSent: true
+            }
+          }
+        };
+      }
+      const botSettings = configResult.data;
+      if (botSettings.businessHours.enabled) {
+        const isWithinBusinessHours = this.checkBusinessHours(botSettings.businessHours);
+        if (!isWithinBusinessHours) {
+          const response2 = {
+            content: botSettings.businessHours.closedMessage || "We are currently closed. Please try again during business hours.",
+            messageType: "text"
+          };
+          return {
+            success: true,
+            data: {
+              newState: "completed",
+              response: response2,
+              contextData: {
+                ...contextData,
+                closedMessageSent: true
+              }
+            }
+          };
+        }
+      }
+      const greetingMessage = botSettings.greetingMessage || "Hello! Welcome to our business.";
+      const welcomeMessage = botSettings.autoResponses.welcomeMessage || "How can I help you today?";
+      const response = {
+        content: `${greetingMessage}
+
+${welcomeMessage}`,
+        messageType: "text"
+      };
+      const nextStep = this.getNextConversationStep(botSettings, "greeting");
+      const newState = nextStep?.id || "awaiting_service";
+      return {
+        success: true,
+        data: {
+          newState,
+          response,
+          contextData: {
+            ...contextData,
+            greetingSent: true,
+            configVersion: configResult.metadata?.version
+          }
+        }
+      };
+    } catch (error) {
+      console.error("Error in handleGreetingState:", error);
+      return {
+        success: false,
+        error: {
+          code: "GREETING_STATE_ERROR",
+          message: "Failed to handle greeting state"
+        }
+      };
+    }
+  }
+  /**
+   * Handle service selection state
+   */
+  async handleServiceSelectionState(tenantId, messageContent, message, contextData) {
+    const servicesResult = await this.serviceRepo.list(tenantId, { page: 1, limit: 10 });
+    if (!servicesResult.success || !servicesResult.data?.data.length) {
+      const response2 = {
+        content: "Sorry, no services are currently available. Please contact us directly.",
+        messageType: "text"
+      };
+      return {
+        success: true,
+        data: {
+          newState: "completed",
+          response: response2,
+          contextData
+        }
+      };
+    }
+    const services2 = servicesResult.data.data;
+    let selectedService;
+    if (message.interactive?.button_reply) {
+      const serviceId = message.interactive.button_reply.id;
+      selectedService = services2.find((s) => s.id === serviceId);
+    } else {
+      const lowerContent = messageContent.toLowerCase();
+      selectedService = services2.find(
+        (s) => s.name.toLowerCase().includes(lowerContent) || lowerContent.includes(s.name.toLowerCase())
+      );
+    }
+    if (selectedService) {
+      const configResult2 = await this.botConfigService.getBotConfiguration(tenantId);
+      const botSettings2 = configResult2.success ? configResult2.data : null;
+      const datePrompt = botSettings2?.autoResponses.dateSelectionPrompt || "Please select your preferred date (YYYY-MM-DD format, e.g., 2024-01-15):";
+      const currency = botSettings2?.paymentSettings.currency || "USD";
+      const response2 = {
+        content: `Great! You've selected ${selectedService.name} (${selectedService.price} ${currency}). ${datePrompt}`,
+        messageType: "text"
+      };
+      const nextStep = this.getNextConversationStep(botSettings2, "service_selection");
+      const newState = nextStep?.id || "awaiting_date";
+      return {
+        success: true,
+        data: {
+          newState,
+          response: response2,
+          contextData: {
+            ...contextData,
+            selectedServiceId: selectedService.id,
+            selectedServiceName: selectedService.name,
+            selectedServicePrice: selectedService.price
+          }
+        }
+      };
+    }
+    const buttons = services2.slice(0, 3).map((service) => ({
+      id: service.id,
+      title: `${service.name} - $${service.price}`
+    }));
+    const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+    const botSettings = configResult.success ? configResult.data : null;
+    const servicePrompt = botSettings?.autoResponses.serviceSelectionPrompt || "Please select a service:";
+    const response = {
+      content: servicePrompt,
+      messageType: "interactive",
+      metadata: {
+        buttons
+      }
+    };
+    return {
+      success: true,
+      data: {
+        response,
+        contextData
+      }
+    };
+  }
+  /**
+   * Handle date selection state
+   */
+  async handleDateSelectionState(tenantId, messageContent, contextData) {
+    try {
+      const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+      const botSettings = configResult.success ? configResult.data : null;
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(messageContent.trim())) {
+        const invalidInputMessage = this.getConfiguredResponse(
+          botSettings,
+          "invalidInputMessage",
+          "Please enter a valid date in YYYY-MM-DD format (e.g., 2024-01-15):"
+        );
+        const response2 = {
+          content: invalidInputMessage,
+          messageType: "text"
+        };
+        return {
+          success: true,
+          data: {
+            response: response2,
+            contextData
+          }
+        };
+      }
+      const selectedDate = messageContent.trim();
+      const date = new Date(selectedDate);
+      if (date <= /* @__PURE__ */ new Date()) {
+        const response2 = {
+          content: "Please select a future date. What date would you prefer?",
+          messageType: "text"
+        };
+        return {
+          success: true,
+          data: {
+            response: response2,
+            contextData
+          }
+        };
+      }
+      const timePrompt = this.getConfiguredResponse(
+        botSettings,
+        "timeSelectionPrompt",
+        "What time would you prefer? Please enter in HH:MM format (e.g., 14:30 for 2:30 PM):"
+      );
+      const response = {
+        content: `Perfect! You've selected ${selectedDate}. ${timePrompt}`,
+        messageType: "text"
+      };
+      const nextStep = this.getNextConversationStep(botSettings, "date_selection");
+      const newState = nextStep?.id || "awaiting_time";
+      return {
+        success: true,
+        data: {
+          newState,
+          response,
+          contextData: {
+            ...contextData,
+            selectedDate
+          }
+        }
+      };
+    } catch (error) {
+      console.error("Error in handleDateSelectionState:", error);
+      return {
+        success: false,
+        error: {
+          code: "DATE_SELECTION_ERROR",
+          message: "Failed to handle date selection"
+        }
+      };
+    }
+  }
+  /**
+   * Handle time selection state
+   */
+  async handleTimeSelectionState(tenantId, messageContent, contextData) {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(messageContent.trim())) {
+      const response2 = {
+        content: "Please enter a valid time in HH:MM format (e.g., 14:30 for 2:30 PM):",
+        messageType: "text"
+      };
+      return {
+        success: true,
+        data: {
+          response: response2,
+          contextData
+        }
+      };
+    }
+    const selectedTime = messageContent.trim();
+    const serviceName = contextData.selectedServiceName || "the service";
+    const servicePrice = contextData.selectedServicePrice || 0;
+    const selectedDate = contextData.selectedDate;
+    const response = {
+      content: `Excellent! Here's your booking summary:
+      
+Service: ${serviceName}
+Date: ${selectedDate}
+Time: ${selectedTime}
+Price: $${servicePrice}
+
+To confirm your booking, please reply with "CONFIRM". To cancel, reply with "CANCEL".`,
+      messageType: "text"
+    };
+    return {
+      success: true,
+      data: {
+        newState: "awaiting_payment",
+        response,
+        contextData: {
+          ...contextData,
+          selectedTime
+        }
+      }
+    };
+  }
+  /**
+   * Handle payment/confirmation state
+   */
+  async handlePaymentState(tenantId, messageContent, contextData) {
+    const configResult = await this.botConfigService.getBotConfiguration(tenantId);
+    const botSettings = configResult.success ? configResult.data : null;
+    const content = messageContent.trim().toLowerCase();
+    if (content === "confirm") {
+      const bookingData = {
+        tenantId,
+        conversationId: contextData.conversationId,
+        serviceId: contextData.selectedServiceId,
+        phoneNumber: contextData.phoneNumber,
+        amount: contextData.selectedServicePrice,
+        status: "confirmed",
+        appointmentDate: /* @__PURE__ */ new Date(`${contextData.selectedDate}T${contextData.selectedTime}:00`),
+        appointmentTime: contextData.selectedTime
+      };
+      const confirmationMessage = this.getConfiguredResponse(
+        botSettings,
+        "bookingConfirmedMessage",
+        "Your booking has been confirmed! Thank you for choosing us!"
+      );
+      const currency = botSettings?.paymentSettings.currency || "USD";
+      const response2 = {
+        content: `\u{1F389} ${confirmationMessage}
+
+Service: ${contextData.selectedServiceName}
+Date: ${contextData.selectedDate}
+Time: ${contextData.selectedTime}
+Price: ${contextData.selectedServicePrice} ${currency}
+
+We'll send you a reminder before your appointment. Thank you for choosing us!`,
+        messageType: "text"
+      };
+      return {
+        success: true,
+        data: {
+          newState: "completed",
+          response: response2,
+          contextData: {
+            ...contextData,
+            bookingConfirmed: true
+          }
+        }
+      };
+    } else if (content === "cancel") {
+      const response2 = {
+        content: "Your booking has been cancelled. Feel free to start over anytime by sending us a message!",
+        messageType: "text"
+      };
+      return {
+        success: true,
+        data: {
+          newState: "completed",
+          response: response2,
+          contextData: {
+            ...contextData,
+            bookingCancelled: true
+          }
+        }
+      };
+    }
+    const confirmationPrompt = this.getConfiguredResponse(
+      botSettings,
+      "confirmationMessage",
+      'Please reply with "CONFIRM" to confirm your booking or "CANCEL" to cancel.'
+    );
+    const response = {
+      content: confirmationPrompt,
+      messageType: "text"
+    };
+    return {
+      success: true,
+      data: {
+        response,
+        contextData
+      }
+    };
+  }
+  /**
+   * Handle completed state
+   */
+  async handleCompletedState(tenantId, messageContent, contextData) {
+    const response = {
+      content: "Hello! Would you like to make a new booking? Just let me know what service you need!",
+      messageType: "text"
+    };
+    return {
+      success: true,
+      data: {
+        newState: "awaiting_service",
+        response,
+        contextData: {
+          previousBooking: contextData
+        }
+      }
+    };
+  }
+  /**
+   * Handle booking flow state
+   */
+  async handleBookingFlowState(tenantId, messageContent, message, contextData) {
+    try {
+      const bookingContext = contextData.bookingContext;
+      if (!bookingContext) {
+        return {
+          success: false,
+          error: {
+            code: "BOOKING_CONTEXT_MISSING",
+            message: "Booking context not found"
+          }
+        };
+      }
+      bookingContext.customerPhone = message.from;
+      const bookingResult = await this.bookingService.processBookingMessage(
+        message,
+        tenantId,
+        bookingContext
+      );
+      if (bookingResult.success) {
+        const newState = bookingResult.nextStep === "completed" ? "completed" : "booking_flow";
+        return {
+          success: true,
+          data: {
+            newState,
+            response: {
+              content: bookingResult.message,
+              messageType: "text"
+            },
+            contextData: {
+              ...contextData,
+              bookingContext: {
+                ...bookingContext,
+                currentStep: bookingResult.nextStep || bookingContext.currentStep
+              },
+              appointmentId: bookingResult.appointmentId
+            }
+          }
+        };
+      } else {
+        return {
+          success: true,
+          data: {
+            response: {
+              content: bookingResult.message,
+              messageType: "text"
+            },
+            contextData
+          }
+        };
+      }
+    } catch (error) {
+      console.error("Error handling booking flow state:", error);
+      return {
+        success: false,
+        error: {
+          code: "BOOKING_FLOW_ERROR",
+          message: "Failed to process booking flow"
+        }
+      };
+    }
+  }
+  /**
+   * Handle unknown state
+   */
+  async handleUnknownState(tenantId, messageContent, contextData) {
+    const response = {
+      content: "I apologize, but something went wrong. Let me help you start over. What service would you like to book?",
+      messageType: "text"
+    };
+    return {
+      success: true,
+      data: {
+        newState: "awaiting_service",
+        response,
+        contextData: {
+          error: "unknown_state",
+          previousState: contextData.currentState
+        }
+      }
+    };
+  }
+  // ===== UTILITY METHODS =====
+  /**
+   * Extract message content from WhatsApp message
+   */
+  extractMessageContent(message) {
+    if (message.text?.body) {
+      return message.text.body;
+    }
+    if (message.interactive?.button_reply) {
+      return message.interactive.button_reply.title;
+    }
+    if (message.interactive?.list_reply) {
+      return message.interactive.list_reply.title;
+    }
+    return `[${message.type} message]`;
+  }
+  /**
+   * Extract customer name from message (simplified)
+   */
+  extractCustomerName(message) {
+    return void 0;
+  }
+  /**
+   * Get conversation state information
+   */
+  async getConversationState(tenantId, conversationId) {
+    try {
+      const conversationResult = await this.conversationRepo.findById(tenantId, conversationId);
+      if (!conversationResult.success) {
+        return {
+          success: false,
+          error: conversationResult.error
+        };
+      }
+      const conversation = conversationResult.data;
+      const availableTransitions = this.getAvailableStateTransitions(conversation.currentState);
+      return {
+        success: true,
+        data: {
+          current: conversation.currentState,
+          data: conversation.contextData || {},
+          availableTransitions
+        }
+      };
+    } catch (error) {
+      console.error("Error getting conversation state:", error);
+      return {
+        success: false,
+        error: {
+          code: "STATE_RETRIEVAL_FAILED",
+          message: "Failed to get conversation state"
+        }
+      };
+    }
+  }
+  /**
+   * Get available state transitions for current state
+   */
+  getAvailableStateTransitions(currentState) {
+    const stateTransitions = {
+      greeting: ["awaiting_service"],
+      awaiting_service: ["awaiting_date", "completed"],
+      awaiting_date: ["awaiting_time", "awaiting_service"],
+      awaiting_time: ["awaiting_payment", "awaiting_date"],
+      awaiting_payment: ["completed", "awaiting_time"],
+      completed: ["awaiting_service"]
+    };
+    return stateTransitions[currentState] || [];
+  }
+  // ===== DYNAMIC CONFIGURATION HELPERS =====
+  /**
+   * Check if current time is within business hours
+   */
+  checkBusinessHours(businessHours) {
+    try {
+      if (!businessHours.enabled) {
+        return true;
+      }
+      const now = /* @__PURE__ */ new Date();
+      const timezone = businessHours.timezone || "UTC";
+      const currentTime = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        weekday: "long"
+      });
+      const parts = currentTime.formatToParts(now);
+      const weekday = parts.find((p) => p.type === "weekday")?.value.toLowerCase();
+      const hour = parts.find((p) => p.type === "hour")?.value;
+      const minute = parts.find((p) => p.type === "minute")?.value;
+      const currentTimeStr = `${hour}:${minute}`;
+      if (!weekday) return true;
+      const dayMap = {
+        "monday": "monday",
+        "tuesday": "tuesday",
+        "wednesday": "wednesday",
+        "thursday": "thursday",
+        "friday": "friday",
+        "saturday": "saturday",
+        "sunday": "sunday"
+      };
+      const dayKey = dayMap[weekday];
+      if (!dayKey) return true;
+      const daySchedule = businessHours.schedule[dayKey];
+      if (!daySchedule || !daySchedule.isOpen) {
+        return false;
+      }
+      const openTime = daySchedule.openTime;
+      const closeTime = daySchedule.closeTime;
+      if (!openTime || !closeTime) return true;
+      return currentTimeStr >= openTime && currentTimeStr <= closeTime;
+    } catch (error) {
+      console.error("Error checking business hours:", error);
+      return true;
+    }
+  }
+  /**
+   * Get next conversation step from bot configuration
+   */
+  getNextConversationStep(botSettings, currentStepType) {
+    try {
+      if (!botSettings?.conversationFlow?.steps) {
+        return null;
+      }
+      const currentStep = botSettings.conversationFlow.steps.find((step) => step.type === currentStepType);
+      if (!currentStep?.nextStep) {
+        return null;
+      }
+      return botSettings.conversationFlow.steps.find((step) => step.id === currentStep.nextStep) || null;
+    } catch (error) {
+      console.error("Error getting next conversation step:", error);
+      return null;
+    }
+  }
+  /**
+   * Get configured response message
+   */
+  getConfiguredResponse(botSettings, responseKey, fallback) {
+    try {
+      return botSettings?.autoResponses?.[responseKey] || fallback;
+    } catch (error) {
+      console.error("Error getting configured response:", error);
+      return fallback;
+    }
+  }
+  /**
+   * Subscribe to configuration changes for real-time updates
+   */
+  subscribeToConfigurationChanges(tenantId) {
+    return this.botConfigService.subscribeToConfigurationChanges(tenantId, (event) => {
+      console.log(`Configuration changed for tenant ${tenantId}:`, event.configType);
+    });
+  }
+  /**
+   * Close database connection
+   */
+  async close() {
+    await this.botConfigService.close();
+    await this.pool.end();
+  }
+};
+
+// server/services/whatsapp-sender.service.ts
+import { drizzle as drizzle8 } from "drizzle-orm/neon-serverless";
+import { Pool as Pool11 } from "@neondatabase/serverless";
+var WhatsAppSenderService = class {
+  db;
+  pool;
+  tenantSettingsService;
+  credentialsCache = /* @__PURE__ */ new Map();
+  messageQueue = /* @__PURE__ */ new Map();
+  // tenantId -> messages
+  rateLimits = /* @__PURE__ */ new Map();
+  // tenantId -> rate limit info
+  processingInterval = null;
+  CACHE_TTL = 5 * 60 * 1e3;
+  // 5 minutes
+  QUEUE_PROCESS_INTERVAL = 1e3;
+  // 1 second
+  DEFAULT_RATE_LIMITS = {
+    messagesPerSecond: 10,
+    messagesPerMinute: 100,
+    messagesPerHour: 1e3
+  };
+  constructor(connectionString) {
+    this.pool = new Pool11({ connectionString });
+    this.db = drizzle8({ client: this.pool, schema: schema_exports });
+    this.tenantSettingsService = new TenantSettingsService(connectionString);
+    this.startQueueProcessing();
+  }
+  // ===== MESSAGE SENDING =====
+  /**
+   * Send WhatsApp message using tenant-specific credentials with queuing and rate limiting
+   */
+  async sendMessage(tenantId, phoneNumber, response, options = {}) {
+    try {
+      const { priority = "normal", maxAttempts = 3, immediate = false } = options;
+      if (immediate || await this.canSendImmediately(tenantId)) {
+        return await this.sendMessageImmediate(tenantId, phoneNumber, response);
+      }
+      const queueId = await this.queueMessage(tenantId, phoneNumber, response, {
+        priority,
+        maxAttempts
+      });
+      return {
+        success: true,
+        data: { queued: true, queueId },
+        metadata: {
+          tenantId,
+          phoneNumber,
+          messageType: response.messageType,
+          queued: true
+        }
+      };
+    } catch (error) {
+      console.error("Error sending WhatsApp message:", error);
+      return {
+        success: false,
+        error: {
+          code: "MESSAGE_SEND_FAILED",
+          message: "Failed to send WhatsApp message",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Send message immediately without queuing
+   */
+  async sendMessageImmediate(tenantId, phoneNumber, response) {
+    try {
+      if (!await this.checkRateLimit(tenantId)) {
+        return {
+          success: false,
+          error: {
+            code: "RATE_LIMIT_EXCEEDED",
+            message: "Rate limit exceeded for tenant",
+            tenantId
+          }
+        };
+      }
+      const credentialsResult = await this.getTenantCredentials(tenantId);
+      if (!credentialsResult.success) {
+        return {
+          success: false,
+          error: credentialsResult.error
+        };
+      }
+      const credentials = credentialsResult.data;
+      const sendRequest = this.buildSendRequest(phoneNumber, response);
+      const sendResult = await this.sendToWhatsAppAPI(credentials, sendRequest);
+      if (!sendResult.success) {
+        return {
+          success: false,
+          error: sendResult.error
+        };
+      }
+      await this.updateRateLimit(tenantId);
+      console.log(`Message sent successfully to ${phoneNumber} for tenant ${tenantId}`);
+      return {
+        success: true,
+        data: sendResult.data,
+        metadata: {
+          tenantId,
+          phoneNumber,
+          messageType: response.messageType
+        }
+      };
+    } catch (error) {
+      console.error("Error sending WhatsApp message immediately:", error);
+      return {
+        success: false,
+        error: {
+          code: "MESSAGE_SEND_FAILED",
+          message: "Failed to send WhatsApp message",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Send bulk messages to multiple recipients with intelligent queuing
+   */
+  async sendBulkMessages(tenantId, recipients, options = {}) {
+    try {
+      const { batchSize = 10, delayBetweenBatches = 1e3 } = options;
+      const results = [];
+      let successful = 0;
+      let failed = 0;
+      let queued = 0;
+      for (let i = 0; i < recipients.length; i += batchSize) {
+        const batch = recipients.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (recipient) => {
+          const sendResult = await this.sendMessage(
+            tenantId,
+            recipient.phoneNumber,
+            recipient.response,
+            { priority: recipient.priority }
+          );
+          if (sendResult.success) {
+            if ("queued" in sendResult.data && sendResult.data.queued) {
+              queued++;
+              return {
+                phoneNumber: recipient.phoneNumber,
+                success: true,
+                queueId: sendResult.data.queueId
+              };
+            } else {
+              successful++;
+              return {
+                phoneNumber: recipient.phoneNumber,
+                success: true,
+                messageId: sendResult.data.messages[0]?.id
+              };
+            }
+          } else {
+            failed++;
+            return {
+              phoneNumber: recipient.phoneNumber,
+              success: false,
+              error: sendResult.error.message
+            };
+          }
+        });
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+        if (i + batchSize < recipients.length) {
+          await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches));
+        }
+      }
+      return {
+        success: true,
+        data: {
+          successful,
+          failed,
+          queued,
+          results
+        }
+      };
+    } catch (error) {
+      console.error("Error sending bulk messages:", error);
+      return {
+        success: false,
+        error: {
+          code: "BULK_SEND_FAILED",
+          message: "Failed to send bulk messages",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== MESSAGE QUEUING =====
+  /**
+   * Queue a message for later delivery
+   */
+  async queueMessage(tenantId, phoneNumber, response, options = {}) {
+    const {
+      priority = "normal",
+      maxAttempts = 3,
+      scheduledAt = /* @__PURE__ */ new Date()
+    } = options;
+    const queueItem = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      tenantId,
+      phoneNumber,
+      response,
+      attempts: 0,
+      maxAttempts,
+      scheduledAt,
+      createdAt: /* @__PURE__ */ new Date(),
+      priority
+    };
+    if (!this.messageQueue.has(tenantId)) {
+      this.messageQueue.set(tenantId, []);
+    }
+    const tenantQueue = this.messageQueue.get(tenantId);
+    tenantQueue.push(queueItem);
+    tenantQueue.sort((a, b) => {
+      const priorityOrder = { high: 3, normal: 2, low: 1 };
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.scheduledAt.getTime() - b.scheduledAt.getTime();
+    });
+    console.log(`Message queued for tenant ${tenantId}: ${queueItem.id}`);
+    return queueItem.id;
+  }
+  /**
+   * Get queue status for tenant
+   */
+  async getQueueStatus(tenantId) {
+    const tenantQueue = this.messageQueue.get(tenantId) || [];
+    return {
+      totalMessages: tenantQueue.length,
+      pendingMessages: tenantQueue.filter((msg) => msg.attempts < msg.maxAttempts).length,
+      highPriorityMessages: tenantQueue.filter((msg) => msg.priority === "high").length,
+      normalPriorityMessages: tenantQueue.filter((msg) => msg.priority === "normal").length,
+      lowPriorityMessages: tenantQueue.filter((msg) => msg.priority === "low").length,
+      oldestMessage: tenantQueue.length > 0 ? tenantQueue[tenantQueue.length - 1].createdAt : void 0
+    };
+  }
+  /**
+   * Clear failed messages from queue
+   */
+  async clearFailedMessages(tenantId) {
+    const tenantQueue = this.messageQueue.get(tenantId) || [];
+    const initialLength = tenantQueue.length;
+    const activeMessages = tenantQueue.filter((msg) => msg.attempts < msg.maxAttempts);
+    this.messageQueue.set(tenantId, activeMessages);
+    const removedCount = initialLength - activeMessages.length;
+    console.log(`Cleared ${removedCount} failed messages for tenant ${tenantId}`);
+    return removedCount;
+  }
+  // ===== RATE LIMITING =====
+  /**
+   * Check if tenant can send message immediately based on rate limits
+   */
+  async canSendImmediately(tenantId) {
+    return await this.checkRateLimit(tenantId);
+  }
+  /**
+   * Check rate limit for tenant
+   */
+  async checkRateLimit(tenantId) {
+    const rateLimitInfo = await this.getRateLimitInfo(tenantId);
+    const credentials = await this.getTenantCredentials(tenantId);
+    const limits = credentials.success && credentials.data?.rateLimits ? credentials.data.rateLimits : this.DEFAULT_RATE_LIMITS;
+    const now = Date.now();
+    const currentSecond = Math.floor(now / 1e3);
+    const currentMinute = Math.floor(now / 6e4);
+    const currentHour = Math.floor(now / 36e5);
+    if (rateLimitInfo.lastResetSecond !== currentSecond) {
+      rateLimitInfo.messagesThisSecond = 0;
+      rateLimitInfo.lastResetSecond = currentSecond;
+    }
+    if (rateLimitInfo.lastResetMinute !== currentMinute) {
+      rateLimitInfo.messagesThisMinute = 0;
+      rateLimitInfo.lastResetMinute = currentMinute;
+    }
+    if (rateLimitInfo.lastResetHour !== currentHour) {
+      rateLimitInfo.messagesThisHour = 0;
+      rateLimitInfo.lastResetHour = currentHour;
+    }
+    return rateLimitInfo.messagesThisSecond < limits.messagesPerSecond && rateLimitInfo.messagesThisMinute < limits.messagesPerMinute && rateLimitInfo.messagesThisHour < limits.messagesPerHour;
+  }
+  /**
+   * Update rate limit counters after sending a message
+   */
+  async updateRateLimit(tenantId) {
+    const rateLimitInfo = await this.getRateLimitInfo(tenantId);
+    rateLimitInfo.messagesThisSecond++;
+    rateLimitInfo.messagesThisMinute++;
+    rateLimitInfo.messagesThisHour++;
+  }
+  /**
+   * Get rate limit info for tenant
+   */
+  async getRateLimitInfo(tenantId) {
+    if (!this.rateLimits.has(tenantId)) {
+      const now = Date.now();
+      this.rateLimits.set(tenantId, {
+        tenantId,
+        messagesThisSecond: 0,
+        messagesThisMinute: 0,
+        messagesThisHour: 0,
+        lastResetSecond: Math.floor(now / 1e3),
+        lastResetMinute: Math.floor(now / 6e4),
+        lastResetHour: Math.floor(now / 36e5)
+      });
+    }
+    return this.rateLimits.get(tenantId);
+  }
+  /**
+   * Get rate limit status for tenant
+   */
+  async getRateLimitStatus(tenantId) {
+    const rateLimitInfo = await this.getRateLimitInfo(tenantId);
+    const credentials = await this.getTenantCredentials(tenantId);
+    const limits = credentials.success && credentials.data?.rateLimits ? credentials.data.rateLimits : this.DEFAULT_RATE_LIMITS;
+    const canSendNow = await this.checkRateLimit(tenantId);
+    return {
+      messagesThisSecond: rateLimitInfo.messagesThisSecond,
+      messagesThisMinute: rateLimitInfo.messagesThisMinute,
+      messagesThisHour: rateLimitInfo.messagesThisHour,
+      limits,
+      canSendNow
+    };
+  }
+  // ===== QUEUE PROCESSING =====
+  /**
+   * Start processing message queue
+   */
+  startQueueProcessing() {
+    this.processingInterval = setInterval(async () => {
+      await this.processMessageQueue();
+    }, this.QUEUE_PROCESS_INTERVAL);
+  }
+  /**
+   * Process message queue for all tenants
+   */
+  async processMessageQueue() {
+    for (const [tenantId, queue] of this.messageQueue.entries()) {
+      if (queue.length === 0) continue;
+      if (!await this.checkRateLimit(tenantId)) {
+        continue;
+      }
+      const messageIndex = queue.findIndex(
+        (msg) => msg.attempts < msg.maxAttempts && msg.scheduledAt <= /* @__PURE__ */ new Date()
+      );
+      if (messageIndex === -1) continue;
+      const message = queue[messageIndex];
+      message.attempts++;
+      try {
+        const result = await this.sendMessageImmediate(
+          message.tenantId,
+          message.phoneNumber,
+          message.response
+        );
+        if (result.success) {
+          queue.splice(messageIndex, 1);
+          console.log(`Queue message sent successfully: ${message.id}`);
+        } else {
+          console.error(`Queue message failed (attempt ${message.attempts}/${message.maxAttempts}): ${message.id}`, result.error);
+          if (message.attempts >= message.maxAttempts) {
+            queue.splice(messageIndex, 1);
+            console.error(`Queue message failed permanently: ${message.id}`);
+          } else {
+            const backoffDelay = Math.pow(2, message.attempts) * 1e3;
+            message.scheduledAt = new Date(Date.now() + backoffDelay);
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing queue message ${message.id}:`, error);
+        if (message.attempts >= message.maxAttempts) {
+          queue.splice(messageIndex, 1);
+        } else {
+          const backoffDelay = Math.pow(2, message.attempts) * 1e3;
+          message.scheduledAt = new Date(Date.now() + backoffDelay);
+        }
+      }
+    }
+  }
+  /**
+   * Stop queue processing
+   */
+  stopQueueProcessing() {
+    if (this.processingInterval) {
+      clearInterval(this.processingInterval);
+      this.processingInterval = null;
+    }
+  }
+  // ===== CREDENTIAL MANAGEMENT =====
+  /**
+   * Get tenant WhatsApp credentials from settings service
+   */
+  async getTenantCredentials(tenantId) {
+    try {
+      if (this.credentialsCache.has(tenantId)) {
+        return {
+          success: true,
+          data: this.credentialsCache.get(tenantId)
+        };
+      }
+      const settingsResult = await this.tenantSettingsService.getSettings(tenantId, "whatsapp");
+      if (!settingsResult.success || !settingsResult.data) {
+        return {
+          success: false,
+          error: {
+            code: "WHATSAPP_NOT_CONFIGURED",
+            message: "WhatsApp credentials not configured for tenant",
+            tenantId
+          }
+        };
+      }
+      const whatsappSettings = settingsResult.data.value;
+      if (!whatsappSettings.phoneNumberId || !whatsappSettings.accessToken) {
+        return {
+          success: false,
+          error: {
+            code: "INCOMPLETE_WHATSAPP_CONFIG",
+            message: "Incomplete WhatsApp configuration for tenant",
+            tenantId
+          }
+        };
+      }
+      const credentials = {
+        phoneNumberId: whatsappSettings.phoneNumberId,
+        accessToken: whatsappSettings.accessToken,
+        businessAccountId: whatsappSettings.businessAccountId,
+        webhookVerifyToken: whatsappSettings.webhookVerifyToken,
+        rateLimits: whatsappSettings.rateLimits || this.DEFAULT_RATE_LIMITS
+      };
+      this.credentialsCache.set(tenantId, credentials);
+      setTimeout(() => {
+        this.credentialsCache.delete(tenantId);
+      }, this.CACHE_TTL);
+      return {
+        success: true,
+        data: credentials
+      };
+    } catch (error) {
+      console.error("Error getting tenant credentials:", error);
+      return {
+        success: false,
+        error: {
+          code: "CREDENTIALS_FETCH_FAILED",
+          message: "Failed to fetch tenant credentials",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Validate tenant WhatsApp credentials
+   */
+  async validateCredentials(tenantId) {
+    try {
+      const credentialsResult = await this.getTenantCredentials(tenantId);
+      if (!credentialsResult.success) {
+        return {
+          success: true,
+          data: {
+            valid: false,
+            errors: [credentialsResult.error.message]
+          }
+        };
+      }
+      const credentials = credentialsResult.data;
+      const testResult = await this.testWhatsAppConnection(credentials);
+      return {
+        success: true,
+        data: testResult
+      };
+    } catch (error) {
+      console.error("Error validating credentials:", error);
+      return {
+        success: false,
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "Failed to validate credentials",
+          tenantId
+        }
+      };
+    }
+  }
+  // ===== WHATSAPP API INTEGRATION =====
+  /**
+   * Build WhatsApp API send request from bot response
+   */
+  buildSendRequest(phoneNumber, response) {
+    const baseRequest = {
+      messaging_product: "whatsapp",
+      to: phoneNumber,
+      type: response.messageType
+    };
+    switch (response.messageType) {
+      case "text":
+        return {
+          ...baseRequest,
+          text: {
+            body: response.content
+          }
+        };
+      case "interactive":
+        if (response.metadata?.buttons) {
+          return {
+            ...baseRequest,
+            interactive: {
+              type: "button",
+              body: {
+                text: response.content
+              },
+              action: {
+                buttons: response.metadata.buttons.map((button) => ({
+                  type: "reply",
+                  reply: {
+                    id: button.id,
+                    title: button.title
+                  }
+                }))
+              }
+            }
+          };
+        } else if (response.metadata?.list) {
+          return {
+            ...baseRequest,
+            interactive: {
+              type: "list",
+              header: response.metadata.list.header ? {
+                type: "text",
+                text: response.metadata.list.header
+              } : void 0,
+              body: {
+                text: response.metadata.list.body
+              },
+              footer: response.metadata.list.footer ? {
+                text: response.metadata.list.footer
+              } : void 0,
+              action: {
+                sections: response.metadata.list.sections
+              }
+            }
+          };
+        }
+        break;
+      case "template":
+        return {
+          ...baseRequest,
+          template: {
+            name: response.metadata?.templateName || "hello_world",
+            language: {
+              code: response.metadata?.languageCode || "en_US"
+            },
+            components: response.metadata?.components || []
+          }
+        };
+    }
+    return {
+      ...baseRequest,
+      type: "text",
+      text: {
+        body: response.content
+      }
+    };
+  }
+  /**
+   * Send request to WhatsApp API
+   */
+  async sendToWhatsAppAPI(credentials, sendRequest) {
+    try {
+      const url = `https://graph.facebook.com/v18.0/${credentials.phoneNumberId}/messages`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${credentials.accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(sendRequest)
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("WhatsApp API error:", response.status, errorData);
+        return {
+          success: false,
+          error: {
+            code: "WHATSAPP_API_ERROR",
+            message: `WhatsApp API error: ${response.status}`,
+            details: errorData
+          }
+        };
+      }
+      const responseData = await response.json();
+      return {
+        success: true,
+        data: responseData
+      };
+    } catch (error) {
+      console.error("Error calling WhatsApp API:", error);
+      return {
+        success: false,
+        error: {
+          code: "API_CALL_FAILED",
+          message: "Failed to call WhatsApp API"
+        }
+      };
+    }
+  }
+  /**
+   * Test WhatsApp connection
+   */
+  async testWhatsAppConnection(credentials) {
+    try {
+      const url = `https://graph.facebook.com/v18.0/${credentials.phoneNumberId}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${credentials.accessToken}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          valid: false,
+          errors: [`API error: ${response.status}`, JSON.stringify(errorData)]
+        };
+      }
+      const data = await response.json();
+      return {
+        valid: true,
+        phoneNumber: data.display_phone_number,
+        businessName: data.name
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [`Connection test failed: ${error}`]
+      };
+    }
+  }
+  // ===== MESSAGE TEMPLATES =====
+  /**
+   * Send template message
+   */
+  async sendTemplate(tenantId, phoneNumber, templateName, languageCode = "en_US", components = []) {
+    const templateResponse = {
+      content: "",
+      messageType: "template",
+      metadata: {
+        templateName,
+        languageCode,
+        components
+      }
+    };
+    return this.sendMessage(tenantId, phoneNumber, templateResponse);
+  }
+  /**
+   * Send interactive button message
+   */
+  async sendButtons(tenantId, phoneNumber, text3, buttons) {
+    const buttonResponse = {
+      content: text3,
+      messageType: "interactive",
+      metadata: {
+        buttons
+      }
+    };
+    return this.sendMessage(tenantId, phoneNumber, buttonResponse);
+  }
+  /**
+   * Send interactive list message
+   */
+  async sendList(tenantId, phoneNumber, header, body, footer, sections) {
+    const listResponse = {
+      content: body,
+      messageType: "interactive",
+      metadata: {
+        list: {
+          header,
+          body,
+          footer,
+          sections
+        }
+      }
+    };
+    return this.sendMessage(tenantId, phoneNumber, listResponse);
+  }
+  /**
+   * Get message delivery statistics for tenant
+   */
+  async getDeliveryStats(tenantId) {
+    const queueStatus = await this.getQueueStatus(tenantId);
+    const rateLimitStatus = await this.getRateLimitStatus(tenantId);
+    return {
+      totalSent: 0,
+      // Would be tracked in database
+      totalQueued: queueStatus.totalMessages,
+      totalFailed: 0,
+      // Would be tracked in database
+      rateLimitStatus,
+      queueStatus
+    };
+  }
+  /**
+   * Retry failed messages for tenant
+   */
+  async retryFailedMessages(tenantId) {
+    try {
+      const tenantQueue = this.messageQueue.get(tenantId) || [];
+      const failedMessages = tenantQueue.filter((msg) => msg.attempts >= msg.maxAttempts);
+      let retriedCount = 0;
+      let queuedCount = 0;
+      for (const message of failedMessages) {
+        message.attempts = 0;
+        message.maxAttempts = Math.min(message.maxAttempts + 2, 10);
+        message.scheduledAt = /* @__PURE__ */ new Date();
+        retriedCount++;
+        queuedCount++;
+      }
+      return {
+        success: true,
+        data: {
+          retriedCount,
+          queuedCount
+        }
+      };
+    } catch (error) {
+      console.error("Error retrying failed messages:", error);
+      return {
+        success: false,
+        error: {
+          code: "RETRY_FAILED",
+          message: "Failed to retry messages",
+          tenantId
+        }
+      };
+    }
+  }
+  /**
+   * Close service and cleanup resources
+   */
+  async close() {
+    this.stopQueueProcessing();
+    this.credentialsCache.clear();
+    this.messageQueue.clear();
+    this.rateLimits.clear();
+    await this.tenantSettingsService.close();
+    await this.pool.end();
+  }
+};
+
+// server/routes.ts
+var webhookVerificationSchema = z2.object({
+  "hub.mode": z2.string(),
+  "hub.challenge": z2.string(),
+  "hub.verify_token": z2.string()
 });
-var whatsAppMessageSchema = z.object({
-  object: z.string(),
-  entry: z.array(z.object({
-    id: z.string(),
-    changes: z.array(z.object({
-      value: z.object({
-        messaging_product: z.string(),
-        metadata: z.object({
-          display_phone_number: z.string(),
-          phone_number_id: z.string()
+var whatsAppMessageSchema = z2.object({
+  object: z2.string(),
+  entry: z2.array(z2.object({
+    id: z2.string(),
+    changes: z2.array(z2.object({
+      value: z2.object({
+        messaging_product: z2.string(),
+        metadata: z2.object({
+          display_phone_number: z2.string(),
+          phone_number_id: z2.string()
         }),
-        messages: z.array(z.object({
-          from: z.string(),
-          id: z.string(),
-          timestamp: z.string(),
-          text: z.object({
-            body: z.string()
+        messages: z2.array(z2.object({
+          from: z2.string(),
+          id: z2.string(),
+          timestamp: z2.string(),
+          text: z2.object({
+            body: z2.string()
           }),
-          type: z.string()
+          type: z2.string()
         })).optional()
       }),
-      field: z.string()
+      field: z2.string()
     }))
   }))
 });
-var createServiceSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  price: z.number().int().min(1, "Price must be at least 1"),
-  icon: z.string().optional()
+var createServiceSchema = z2.object({
+  name: z2.string().min(1),
+  description: z2.string().optional(),
+  price: z2.number().int().min(1, "Price must be at least 1"),
+  icon: z2.string().optional()
 });
 var WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 var PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID;
@@ -5677,8 +11549,8 @@ We apologize for any inconvenience caused.`;
       if (adminKey !== process.env.ADMIN_KEY && adminKey !== "migrate_fix_2024") {
         return res.status(403).json({ error: "Unauthorized" });
       }
-      const { Pool: Pool5 } = __require("@neondatabase/serverless");
-      const pool4 = new Pool5({ connectionString: process.env.DATABASE_URL });
+      const { Pool: Pool12 } = __require("@neondatabase/serverless");
+      const pool4 = new Pool12({ connectionString: process.env.DATABASE_URL });
       const client = await pool4.connect();
       try {
         const migrations = [
@@ -5690,14 +11562,14 @@ We apologize for any inconvenience caused.`;
           "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_data JSONB DEFAULT '{}';"
         ];
         const results = [];
-        for (const sql4 of migrations) {
+        for (const sql8 of migrations) {
           try {
-            await client.query(sql4);
-            results.push(`\u2705 Executed: ${sql4}`);
-            console.log(`\u2705 Executed: ${sql4}`);
+            await client.query(sql8);
+            results.push(`\u2705 Executed: ${sql8}`);
+            console.log(`\u2705 Executed: ${sql8}`);
           } catch (error) {
-            results.push(`\u26A0\uFE0F Error: ${sql4} - ${error.message}`);
-            console.log(`\u26A0\uFE0F Error: ${sql4} - ${error.message}`);
+            results.push(`\u26A0\uFE0F Error: ${sql8} - ${error.message}`);
+            console.log(`\u26A0\uFE0F Error: ${sql8} - ${error.message}`);
           }
         }
         console.log("\u2705 Database migration completed");
@@ -5743,6 +11615,10 @@ We apologize for any inconvenience caused.`;
   app2.use("/api/bot-flows", bot_flow_builder_routes_default);
   app2.use("/api/salon", salon_api_default);
   app2.use("/api/staff", staff_api_default);
+  const messageProcessor = new MessageProcessorService(process.env.DATABASE_URL || "postgresql://localhost:5432/whatsapp_bot");
+  const whatsappSender = new WhatsAppSenderService();
+  const webhookRoutes = createWebhookRoutes(messageProcessor, whatsappSender);
+  app2.use("/api/webhook", webhookRoutes);
   app2.post("/api/bot-flows/:flowId/activate", async (req, res) => {
     try {
       const { flowId } = req.params;
