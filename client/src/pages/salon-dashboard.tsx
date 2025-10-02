@@ -7326,7 +7326,11 @@ export default function SalonDashboard() {
           onOpenViewSchedule={handleOpenViewSchedule}
           onOpenWalkIn={handleOpenWalkIn}
           onOpenDailySummary={handleOpenDailySummary}
-          appointments={appointments}
+          appointments={appointments.filter(apt => {
+            const appointmentDate = new Date(apt.scheduled_at || apt.date || '').toDateString();
+            const today = new Date().toDateString();
+            return appointmentDate === today;
+          })}
           setAppointments={setAppointments}
           allAppointments={allAppointments}
           setAllAppointments={setAllAppointments}
