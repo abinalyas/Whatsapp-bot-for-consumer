@@ -6188,7 +6188,30 @@ function WhatsAppBotSection() {
       category: "Management",
       description: "Easy rescheduling with alternative time slots",
       uses: 156,
-      successRate: 92
+      successRate: 92,
+      flowSteps: [
+        "Identify current appointment",
+        "Show available time slots",
+        "Select new date & time",
+        "Confirm rescheduling",
+        "Send confirmation details"
+      ],
+      sampleConversation: [
+        { type: "bot", message: "Hi! I can help you reschedule your appointment. What's your phone number or booking reference?" },
+        { type: "user", message: "9876543210" },
+        { type: "bot", message: "Found your appointment with Sofia for Hair Cut & Color on Oct 5th at 2:00 PM. Here are available slots:\n\n📅 **Available Times:**\n• Oct 6th - 10:00 AM, 1:00 PM, 3:00 PM\n• Oct 7th - 11:00 AM, 2:00 PM, 4:00 PM\n• Oct 8th - 9:00 AM, 12:00 PM, 3:00 PM\n\nWhich time works best for you?" },
+        { type: "user", message: "Oct 7th at 2:00 PM works great!" },
+        { type: "bot", message: "Perfect! ✅ Your appointment has been rescheduled:\n\n**New Appointment Details:**\n📅 Date: October 7th\n⏰ Time: 2:00 PM\n💇‍♀️ Service: Hair Cut & Color\n👩‍💼 Staff: Sofia\n\nA confirmation message has been sent to your phone. See you soon!" }
+      ],
+      settings: {
+        isActive: true,
+        autoFallback: true,
+        analyticsTracking: true,
+        keywords: "reschedule, change, appointment, move",
+        priorityLevel: "High Priority",
+        businessHoursOnly: false,
+        afterHoursMessage: "Sorry, we're currently closed. Please try again during business hours..."
+      }
     },
     {
       id: 3,
@@ -6197,7 +6220,30 @@ function WhatsAppBotSection() {
       category: "Information",
       description: "Browse services, prices, and duration details",
       uses: 289,
-      successRate: 95
+      successRate: 95,
+      flowSteps: [
+        "Service category selection",
+        "Display service details",
+        "Show pricing & duration",
+        "Staff member information",
+        "Booking option"
+      ],
+      sampleConversation: [
+        { type: "bot", message: "Welcome to Bella Salon! 💇‍♀️ What type of service are you interested in?\n\n💇‍♀️ **Hair Services**\n💅 **Nail Services**\n✨ **Skin Care**\n💄 **Makeup**\n🔍 **View All Services**" },
+        { type: "user", message: "Hair Services" },
+        { type: "bot", message: "Great choice! Here are our hair services:\n\n💇‍♀️ **Hair Services:**\n• Hair Cut - ₹800 (45 mins)\n• Hair Color - ₹1,500 (90 mins)\n• Hair Cut & Color - ₹2,000 (120 mins)\n• Highlights - ₹2,500 (150 mins)\n• Hair Treatment - ₹1,200 (60 mins)\n\nWould you like to know more about any specific service?" },
+        { type: "user", message: "Tell me about Hair Cut & Color" },
+        { type: "bot", message: "Perfect! Here's everything about our Hair Cut & Color service:\n\n💇‍♀️ **Hair Cut & Color Combo**\n💰 **Price:** ₹2,000\n⏰ **Duration:** 120 minutes\n👩‍💼 **Best with:** Sofia, Emma, or Anna\n✨ **Includes:**\n• Professional consultation\n• Hair wash & conditioning\n• Cut with styling\n• Color application\n• Blow dry & finish\n\n📅 Would you like to book this service?" }
+      ],
+      settings: {
+        isActive: true,
+        autoFallback: false,
+        analyticsTracking: true,
+        keywords: "services, prices, information, menu, rates",
+        priorityLevel: "Low Priority",
+        businessHoursOnly: false,
+        afterHoursMessage: "Sorry, we're currently closed. Please try again during business hours..."
+      }
     },
     {
       id: 4,
@@ -6224,7 +6270,30 @@ function WhatsAppBotSection() {
       category: "Information",
       description: "Hours, location, contact details, and general inquiries",
       uses: 267,
-      successRate: 98
+      successRate: 98,
+      flowSteps: [
+        "Welcome message",
+        "Information category selection",
+        "Provide requested details",
+        "Additional help offer",
+        "Booking suggestion"
+      ],
+      sampleConversation: [
+        { type: "bot", message: "Welcome to Bella Salon! 🏪 How can I help you today?\n\n🕐 **Hours & Location**\n📞 **Contact Info**\n🅿️ **Parking & Directions**\n👥 **About Our Team**\n❓ **General Questions**" },
+        { type: "user", message: "Hours & Location" },
+        { type: "bot", message: "Here are our details:\n\n🕐 **Business Hours:**\n• Monday - Friday: 9:00 AM - 7:00 PM\n• Saturday: 8:00 AM - 6:00 PM\n• Sunday: 10:00 AM - 4:00 PM\n\n📍 **Location:**\n123 Beauty Street, Downtown Mumbai\nNear Central Mall, 2nd Floor\n\n🚗 **Parking:** Free parking available\n🚇 **Metro:** 5 min walk from Central Station" },
+        { type: "user", message: "Contact Info" },
+        { type: "bot", message: "📞 **Contact Information:**\n\n📱 **Phone:** +91 98765 43210\n📧 **Email:** hello@bellasalon.com\n🌐 **Website:** www.bellasalon.com\n📱 **WhatsApp:** This chat!\n\n💬 **Social Media:**\n• Instagram: @bellasalon_mumbai\n• Facebook: Bella Salon Mumbai\n\n📅 Ready to book an appointment?" }
+      ],
+      settings: {
+        isActive: true,
+        autoFallback: false,
+        analyticsTracking: true,
+        keywords: "hours, location, contact, address, phone, directions",
+        priorityLevel: "Low Priority",
+        businessHoursOnly: false,
+        afterHoursMessage: "Sorry, we're currently closed. Please try again during business hours..."
+      }
     },
     {
       id: 7,
@@ -6233,7 +6302,39 @@ function WhatsAppBotSection() {
       category: "Feedback",
       description: "Collect service feedback and manage customer satisfaction",
       uses: 89,
-      successRate: 94
+      successRate: 94,
+      flowSteps: [
+        "Service identification",
+        "Rating collection",
+        "Detailed feedback",
+        "Issue resolution",
+        "Thank you & follow-up"
+      ],
+      sampleConversation: [
+        { 
+          type: "bot", 
+          message: "Thank you for visiting Bella Salon! ✨ We'd love to hear about your experience.\n\nWhich service did you receive today?\n\n💇‍♀️ Hair Cut & Color with Sofia\n💅 Manicure with Anna\n✨ Facial with Emma\n🔍 Other service" 
+        },
+        { type: "user", message: "Hair cut and color with Sofia" },
+        { 
+          type: "bot", 
+          message: "Wonderful! How would you rate your experience with Sofia today? ⭐\n\n⭐⭐⭐⭐⭐ (5) Amazing!\n⭐⭐⭐⭐ (4) Great\n⭐⭐⭐ (3) Good\n⭐⭐ (2) Okay\n⭐ (1) Needs improvement" 
+        },
+        { type: "user", message: "5 stars - Sofia was amazing!" },
+        { 
+          type: "bot", 
+          message: "🎉 That's fantastic! Thank you so much!\n\nWe're thrilled Sofia exceeded your expectations! ✨\n\n💖 **Special Thank You**\n• 50 loyalty points added to your account\n• 15% off your next visit\n• Sofia will be notified of your wonderful feedback!\n\n📝 Would you like to leave a detailed review or share anything specific about your experience?" 
+        }
+      ],
+      settings: {
+        isActive: true,
+        autoFallback: true,
+        analyticsTracking: true,
+        keywords: "feedback, review, rating, experience, service",
+        priorityLevel: "Medium Priority",
+        businessHoursOnly: false,
+        afterHoursMessage: "Sorry, we're currently closed. Please try again during business hours..."
+      }
     },
     {
       id: 8,
