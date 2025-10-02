@@ -7267,6 +7267,671 @@ function verifyWebhookSignature(payload, signature, secret) {
   }
 }
 
+// server/routes/simple-webhook.routes.ts
+import { Router as Router5 } from "express";
+
+// server/services/whatsapp-booking.service.ts
+import { Pool as Pool7 } from "@neondatabase/serverless";
+var WhatsAppBookingService = class {
+  pool;
+  constructor() {
+    this.pool = new Pool7({
+      connectionString: process.env.DATABASE_URL
+    });
+  }
+  /**
+   * Process WhatsApp booking message and return appropriate response
+   */
+  async processBookingMessage(message, tenantId, context) {
+    try {
+      const messageText = message.text?.body?.toLowerCase().trim() || "";
+      switch (context.currentStep) {
+        case "welcome":
+          return await this.handleWelcome(messageText, context);
+        case "service_selection":
+          return await this.handleServiceSelection(messageText, context);
+        case "date_selection":
+          return await this.handleDateSelection(messageText, context);
+        case "time_selection":
+          return await this.handleTimeSelection(messageText, context);
+        case "staff_selection":
+          return await this.handleStaffSelection(messageText, context);
+        case "confirmation":
+          return await this.handleConfirmation(messageText, context);
+        default:
+          return {
+            success: false,
+            message: "I'm sorry, I didn't understand that. Please start over by typing 'book appointment'."
+          };
+      }
+    } catch (error) {
+      console.error("Error processing booking message:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error processing your request. Please try again later.",
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
+  /**
+   * Handle welcome message and start booking flow
+   */
+  async handleWelcome(messageText, context) {
+    const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
+    if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
+      try {
+        const services2 = await this.getServices(context.tenantId);
+        if (services2.length === 0) {
+          return {
+            success: false,
+            message: "I'm sorry, no services are currently available. Please contact us directly."
+          };
+        }
+        const serviceList = services2.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
+        }).join("\n");
+        return {
+          success: true,
+          message: `Hi! \u{1F44B} Welcome to Bella Salon! I'm here to help you book an appointment.
+
+Here are our services:
+${serviceList}
+
+Reply with the number or name of the service to book.`,
+          nextStep: "service_selection",
+          options: services2.map((service) => service.name)
+        };
+      } catch (error) {
+        console.error("Error fetching services in welcome:", error);
+        return {
+          success: false,
+          message: "I'm sorry, there was an error loading our services. Please try again later."
+        };
+      }
+    }
+    return {
+      success: false,
+      message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'."
+    };
+  }
+  /**
+   * Handle service selection
+   */
+  async handleServiceSelection(messageText, context) {
+    try {
+      const services2 = await this.getServices(context.tenantId);
+      if (services2.length === 0) {
+        return {
+          success: false,
+          message: "I'm sorry, no services are currently available. Please contact us directly."
+        };
+      }
+      let selectedService = null;
+      const serviceNumber = parseInt(messageText.trim());
+      if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services2.length) {
+        selectedService = services2[serviceNumber - 1];
+      } else {
+        const messageTextLower = messageText.toLowerCase().trim();
+        for (const service of services2) {
+          const serviceNameLower = service.name.toLowerCase();
+          if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
+            selectedService = service;
+            break;
+          }
+        }
+      }
+      if (!selectedService) {
+        const serviceList = services2.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${index + 1}. ${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
+        }).join("\n");
+        return {
+          success: false,
+          message: `I couldn't find that service. Please select from our available services:
+
+${serviceList}
+
+Reply with the number or name of the service.`
+        };
+      }
+      context.selectedService = selectedService.id;
+      context.currentStep = "date_selection";
+      const availableDates = this.getAvailableDates();
+      return {
+        success: true,
+        message: `Great choice! You selected: ${selectedService.name}
+\u{1F4B0} Price: \u20B9${selectedService.base_price}
+\u23F0 Duration: ${selectedService.duration_minutes} minutes
+
+When would you like to book this service?
+
+${availableDates.map((date, index) => `${index + 1}. ${date.formatted}`).join("\n")}
+
+Please reply with the date number or date.`,
+        nextStep: "date_selection",
+        options: availableDates.map((date) => date.formatted)
+      };
+    } catch (error) {
+      console.error("Error handling service selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle date selection
+   */
+  async handleDateSelection(messageText, context) {
+    try {
+      const availableDates = this.getAvailableDates();
+      let selectedDate = null;
+      const dateNumber = parseInt(messageText);
+      if (!isNaN(dateNumber) && dateNumber >= 1 && dateNumber <= availableDates.length) {
+        selectedDate = availableDates[dateNumber - 1];
+      } else {
+        for (const date of availableDates) {
+          if (messageText.includes(date.formatted.toLowerCase()) || messageText.includes(date.date)) {
+            selectedDate = date;
+            break;
+          }
+        }
+      }
+      if (!selectedDate) {
+        return {
+          success: false,
+          message: "Please select a valid date from the list above."
+        };
+      }
+      context.selectedDate = selectedDate.date;
+      context.currentStep = "time_selection";
+      const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date);
+      return {
+        success: true,
+        message: `Perfect! You selected: ${selectedDate.formatted}
+
+Here are the available time slots:
+
+${timeSlots.map((slot, index) => `${index + 1}. ${slot.time} (${slot.available ? "Available" : "Booked"})`).join("\n")}
+
+Please reply with the time slot number or time.`,
+        nextStep: "time_selection",
+        options: timeSlots.filter((slot) => slot.available).map((slot) => slot.time)
+      };
+    } catch (error) {
+      console.error("Error handling date selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle time selection
+   */
+  async handleTimeSelection(messageText, context) {
+    try {
+      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate);
+      const availableSlots = availableTimeSlots.filter((slot) => slot.available);
+      let selectedTime = null;
+      const timeNumber = parseInt(messageText);
+      if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
+        selectedTime = availableSlots[timeNumber - 1].time;
+      } else {
+        for (const slot of availableSlots) {
+          if (messageText.includes(slot.time.toLowerCase()) || messageText.includes(slot.time.replace(":", ""))) {
+            selectedTime = slot.time;
+            break;
+          }
+        }
+      }
+      if (!selectedTime) {
+        return {
+          success: false,
+          message: "Please select a valid time slot from the list above."
+        };
+      }
+      context.selectedTime = selectedTime;
+      context.currentStep = "staff_selection";
+      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
+      return {
+        success: true,
+        message: `Excellent! You selected: ${selectedTime}
+
+Here are our available staff members:
+
+${availableStaff.map((staff, index) => `${index + 1}. ${staff.name} - ${staff.specialization}`).join("\n")}
+
+Please reply with the staff member number or name.`,
+        nextStep: "staff_selection",
+        options: availableStaff.map((staff) => staff.name)
+      };
+    } catch (error) {
+      console.error("Error handling time selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle staff selection
+   */
+  async handleStaffSelection(messageText, context) {
+    try {
+      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, context.selectedTime);
+      let selectedStaff = null;
+      const staffNumber = parseInt(messageText);
+      if (!isNaN(staffNumber) && staffNumber >= 1 && staffNumber <= availableStaff.length) {
+        selectedStaff = availableStaff[staffNumber - 1];
+      } else {
+        for (const staff of availableStaff) {
+          if (messageText.toLowerCase().includes(staff.name.toLowerCase())) {
+            selectedStaff = staff;
+            break;
+          }
+        }
+      }
+      if (!selectedStaff) {
+        return {
+          success: false,
+          message: "Please select a valid staff member from the list above."
+        };
+      }
+      context.selectedStaff = selectedStaff.id;
+      context.currentStep = "confirmation";
+      const service = await this.getServiceById(context.tenantId, context.selectedService);
+      const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${context.selectedTime}:00`);
+      context.appointmentData = {
+        customer_name: context.customerName || "WhatsApp Customer",
+        customer_phone: context.customerPhone,
+        customer_email: context.customerEmail || "",
+        service_id: context.selectedService,
+        staff_id: context.selectedStaff,
+        scheduled_at: appointmentDateTime.toISOString(),
+        amount: service?.base_price || 0,
+        currency: "INR",
+        notes: "Booked via WhatsApp Bot",
+        payment_status: "pending"
+      };
+      return {
+        success: true,
+        message: `Perfect! Here's your appointment summary:
+
+\u{1F4C5} **Appointment Details:**
+\u2022 Service: ${service?.name}
+\u2022 Date: ${context.selectedDate}
+\u2022 Time: ${context.selectedTime}
+\u2022 Staff: ${selectedStaff.name}
+\u2022 Price: \u20B9${service?.base_price}
+\u2022 Duration: ${service?.duration_minutes} minutes
+
+Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
+        nextStep: "confirmation"
+      };
+    } catch (error) {
+      console.error("Error handling staff selection:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error. Please try again."
+      };
+    }
+  }
+  /**
+   * Handle confirmation and create appointment
+   */
+  async handleConfirmation(messageText, context) {
+    try {
+      const confirmKeywords = ["yes", "confirm", "book", "ok", "okay", "proceed"];
+      if (!confirmKeywords.some((keyword) => messageText.includes(keyword))) {
+        return {
+          success: false,
+          message: "Please type 'yes' or 'confirm' to book the appointment, or 'cancel' to start over."
+        };
+      }
+      const appointmentId = await this.createAppointment(context.tenantId, context.appointmentData);
+      if (appointmentId) {
+        context.currentStep = "completed";
+        return {
+          success: true,
+          message: `\u{1F389} **Appointment Booked Successfully!**
+
+Your appointment has been confirmed:
+
+\u{1F4C5} Date: ${context.selectedDate}
+\u23F0 Time: ${context.selectedTime}
+\u{1F487}\u200D\u2640\uFE0F Service: ${context.appointmentData.service_id}
+\u{1F469}\u200D\u{1F4BC} Staff: ${context.selectedStaff}
+\u{1F4B0} Price: \u20B9${context.appointmentData.amount}
+
+You'll receive a confirmation SMS shortly. 
+
+Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
+          appointmentId,
+          nextStep: "completed"
+        };
+      } else {
+        return {
+          success: false,
+          message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
+        };
+      }
+    } catch (error) {
+      console.error("Error handling confirmation:", error);
+      return {
+        success: false,
+        message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
+      };
+    }
+  }
+  /**
+   * Get services for a tenant
+   */
+  async getServices(tenantId) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, description, base_price, duration_minutes
+        FROM offerings 
+        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
+        ORDER BY display_order, name
+      `, [tenantId]);
+      return result.rows;
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      return [];
+    }
+  }
+  /**
+   * Get service by ID
+   */
+  async getServiceById(tenantId, serviceId) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, description, base_price, duration_minutes
+        FROM offerings 
+        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service'
+      `, [tenantId, serviceId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("Error fetching service:", error);
+      return null;
+    }
+  }
+  /**
+   * Get available dates (next 7 days)
+   */
+  getAvailableDates() {
+    const dates = [];
+    const today = /* @__PURE__ */ new Date();
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toISOString().split("T")[0];
+      const formatted = date.toLocaleDateString("en-IN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+      dates.push({ date: dateStr, formatted });
+    }
+    return dates;
+  }
+  /**
+   * Get available time slots for a date
+   */
+  async getAvailableTimeSlots(tenantId, date) {
+    try {
+      const timeSlots = [
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00"
+      ];
+      const bookedSlots = await this.pool.query(`
+        SELECT scheduled_at
+        FROM transactions 
+        WHERE tenant_id = $1 
+        AND DATE(scheduled_at) = $2 
+        AND transaction_type = 'booking'
+      `, [tenantId, date]);
+      const bookedTimes = bookedSlots.rows.map(
+        (row) => new Date(row.scheduled_at).toTimeString().substring(0, 5)
+      );
+      return timeSlots.map((time) => ({
+        time,
+        available: !bookedTimes.includes(time)
+      }));
+    } catch (error) {
+      console.error("Error fetching time slots:", error);
+      return [];
+    }
+  }
+  /**
+   * Get available staff for a specific date and time
+   */
+  async getAvailableStaff(tenantId, date, time) {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, specializations
+        FROM staff 
+        WHERE tenant_id = $1 AND is_active = true
+        ORDER BY name
+      `, [tenantId]);
+      return result.rows.map((staff) => ({
+        id: staff.id,
+        name: staff.name,
+        specialization: Array.isArray(staff.specializations) ? staff.specializations.join(", ") : "General Services"
+      }));
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      return [];
+    }
+  }
+  /**
+   * Create appointment in database
+   */
+  async createAppointment(tenantId, appointmentData) {
+    try {
+      const result = await this.pool.query(`
+        INSERT INTO transactions (
+          tenant_id, transaction_type, customer_name, customer_phone, customer_email,
+          offering_id, staff_id, scheduled_at, duration_minutes,
+          amount, currency, notes, payment_status
+        ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING id
+      `, [
+        tenantId,
+        appointmentData.customer_name,
+        appointmentData.customer_phone,
+        appointmentData.customer_email,
+        appointmentData.service_id,
+        appointmentData.staff_id,
+        appointmentData.scheduled_at,
+        appointmentData.duration_minutes || 60,
+        appointmentData.amount,
+        appointmentData.currency,
+        appointmentData.notes,
+        appointmentData.payment_status
+      ]);
+      return result.rows[0]?.id || null;
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      return null;
+    }
+  }
+  /**
+   * Get appropriate emoji for service based on name and category
+   */
+  getServiceEmoji(serviceName, category) {
+    const name = serviceName.toLowerCase();
+    if (name.includes("hair") || name.includes("cut") || name.includes("color") || name.includes("style")) {
+      return "\u{1F487}\u200D\u2640\uFE0F";
+    }
+    if (name.includes("nail") || name.includes("manicure") || name.includes("pedicure") || name.includes("polish")) {
+      return "\u{1F485}";
+    }
+    if (name.includes("facial") || name.includes("skin") || name.includes("treatment")) {
+      return "\u2728";
+    }
+    if (name.includes("massage") || name.includes("spa")) {
+      return "\u{1F9D8}\u200D\u2640\uFE0F";
+    }
+    if (name.includes("makeup") || name.includes("bridal") || name.includes("party")) {
+      return "\u{1F484}";
+    }
+    if (name.includes("wax") || name.includes("threading")) {
+      return "\u{1FA92}";
+    }
+    return "\u2728";
+  }
+};
+
+// server/routes/simple-webhook.routes.ts
+function createSimpleWebhookRoutes() {
+  const router4 = Router5();
+  const bookingService = new WhatsAppBookingService();
+  router4.get("/whatsapp/simple", (req, res) => {
+    try {
+      const mode = req.query["hub.mode"];
+      const token = req.query["hub.verify_token"];
+      const challenge = req.query["hub.challenge"];
+      console.log("Simple webhook verification request:", { mode, token, challenge });
+      if (mode === "subscribe") {
+        if (token === process.env.WHATSAPP_VERIFY_TOKEN && challenge) {
+          console.log("Simple webhook verified successfully");
+          res.status(200).send(challenge);
+          return;
+        }
+      }
+      console.log("Simple webhook verification failed");
+      res.status(403).send("Forbidden");
+    } catch (error) {
+      console.error("Simple webhook verification error:", error);
+      res.status(400).send("Bad Request");
+    }
+  });
+  router4.post("/whatsapp/simple", async (req, res) => {
+    try {
+      const payload = req.body;
+      console.log("Simple webhook payload received:", JSON.stringify(payload, null, 2));
+      const messages2 = extractMessages(payload);
+      if (messages2.length === 0) {
+        console.log("No messages found in webhook payload");
+        return res.status(200).json({ success: true, processed: 0 });
+      }
+      const processedMessages = [];
+      for (const message of messages2) {
+        try {
+          console.log(`Processing message from ${message.from}: ${message.text?.body}`);
+          const bookingContext = {
+            tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+            // Bella Salon tenant ID
+            customerPhone: message.from,
+            currentStep: "welcome"
+          };
+          const result = await bookingService.processBookingMessage(
+            message,
+            bookingContext.tenantId,
+            bookingContext
+          );
+          if (result.success) {
+            processedMessages.push({
+              messageId: message.id,
+              phoneNumber: message.from,
+              response: result.message,
+              nextStep: result.nextStep,
+              appointmentId: result.appointmentId
+            });
+            console.log(`Generated response: ${result.message.substring(0, 100)}...`);
+          } else {
+            console.error(`Failed to process message: ${result.error}`);
+          }
+        } catch (error) {
+          console.error(`Error processing message ${message.id}:`, error);
+        }
+      }
+      console.log(`Successfully processed ${processedMessages.length} messages`);
+      res.status(200).json({
+        success: true,
+        processed: processedMessages.length,
+        messages: processedMessages
+      });
+    } catch (error) {
+      console.error("Simple webhook processing error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_PROCESSING_ERROR",
+        message: "Internal server error processing webhook"
+      });
+    }
+  });
+  router4.post("/whatsapp/simple/test", async (req, res) => {
+    try {
+      const { phoneNumber, message } = req.body;
+      if (!phoneNumber || !message) {
+        return res.status(400).json({
+          error: "MISSING_PARAMETERS",
+          message: "phoneNumber and message are required"
+        });
+      }
+      console.log(`Test message from ${phoneNumber}: ${message}`);
+      const bookingContext = {
+        tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+        // Bella Salon tenant ID
+        customerPhone: phoneNumber,
+        currentStep: "welcome"
+      };
+      const result = await bookingService.processBookingMessage(
+        { text: { body: message }, from: phoneNumber, id: "test", type: "text", timestamp: (/* @__PURE__ */ new Date()).toISOString() },
+        bookingContext.tenantId,
+        bookingContext
+      );
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          nextStep: result.nextStep,
+          appointmentId: result.appointmentId
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error || "Unknown error"
+        });
+      }
+    } catch (error) {
+      console.error("Simple webhook test error:", error);
+      res.status(500).json({
+        error: "WEBHOOK_TEST_FAILED",
+        message: "Failed to test webhook"
+      });
+    }
+  });
+  return router4;
+}
+function extractMessages(payload) {
+  try {
+    const messages2 = [];
+    for (const entry of payload.entry || []) {
+      for (const change of entry.changes || []) {
+        if (change.field === "messages" && change.value.messages) {
+          messages2.push(...change.value.messages);
+        }
+      }
+    }
+    return messages2;
+  } catch (error) {
+    console.error("Error extracting messages:", error);
+    return [];
+  }
+}
+
 // server/routes.ts
 init_dynamic_flow_processor_service();
 
@@ -7281,14 +7946,14 @@ import { eq as eq7, and as and7, like as like3, inArray as inArray4, desc as des
 // server/repositories/base.repository.ts
 import { eq as eq6, and as and6, desc as desc4, asc as asc3, like as like2, inArray as inArray3, gte as gte4, lte as lte2, sql as sql5 } from "drizzle-orm";
 import { drizzle as drizzle5 } from "drizzle-orm/neon-serverless";
-import { Pool as Pool7 } from "@neondatabase/serverless";
+import { Pool as Pool8 } from "@neondatabase/serverless";
 var BaseRepository = class {
   db;
   pool;
   table;
   options;
   constructor(connectionString, table, options = {}) {
-    this.pool = new Pool7({ connectionString });
+    this.pool = new Pool8({ connectionString });
     this.db = drizzle5({ client: this.pool, schema: schema_exports });
     this.table = table;
     this.options = {
@@ -7850,7 +8515,7 @@ var ServiceRepository = class extends BaseRepository {
 
 // server/services/bot-configuration.service.ts
 import { drizzle as drizzle6 } from "drizzle-orm/neon-serverless";
-import { Pool as Pool8 } from "@neondatabase/serverless";
+import { Pool as Pool9 } from "@neondatabase/serverless";
 var BotConfigurationService = class {
   db;
   pool;
@@ -7858,7 +8523,7 @@ var BotConfigurationService = class {
   configurationCache = /* @__PURE__ */ new Map();
   changeListeners = /* @__PURE__ */ new Map();
   constructor(connectionString) {
-    this.pool = new Pool8({ connectionString });
+    this.pool = new Pool9({ connectionString });
     this.db = drizzle6({ client: this.pool, schema: schema_exports });
     this.settingsService = new TenantSettingsService(connectionString);
     setInterval(() => {
@@ -8488,529 +9153,6 @@ var BotConfigurationService = class {
     } catch (error) {
       console.error("Error closing bot configuration service:", error);
     }
-  }
-};
-
-// server/services/whatsapp-booking.service.ts
-import { Pool as Pool9 } from "@neondatabase/serverless";
-var WhatsAppBookingService = class {
-  pool;
-  constructor() {
-    this.pool = new Pool9({
-      connectionString: process.env.DATABASE_URL
-    });
-  }
-  /**
-   * Process WhatsApp booking message and return appropriate response
-   */
-  async processBookingMessage(message, tenantId, context) {
-    try {
-      const messageText = message.text?.body?.toLowerCase().trim() || "";
-      switch (context.currentStep) {
-        case "welcome":
-          return await this.handleWelcome(messageText, context);
-        case "service_selection":
-          return await this.handleServiceSelection(messageText, context);
-        case "date_selection":
-          return await this.handleDateSelection(messageText, context);
-        case "time_selection":
-          return await this.handleTimeSelection(messageText, context);
-        case "staff_selection":
-          return await this.handleStaffSelection(messageText, context);
-        case "confirmation":
-          return await this.handleConfirmation(messageText, context);
-        default:
-          return {
-            success: false,
-            message: "I'm sorry, I didn't understand that. Please start over by typing 'book appointment'."
-          };
-      }
-    } catch (error) {
-      console.error("Error processing booking message:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error processing your request. Please try again later.",
-        error: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-  }
-  /**
-   * Handle welcome message and start booking flow
-   */
-  async handleWelcome(messageText, context) {
-    const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
-    if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
-      try {
-        const services2 = await this.getServices(context.tenantId);
-        if (services2.length === 0) {
-          return {
-            success: false,
-            message: "I'm sorry, no services are currently available. Please contact us directly."
-          };
-        }
-        const serviceList = services2.map((service, index) => {
-          const emoji = this.getServiceEmoji(service.name, service.category);
-          return `${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
-        }).join("\n");
-        return {
-          success: true,
-          message: `Hi! \u{1F44B} Welcome to Bella Salon! I'm here to help you book an appointment.
-
-Here are our services:
-${serviceList}
-
-Reply with the number or name of the service to book.`,
-          nextStep: "service_selection",
-          options: services2.map((service) => service.name)
-        };
-      } catch (error) {
-        console.error("Error fetching services in welcome:", error);
-        return {
-          success: false,
-          message: "I'm sorry, there was an error loading our services. Please try again later."
-        };
-      }
-    }
-    return {
-      success: false,
-      message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'."
-    };
-  }
-  /**
-   * Handle service selection
-   */
-  async handleServiceSelection(messageText, context) {
-    try {
-      const services2 = await this.getServices(context.tenantId);
-      if (services2.length === 0) {
-        return {
-          success: false,
-          message: "I'm sorry, no services are currently available. Please contact us directly."
-        };
-      }
-      let selectedService = null;
-      const serviceNumber = parseInt(messageText.trim());
-      if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services2.length) {
-        selectedService = services2[serviceNumber - 1];
-      } else {
-        const messageTextLower = messageText.toLowerCase().trim();
-        for (const service of services2) {
-          const serviceNameLower = service.name.toLowerCase();
-          if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
-            selectedService = service;
-            break;
-          }
-        }
-      }
-      if (!selectedService) {
-        const serviceList = services2.map((service, index) => {
-          const emoji = this.getServiceEmoji(service.name, service.category);
-          return `${index + 1}. ${emoji} ${service.name} \u2013 \u20B9${service.base_price}`;
-        }).join("\n");
-        return {
-          success: false,
-          message: `I couldn't find that service. Please select from our available services:
-
-${serviceList}
-
-Reply with the number or name of the service.`
-        };
-      }
-      context.selectedService = selectedService.id;
-      context.currentStep = "date_selection";
-      const availableDates = this.getAvailableDates();
-      return {
-        success: true,
-        message: `Great choice! You selected: ${selectedService.name}
-\u{1F4B0} Price: \u20B9${selectedService.base_price}
-\u23F0 Duration: ${selectedService.duration_minutes} minutes
-
-When would you like to book this service?
-
-${availableDates.map((date, index) => `${index + 1}. ${date.formatted}`).join("\n")}
-
-Please reply with the date number or date.`,
-        nextStep: "date_selection",
-        options: availableDates.map((date) => date.formatted)
-      };
-    } catch (error) {
-      console.error("Error handling service selection:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error. Please try again."
-      };
-    }
-  }
-  /**
-   * Handle date selection
-   */
-  async handleDateSelection(messageText, context) {
-    try {
-      const availableDates = this.getAvailableDates();
-      let selectedDate = null;
-      const dateNumber = parseInt(messageText);
-      if (!isNaN(dateNumber) && dateNumber >= 1 && dateNumber <= availableDates.length) {
-        selectedDate = availableDates[dateNumber - 1];
-      } else {
-        for (const date of availableDates) {
-          if (messageText.includes(date.formatted.toLowerCase()) || messageText.includes(date.date)) {
-            selectedDate = date;
-            break;
-          }
-        }
-      }
-      if (!selectedDate) {
-        return {
-          success: false,
-          message: "Please select a valid date from the list above."
-        };
-      }
-      context.selectedDate = selectedDate.date;
-      context.currentStep = "time_selection";
-      const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date);
-      return {
-        success: true,
-        message: `Perfect! You selected: ${selectedDate.formatted}
-
-Here are the available time slots:
-
-${timeSlots.map((slot, index) => `${index + 1}. ${slot.time} (${slot.available ? "Available" : "Booked"})`).join("\n")}
-
-Please reply with the time slot number or time.`,
-        nextStep: "time_selection",
-        options: timeSlots.filter((slot) => slot.available).map((slot) => slot.time)
-      };
-    } catch (error) {
-      console.error("Error handling date selection:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error. Please try again."
-      };
-    }
-  }
-  /**
-   * Handle time selection
-   */
-  async handleTimeSelection(messageText, context) {
-    try {
-      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate);
-      const availableSlots = availableTimeSlots.filter((slot) => slot.available);
-      let selectedTime = null;
-      const timeNumber = parseInt(messageText);
-      if (!isNaN(timeNumber) && timeNumber >= 1 && timeNumber <= availableSlots.length) {
-        selectedTime = availableSlots[timeNumber - 1].time;
-      } else {
-        for (const slot of availableSlots) {
-          if (messageText.includes(slot.time.toLowerCase()) || messageText.includes(slot.time.replace(":", ""))) {
-            selectedTime = slot.time;
-            break;
-          }
-        }
-      }
-      if (!selectedTime) {
-        return {
-          success: false,
-          message: "Please select a valid time slot from the list above."
-        };
-      }
-      context.selectedTime = selectedTime;
-      context.currentStep = "staff_selection";
-      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, selectedTime);
-      return {
-        success: true,
-        message: `Excellent! You selected: ${selectedTime}
-
-Here are our available staff members:
-
-${availableStaff.map((staff, index) => `${index + 1}. ${staff.name} - ${staff.specialization}`).join("\n")}
-
-Please reply with the staff member number or name.`,
-        nextStep: "staff_selection",
-        options: availableStaff.map((staff) => staff.name)
-      };
-    } catch (error) {
-      console.error("Error handling time selection:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error. Please try again."
-      };
-    }
-  }
-  /**
-   * Handle staff selection
-   */
-  async handleStaffSelection(messageText, context) {
-    try {
-      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, context.selectedTime);
-      let selectedStaff = null;
-      const staffNumber = parseInt(messageText);
-      if (!isNaN(staffNumber) && staffNumber >= 1 && staffNumber <= availableStaff.length) {
-        selectedStaff = availableStaff[staffNumber - 1];
-      } else {
-        for (const staff of availableStaff) {
-          if (messageText.toLowerCase().includes(staff.name.toLowerCase())) {
-            selectedStaff = staff;
-            break;
-          }
-        }
-      }
-      if (!selectedStaff) {
-        return {
-          success: false,
-          message: "Please select a valid staff member from the list above."
-        };
-      }
-      context.selectedStaff = selectedStaff.id;
-      context.currentStep = "confirmation";
-      const service = await this.getServiceById(context.tenantId, context.selectedService);
-      const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${context.selectedTime}:00`);
-      context.appointmentData = {
-        customer_name: context.customerName || "WhatsApp Customer",
-        customer_phone: context.customerPhone,
-        customer_email: context.customerEmail || "",
-        service_id: context.selectedService,
-        staff_id: context.selectedStaff,
-        scheduled_at: appointmentDateTime.toISOString(),
-        amount: service?.base_price || 0,
-        currency: "INR",
-        notes: "Booked via WhatsApp Bot",
-        payment_status: "pending"
-      };
-      return {
-        success: true,
-        message: `Perfect! Here's your appointment summary:
-
-\u{1F4C5} **Appointment Details:**
-\u2022 Service: ${service?.name}
-\u2022 Date: ${context.selectedDate}
-\u2022 Time: ${context.selectedTime}
-\u2022 Staff: ${selectedStaff.name}
-\u2022 Price: \u20B9${service?.base_price}
-\u2022 Duration: ${service?.duration_minutes} minutes
-
-Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
-        nextStep: "confirmation"
-      };
-    } catch (error) {
-      console.error("Error handling staff selection:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error. Please try again."
-      };
-    }
-  }
-  /**
-   * Handle confirmation and create appointment
-   */
-  async handleConfirmation(messageText, context) {
-    try {
-      const confirmKeywords = ["yes", "confirm", "book", "ok", "okay", "proceed"];
-      if (!confirmKeywords.some((keyword) => messageText.includes(keyword))) {
-        return {
-          success: false,
-          message: "Please type 'yes' or 'confirm' to book the appointment, or 'cancel' to start over."
-        };
-      }
-      const appointmentId = await this.createAppointment(context.tenantId, context.appointmentData);
-      if (appointmentId) {
-        context.currentStep = "completed";
-        return {
-          success: true,
-          message: `\u{1F389} **Appointment Booked Successfully!**
-
-Your appointment has been confirmed:
-
-\u{1F4C5} Date: ${context.selectedDate}
-\u23F0 Time: ${context.selectedTime}
-\u{1F487}\u200D\u2640\uFE0F Service: ${context.appointmentData.service_id}
-\u{1F469}\u200D\u{1F4BC} Staff: ${context.selectedStaff}
-\u{1F4B0} Price: \u20B9${context.appointmentData.amount}
-
-You'll receive a confirmation SMS shortly. 
-
-Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
-          appointmentId,
-          nextStep: "completed"
-        };
-      } else {
-        return {
-          success: false,
-          message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
-        };
-      }
-    } catch (error) {
-      console.error("Error handling confirmation:", error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error booking your appointment. Please try again or contact us directly."
-      };
-    }
-  }
-  /**
-   * Get services for a tenant
-   */
-  async getServices(tenantId) {
-    try {
-      const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
-        ORDER BY display_order, name
-      `, [tenantId]);
-      return result.rows;
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      return [];
-    }
-  }
-  /**
-   * Get service by ID
-   */
-  async getServiceById(tenantId, serviceId) {
-    try {
-      const result = await this.pool.query(`
-        SELECT id, name, description, base_price, duration_minutes
-        FROM offerings 
-        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service'
-      `, [tenantId, serviceId]);
-      return result.rows[0] || null;
-    } catch (error) {
-      console.error("Error fetching service:", error);
-      return null;
-    }
-  }
-  /**
-   * Get available dates (next 7 days)
-   */
-  getAvailableDates() {
-    const dates = [];
-    const today = /* @__PURE__ */ new Date();
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
-      const formatted = date.toLocaleDateString("en-IN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      });
-      dates.push({ date: dateStr, formatted });
-    }
-    return dates;
-  }
-  /**
-   * Get available time slots for a date
-   */
-  async getAvailableTimeSlots(tenantId, date) {
-    try {
-      const timeSlots = [
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00"
-      ];
-      const bookedSlots = await this.pool.query(`
-        SELECT scheduled_at
-        FROM transactions 
-        WHERE tenant_id = $1 
-        AND DATE(scheduled_at) = $2 
-        AND transaction_type = 'booking'
-      `, [tenantId, date]);
-      const bookedTimes = bookedSlots.rows.map(
-        (row) => new Date(row.scheduled_at).toTimeString().substring(0, 5)
-      );
-      return timeSlots.map((time) => ({
-        time,
-        available: !bookedTimes.includes(time)
-      }));
-    } catch (error) {
-      console.error("Error fetching time slots:", error);
-      return [];
-    }
-  }
-  /**
-   * Get available staff for a specific date and time
-   */
-  async getAvailableStaff(tenantId, date, time) {
-    try {
-      const result = await this.pool.query(`
-        SELECT id, name, specializations
-        FROM staff 
-        WHERE tenant_id = $1 AND is_active = true
-        ORDER BY name
-      `, [tenantId]);
-      return result.rows.map((staff) => ({
-        id: staff.id,
-        name: staff.name,
-        specialization: Array.isArray(staff.specializations) ? staff.specializations.join(", ") : "General Services"
-      }));
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      return [];
-    }
-  }
-  /**
-   * Create appointment in database
-   */
-  async createAppointment(tenantId, appointmentData) {
-    try {
-      const result = await this.pool.query(`
-        INSERT INTO transactions (
-          tenant_id, transaction_type, customer_name, customer_phone, customer_email,
-          offering_id, staff_id, scheduled_at, duration_minutes,
-          amount, currency, notes, payment_status
-        ) VALUES ($1, 'booking', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        RETURNING id
-      `, [
-        tenantId,
-        appointmentData.customer_name,
-        appointmentData.customer_phone,
-        appointmentData.customer_email,
-        appointmentData.service_id,
-        appointmentData.staff_id,
-        appointmentData.scheduled_at,
-        appointmentData.duration_minutes || 60,
-        appointmentData.amount,
-        appointmentData.currency,
-        appointmentData.notes,
-        appointmentData.payment_status
-      ]);
-      return result.rows[0]?.id || null;
-    } catch (error) {
-      console.error("Error creating appointment:", error);
-      return null;
-    }
-  }
-  /**
-   * Get appropriate emoji for service based on name and category
-   */
-  getServiceEmoji(serviceName, category) {
-    const name = serviceName.toLowerCase();
-    if (name.includes("hair") || name.includes("cut") || name.includes("color") || name.includes("style")) {
-      return "\u{1F487}\u200D\u2640\uFE0F";
-    }
-    if (name.includes("nail") || name.includes("manicure") || name.includes("pedicure") || name.includes("polish")) {
-      return "\u{1F485}";
-    }
-    if (name.includes("facial") || name.includes("skin") || name.includes("treatment")) {
-      return "\u2728";
-    }
-    if (name.includes("massage") || name.includes("spa")) {
-      return "\u{1F9D8}\u200D\u2640\uFE0F";
-    }
-    if (name.includes("makeup") || name.includes("bridal") || name.includes("party")) {
-      return "\u{1F484}";
-    }
-    if (name.includes("wax") || name.includes("threading")) {
-      return "\u{1FA92}";
-    }
-    return "\u2728";
   }
 };
 
@@ -11619,6 +11761,8 @@ We apologize for any inconvenience caused.`;
   const whatsappSender = new WhatsAppSenderService();
   const webhookRoutes = createWebhookRoutes(messageProcessor, whatsappSender);
   app2.use("/api/webhook", webhookRoutes);
+  const simpleWebhookRoutes = createSimpleWebhookRoutes();
+  app2.use("/api", simpleWebhookRoutes);
   app2.post("/api/bot-flows/:flowId/activate", async (req, res) => {
     try {
       const { flowId } = req.params;
