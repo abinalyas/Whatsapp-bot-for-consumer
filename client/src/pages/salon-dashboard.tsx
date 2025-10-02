@@ -7246,6 +7246,13 @@ export default function SalonDashboard() {
           }
         }
         
+        // CRITICAL FIX: Always convert time to 24-hour format if it exists but is in 12-hour format
+        if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM'))) {
+          const convertedTime = convertTo24HourFormat(timeValue);
+          console.log('🕐 Converting existing time from 12-hour to 24-hour:', timeValue, '->', convertedTime);
+          timeValue = convertedTime;
+        }
+        
         // Final fallback - if still no time, use a reasonable default
         if (!timeValue) {
           timeValue = "10:00";
@@ -7254,7 +7261,13 @@ export default function SalonDashboard() {
         
         // Find staff ID (this should already be correct)
         let staffId = appointment.staff_id || "";
-        console.log('🔍 Staff ID from appointment:', staffId);
+        console.log('🔍 Staff assignment debug:', {
+          appointmentStaffId: appointment.staff_id,
+          appointmentStaffName: appointment.staff_name || appointment.staff,
+          staffId,
+          staffDataLoaded: staffResult?.data?.length || 0,
+          staffData: staffResult?.data
+        });
         
         // Set the edit appointment data
         const editData = {
