@@ -158,6 +158,15 @@ export function createSimpleWebhookRoutes(): Router {
       } else {
         // Create a deep copy to avoid modifying the stored state directly
         bookingContext = JSON.parse(JSON.stringify(bookingContext));
+        
+        // If the conversation is completed, start a new one
+        if (bookingContext.currentStep === 'completed') {
+          bookingContext = {
+            tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+            customerPhone: phoneNumber,
+            currentStep: 'welcome'
+          };
+        }
       }
 
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);

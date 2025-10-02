@@ -75,6 +75,11 @@ export class WhatsAppBookingService {
         case 'confirmation':
           return await this.handleConfirmation(messageText, context);
         
+        case 'completed':
+          // If conversation is completed, start a new one
+          context.currentStep = 'welcome';
+          return await this.handleWelcome(messageText, context);
+        
         default:
           return {
             success: false,

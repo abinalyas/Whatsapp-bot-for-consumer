@@ -67,6 +67,9 @@ var init_whatsapp_booking_service = __esm({
               return await this.handleStaffSelection(messageText, context);
             case "confirmation":
               return await this.handleConfirmation(messageText, context);
+            case "completed":
+              context.currentStep = "welcome";
+              return await this.handleWelcome(messageText, context);
             default:
               return {
                 success: false,
@@ -8070,6 +8073,14 @@ function createSimpleWebhookRoutes() {
         };
       } else {
         bookingContext = JSON.parse(JSON.stringify(bookingContext));
+        if (bookingContext.currentStep === "completed") {
+          bookingContext = {
+            tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
+            // Bella Salon tenant ID
+            customerPhone: phoneNumber,
+            currentStep: "welcome"
+          };
+        }
       }
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
       const result = await bookingService.processBookingMessage(
