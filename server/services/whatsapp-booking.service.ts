@@ -660,6 +660,8 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getAvailableTimeSlots(tenantId: string, date: string, serviceName?: string): Promise<Array<{ time: string; available: boolean; assignedStaff?: { id: string; name: string } }>> {
     try {
+      console.log('🔍 getAvailableTimeSlots called with:', { tenantId, date, serviceName });
+      
       // Standard time slots
       const timeSlots = [
         '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
@@ -667,6 +669,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
 
       // If no service is specified, use the old logic
       if (!serviceName) {
+        console.log('🔍 Using basic time slot logic (no service specified)');
         const bookedSlots = await this.pool.query(`
           SELECT appointment_time
           FROM bookings 
@@ -675,11 +678,15 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
         `, [date]);
 
         const bookedTimes = bookedSlots.rows.map(row => row.appointment_time);
+        console.log('🔍 Found booked times:', bookedTimes);
 
-        return timeSlots.map(time => ({
+        const result = timeSlots.map(time => ({
           time,
           available: !bookedTimes.includes(time)
         }));
+        
+        console.log('🔍 Time slots result:', result);
+        return result;
       }
 
       // Get staff who can perform this service
