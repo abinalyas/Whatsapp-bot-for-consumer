@@ -6251,6 +6251,7 @@ export default function SalonDashboard() {
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]); // Store all appointments for revenue calculation
   
   // Staff schedule state
   const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
@@ -6266,6 +6267,27 @@ export default function SalonDashboard() {
   const [showProcessPaymentModal, setShowProcessPaymentModal] = useState(false);
   const [showSendRemindersModal, setShowSendRemindersModal] = useState(false);
   const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
+
+  // Load all appointments for calendar and revenue calculation
+  const loadAllAppointments = async () => {
+    try {
+      console.log('🚀 MAIN COMPONENT: Loading all appointments...');
+      const response = await fetch('/api/salon/appointments', {
+        headers: { 'x-tenant-id': 'bella-salon' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          console.log('🚀 MAIN COMPONENT: Loaded all appointments:', result.data?.length || 0);
+          setAllAppointments(result.data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading all appointments:', error);
+      setAllAppointments([]);
+    }
+  };
 
   // Load today's appointments for staff schedule
   const loadTodaysAppointments = async () => {
@@ -6335,9 +6357,10 @@ export default function SalonDashboard() {
     }
   };
 
-  // Load today's appointments on component mount
+  // Load today's appointments and all appointments on component mount
   useEffect(() => {
     loadTodaysAppointments();
+    loadAllAppointments();
   }, []);
 
   const [showWalkInModal, setShowWalkInModal] = useState(false);
