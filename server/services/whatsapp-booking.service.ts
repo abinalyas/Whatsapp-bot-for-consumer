@@ -344,6 +344,13 @@ Please reply with the time slot number or time.`,
       
       // Find the assigned staff for this time slot
       const selectedSlot = availableSlots.find(slot => slot.time === selectedTime);
+      console.log('🔍 Time selection debug:', {
+        selectedTime,
+        availableSlots: availableSlots.length,
+        selectedSlot: selectedSlot ? 'found' : 'not found',
+        hasAssignedStaff: selectedSlot?.assignedStaff ? 'yes' : 'no'
+      });
+      
       if (selectedSlot && selectedSlot.assignedStaff) {
         context.selectedStaff = selectedSlot.assignedStaff.id;
         context.currentStep = 'confirmation';
@@ -660,6 +667,11 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
 
       // Get staff who can perform this service
       const skilledStaff = await this.getStaffForService(tenantId, serviceName);
+      console.log('🔍 getAvailableTimeSlots debug:', {
+        serviceName,
+        skilledStaffCount: skilledStaff.length,
+        skilledStaff: skilledStaff.map(s => s.name)
+      });
       
       if (skilledStaff.length === 0) {
         console.log(`No staff available for service: ${serviceName}`);
