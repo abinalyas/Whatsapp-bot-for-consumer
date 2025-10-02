@@ -463,6 +463,13 @@ router.get('/appointments', async (req, res) => {
     
     const result = await pool.query(query, params);
     
+    // Add cache-busting headers to prevent frontend caching issues
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.json({
       success: true,
       data: result.rows

@@ -4694,6 +4694,11 @@ router2.get("/appointments", async (req, res) => {
     }
     query += ` ORDER BY scheduled_at DESC`;
     const result = await pool2.query(query, params);
+    res.set({
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
+    });
     res.json({
       success: true,
       data: result.rows
