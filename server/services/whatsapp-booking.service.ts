@@ -101,6 +101,16 @@ export class WhatsAppBookingService {
    */
   private async handleWelcome(messageText: string, context: BookingContext): Promise<BookingResponse> {
     const bookingKeywords = ['book', 'appointment', 'booking', 'schedule', 'reserve'];
+    const greetingKeywords = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
+    
+    // Handle greeting messages
+    if (greetingKeywords.some(keyword => messageText.includes(keyword))) {
+      return {
+        success: true,
+        message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
+        nextStep: 'welcome'
+      };
+    }
     
     if (bookingKeywords.some(keyword => messageText.includes(keyword))) {
       try {

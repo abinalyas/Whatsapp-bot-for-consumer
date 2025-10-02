@@ -90,6 +90,14 @@ var init_whatsapp_booking_service = __esm({
        */
       async handleWelcome(messageText, context) {
         const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
+        const greetingKeywords = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"];
+        if (greetingKeywords.some((keyword) => messageText.includes(keyword))) {
+          return {
+            success: true,
+            message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
+            nextStep: "welcome"
+          };
+        }
         if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
           try {
             const services2 = await this.getServices(context.tenantId);
