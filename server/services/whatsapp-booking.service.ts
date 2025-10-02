@@ -69,9 +69,6 @@ export class WhatsAppBookingService {
         case 'time_selection':
           return await this.handleTimeSelection(messageText, context);
         
-        case 'staff_selection':
-          return await this.handleStaffSelection(messageText, context);
-        
         case 'confirmation':
           return await this.handleConfirmation(messageText, context);
         
@@ -281,8 +278,9 @@ Please reply with the date number or date.`,
       context.selectedDate = selectedDate.date;
       context.currentStep = 'time_selection';
 
-      // Get available time slots for selected date
-      const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date);
+      // Get available time slots for selected date, filtered by service
+      const selectedService = await this.getServiceById(context.selectedService);
+      const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
 
       return {
         success: true,
@@ -311,7 +309,8 @@ Please reply with the time slot number or time.`,
    */
   private async handleTimeSelection(messageText: string, context: BookingContext): Promise<BookingResponse> {
     try {
-      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!);
+      const selectedService = await this.getServiceById(context.selectedService);
+      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!, selectedService?.name);
       const availableSlots = availableTimeSlots.filter(slot => slot.available);
       
       let selectedTime = null;
@@ -334,23 +333,58 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
-      context.currentStep = 'staff_selection';
+      
+      // Find the assigned staff for this time slot
+      const selectedSlot = availableSlots.find(slot => slot.time === selectedTime);
+      if (selectedSlot && selectedSlot.assignedStaff) {
+        context.selectedStaff = selectedSlot.assignedStaff.id;
+        context.currentStep = 'confirmation';
+        
+        // Get service details for confirmation
+        const service = await this.getServiceById(context.selectedService);
+        
+        // Set appointment data for confirmation step
+        const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
+        const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+        const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
+        
+        context.appointmentData = {
+          customer_name: context.customerName || 'WhatsApp Customer',
+          customer_phone: context.customerPhone,
+          customer_email: context.customerEmail || '',
+          service_id: context.selectedService,
+          service_name: service?.name || 'Unknown Service',
+          staff_id: selectedSlot.assignedStaff.id,
+          staff_name: selectedSlot.assignedStaff.name,
+          scheduled_at: utcDateTime.toISOString(),
+          selectedTime: selectedTime,
+          amount: service?.price || 0,
+          currency: 'INR',
+          notes: 'Booked via WhatsApp Bot',
+          payment_status: 'pending'
+        };
+        
+        return {
+          success: true,
+          message: `Perfect! You selected: ${selectedTime}
 
-      // Get available staff for the selected time
-      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate!, selectedTime);
+✅ **Appointment Summary:**
+• Service: ${service?.name}
+• Date: ${context.selectedDate}
+• Time: ${selectedTime}
+• Staff: ${selectedSlot.assignedStaff.name}
+• Price: ₹${service?.price}
+• Duration: ${service?.duration_minutes} minutes
 
-      return {
-        success: true,
-        message: `Excellent! You selected: ${selectedTime}
-
-Here are our available staff members:
-
-${availableStaff.map((staff, index) => `${index + 1}. ${staff.name} - ${staff.specialization}`).join('\n')}
-
-Please reply with the staff member number or name.`,
-        nextStep: 'staff_selection',
-        options: availableStaff.map(staff => staff.name)
-      };
+Please reply with "confirm" to book this appointment, or "change" to modify your selection.`,
+          nextStep: 'confirmation'
+        };
+      } else {
+        return {
+          success: false,
+          message: "I'm sorry, this time slot is no longer available. Please select another time."
+        };
+      }
 
     } catch (error) {
       console.error('Error handling time selection:', error);
@@ -417,90 +451,6 @@ Please reply with the staff member number or name.`,
     return null;
   }
 
-  /**
-   * Handle staff selection
-   */
-  private async handleStaffSelection(messageText: string, context: BookingContext): Promise<BookingResponse> {
-    try {
-      const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate!, context.selectedTime!);
-      
-      let selectedStaff = null;
-
-      // Try to match by number
-      const staffNumber = parseInt(messageText);
-      if (!isNaN(staffNumber) && staffNumber >= 1 && staffNumber <= availableStaff.length) {
-        selectedStaff = availableStaff[staffNumber - 1];
-      } else {
-        // Try to match by staff name
-        for (const staff of availableStaff) {
-          if (messageText.toLowerCase().includes(staff.name.toLowerCase())) {
-            selectedStaff = staff;
-            break;
-          }
-        }
-      }
-
-      if (!selectedStaff) {
-        return {
-          success: false,
-          message: "Please select a valid staff member from the list above."
-        };
-      }
-
-      context.selectedStaff = selectedStaff.id;
-      context.currentStep = 'confirmation';
-
-      // Get service details for confirmation
-      const service = await this.getServiceById(context.tenantId, context.selectedService!);
-
-      // Create appointment data
-      // Parse the selected time and date in Indian timezone
-      const appointmentDateTime = new Date(`${context.selectedDate}T${context.selectedTime}:00`);
-      
-      // Convert to UTC for storage (subtract 5:30 hours for IST to UTC conversion)
-      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-      const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
-      
-      context.appointmentData = {
-        customer_name: context.customerName || 'WhatsApp Customer',
-        customer_phone: context.customerPhone,
-        customer_email: context.customerEmail || '',
-        service_id: context.selectedService,
-        service_name: service?.name || 'Unknown Service',
-        staff_id: context.selectedStaff,
-        staff_name: selectedStaff.name,
-        scheduled_at: utcDateTime.toISOString(),
-        selectedTime: context.selectedTime,
-        amount: service?.price || 0,
-        currency: 'INR',
-        notes: 'Booked via WhatsApp Bot',
-        payment_status: 'pending'
-      };
-
-      return {
-        success: true,
-        message: `Perfect! Here's your appointment summary:
-
-📅 **Appointment Details:**
-• Service: ${service?.name}
-• Date: ${context.selectedDate}
-• Time: ${context.selectedTime}
-• Staff: ${selectedStaff.name}
-• Price: ₹${service?.price}
-• Duration: ${service?.duration_minutes} minutes
-
-Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
-        nextStep: 'confirmation'
-      };
-
-    } catch (error) {
-      console.error('Error handling staff selection:', error);
-      return {
-        success: false,
-        message: "I'm sorry, there was an error. Please try again."
-      };
-    }
-  }
 
   /**
    * Handle confirmation and create appointment
@@ -676,30 +626,118 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
   /**
    * Get available time slots for a date
    */
-  private async getAvailableTimeSlots(tenantId: string, date: string): Promise<Array<{ time: string; available: boolean }>> {
+  private async getAvailableTimeSlots(tenantId: string, date: string, serviceName?: string): Promise<Array<{ time: string; available: boolean; assignedStaff?: { id: string; name: string } }>> {
     try {
       // Standard time slots
       const timeSlots = [
         '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
       ];
 
-      // Check which slots are already booked
-      const bookedSlots = await this.pool.query(`
-        SELECT appointment_time
-        FROM bookings 
-        WHERE appointment_date = $1 
-        AND status != 'cancelled'
-      `, [date]);
+      // If no service is specified, use the old logic
+      if (!serviceName) {
+        const bookedSlots = await this.pool.query(`
+          SELECT appointment_time
+          FROM bookings 
+          WHERE appointment_date = $1 
+          AND status != 'cancelled'
+        `, [date]);
 
-      const bookedTimes = bookedSlots.rows.map(row => row.appointment_time);
+        const bookedTimes = bookedSlots.rows.map(row => row.appointment_time);
 
-      return timeSlots.map(time => ({
-        time,
-        available: !bookedTimes.includes(time)
-      }));
+        return timeSlots.map(time => ({
+          time,
+          available: !bookedTimes.includes(time)
+        }));
+      }
+
+      // Get staff who can perform this service
+      const skilledStaff = await this.getStaffForService(tenantId, serviceName);
+      
+      if (skilledStaff.length === 0) {
+        console.log(`No staff available for service: ${serviceName}`);
+        return timeSlots.map(time => ({ time, available: false }));
+      }
+
+      // Check availability for each time slot
+      const result = [];
+      for (const time of timeSlots) {
+        // Check if any skilled staff is available at this time
+        const availableStaff = await this.getAvailableStaffAtTime(tenantId, date, time, skilledStaff);
+        
+        if (availableStaff.length > 0) {
+          result.push({
+            time,
+            available: true,
+            assignedStaff: availableStaff[0] // Assign the first available staff
+          });
+        } else {
+          result.push({
+            time,
+            available: false
+          });
+        }
+      }
+
+      return result;
 
     } catch (error) {
       console.error('Error fetching time slots:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get staff who can perform a specific service
+   */
+  private async getStaffForService(tenantId: string, serviceName: string): Promise<Array<{ id: string; name: string; role: string }>> {
+    try {
+      const result = await this.pool.query(`
+        SELECT id, name, role
+        FROM staff 
+        WHERE tenant_id = $1 
+        AND is_active = true
+        AND specializations @> $2::jsonb
+      `, [tenantId, JSON.stringify([serviceName])]);
+
+      return result.rows.map(staff => ({
+        id: staff.id,
+        name: staff.name,
+        role: staff.role
+      }));
+    } catch (error) {
+      console.error('Error fetching staff for service:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available staff at a specific time from a list of skilled staff
+   */
+  private async getAvailableStaffAtTime(tenantId: string, date: string, time: string, skilledStaff: Array<{ id: string; name: string; role: string }>): Promise<Array<{ id: string; name: string }>> {
+    try {
+      if (skilledStaff.length === 0) {
+        return [];
+      }
+
+      // Check which skilled staff are already booked at this time
+      const staffIds = skilledStaff.map(staff => staff.id);
+      const bookedStaff = await this.pool.query(`
+        SELECT staff_id
+        FROM bookings 
+        WHERE appointment_date = $1 
+        AND appointment_time = $2
+        AND status != 'cancelled'
+        AND staff_id = ANY($3)
+      `, [date, time, staffIds]);
+
+      const bookedStaffIds = bookedStaff.rows.map(row => row.staff_id);
+
+      // Return staff who are not booked
+      return skilledStaff
+        .filter(staff => !bookedStaffIds.includes(staff.id))
+        .map(staff => ({ id: staff.id, name: staff.name }));
+    } catch (error) {
+      console.error('Error checking staff availability:', error);
       return [];
     }
   }
