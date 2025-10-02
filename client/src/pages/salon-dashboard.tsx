@@ -6141,6 +6141,13 @@ function WhatsAppBotSection() {
     responseTime: 0.8
   });
 
+  // Modal states
+  const [showEditFlowModal, setShowEditFlowModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [editingFlow, setEditingFlow] = useState(null);
+  const [previewFlow, setPreviewFlow] = useState(null);
+  const [editFlowActiveTab, setEditFlowActiveTab] = useState("basic-info");
+
   const [botFlows] = useState([
     {
       id: 1,
@@ -6149,7 +6156,30 @@ function WhatsAppBotSection() {
       category: "Booking",
       description: "Complete appointment booking flow with service selection and confirmation",
       uses: 342,
-      successRate: 87
+      successRate: 87,
+      flowSteps: [
+        "Greeting & service inquiry",
+        "Show available services & prices",
+        "Select preferred date & time",
+        "Choose staff member",
+        "Collect customer details",
+        "Confirm booking & send details"
+      ],
+      sampleConversation: [
+        { type: "bot", message: "Hi! 👋 Welcome to Bella Salon! I'm here to help you book an appointment. What service are you interested in today?" },
+        { type: "user", message: "I'd like a haircut and color" },
+        { type: "bot", message: "Great choice! 💇‍♀️ Here are our hair services:\n\n✂️ Hair Cut - $45 (60 mins)\n🎨 Hair Color - $85 (120 mins)\n💅 Hair Cut & Color Combo - $120 (150 mins)\n\nWhich option would you prefer?" },
+        { type: "user", message: "The combo sounds perfect" }
+      ],
+      settings: {
+        isActive: true,
+        autoFallback: true,
+        analyticsTracking: true,
+        keywords: "book, appointment, schedule",
+        priorityLevel: "Medium Priority",
+        businessHoursOnly: false,
+        afterHoursMessage: "Sorry, we're currently closed. Please try again during business hours..."
+      }
     },
     {
       id: 2,
@@ -6227,8 +6257,9 @@ function WhatsAppBotSection() {
   };
 
   const handlePreviewFlow = (flowId) => {
-    console.log(`Previewing flow ${flowId}...`);
-    // TODO: Implement flow preview
+    const flow = botFlows.find(f => f.id === flowId);
+    setPreviewFlow(flow);
+    setShowPreviewModal(true);
   };
 
   const handleCopyFlow = (flowId) => {
@@ -6237,8 +6268,27 @@ function WhatsAppBotSection() {
   };
 
   const handleEditFlow = (flowId) => {
-    console.log(`Editing flow ${flowId}...`);
-    // TODO: Implement flow editing
+    const flow = botFlows.find(f => f.id === flowId);
+    setEditingFlow(flow);
+    setShowEditFlowModal(true);
+    setEditFlowActiveTab("basic-info");
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditFlowModal(false);
+    setEditingFlow(null);
+    setEditFlowActiveTab("basic-info");
+  };
+
+  const handleClosePreviewModal = () => {
+    setShowPreviewModal(false);
+    setPreviewFlow(null);
+  };
+
+  const handleSaveFlow = () => {
+    console.log("Saving flow changes...");
+    // TODO: Implement save functionality
+    handleCloseEditModal();
   };
 
   return (
@@ -6394,6 +6444,315 @@ function WhatsAppBotSection() {
           </Card>
         ))}
       </div>
+
+      {/* Edit Flow Modal */}
+      {showEditFlowModal && editingFlow && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <div className="flex items-center gap-3">
+                <Edit className="h-6 w-6 text-blue-600" />
+                <h2 className="text-xl font-semibold">Edit Flow: {editingFlow.title}</h2>
+              </div>
+              <button
+                onClick={handleCloseEditModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex border-b">
+              {[
+                { id: "basic-info", label: "Basic Info" },
+                { id: "flow-steps", label: "Flow Steps" },
+                { id: "conversation", label: "Conversation" },
+                { id: "settings", label: "Settings" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setEditFlowActiveTab(tab.id)}
+                  className={`px-6 py-3 text-sm font-medium transition-colors ${
+                    editFlowActiveTab === tab.id
+                      ? "bg-white text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              {editFlowActiveTab === "basic-info" && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Flow Title</label>
+                    <input
+                      type="text"
+                      defaultValue={editingFlow.title}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="Booking">Booking</option>
+                      <option value="Management">Management</option>
+                      <option value="Information">Information</option>
+                      <option value="Payment">Payment</option>
+                      <option value="Rewards">Rewards</option>
+                      <option value="Feedback">Feedback</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea
+                      defaultValue={editingFlow.description}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Usage Count</label>
+                      <input
+                        type="number"
+                        defaultValue={editingFlow.uses}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Completion Rate (%)</label>
+                      <input
+                        type="number"
+                        defaultValue={editingFlow.successRate}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {editFlowActiveTab === "flow-steps" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Flow Steps</h3>
+                    <Button variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Step
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {editingFlow.flowSteps?.map((step, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <span className="text-sm">{step}</span>
+                        </div>
+                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editFlowActiveTab === "conversation" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Sample Conversation</h3>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Bot className="h-4 w-4 mr-2" />
+                        Add Bot Message
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <Users className="h-4 w-4 mr-2" />
+                        Add User Message
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {editingFlow.sampleConversation?.map((message, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          message.type === 'bot' ? 'bg-blue-100' : 'bg-gray-100'
+                        }`}>
+                          {message.type === 'bot' ? (
+                            <Bot className="h-4 w-4 text-blue-600" />
+                          ) : (
+                            <Users className="h-4 w-4 text-gray-600" />
+                          )}
+                        </div>
+                        <div className={`flex-1 p-3 rounded-lg ${
+                          message.type === 'bot' ? 'bg-gray-100' : 'bg-blue-600 text-white'
+                        }`}>
+                          <p className="text-sm whitespace-pre-line">{message.message}</p>
+                        </div>
+                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editFlowActiveTab === "settings" && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Flow Settings</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Enable or disable this flow</label>
+                        <Switch defaultChecked={editingFlow.settings?.isActive} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Fallback to human agent if flow fails</label>
+                        <Switch defaultChecked={editingFlow.settings?.autoFallback} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Track usage and performance metrics</label>
+                        <Switch defaultChecked={editingFlow.settings?.analyticsTracking} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Flow Triggers</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Keywords</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            defaultValue={editingFlow.settings?.keywords}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Comma-separated keywords that trigger this flow"
+                          />
+                          <Button variant="outline" size="sm">Edit</Button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Priority Level</label>
+                        <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="Low Priority">Low Priority</option>
+                          <option value="Medium Priority" selected>Medium Priority</option>
+                          <option value="High Priority">High Priority</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Business Hours</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium">Restrict flow to business hours only</label>
+                        <Switch defaultChecked={editingFlow.settings?.businessHoursOnly} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">After Hours Message</label>
+                        <div className="flex gap-2">
+                          <textarea
+                            defaultValue={editingFlow.settings?.afterHoursMessage}
+                            rows={3}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <Button variant="outline" size="sm">Edit</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+              <Button variant="outline" onClick={handleCloseEditModal}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveFlow}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flow Preview Modal */}
+      {showPreviewModal && previewFlow && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-6 w-6 text-blue-600" />
+                <h2 className="text-xl font-semibold">{previewFlow.title} - Flow Preview</h2>
+              </div>
+              <button
+                onClick={handleClosePreviewModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Flow Steps */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Flow Steps</h3>
+                <div className="space-y-3">
+                  {previewFlow.flowSteps?.map((step, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <span className="text-sm">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sample Conversation */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Sample Conversation</h3>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {previewFlow.sampleConversation?.map((message, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        message.type === 'bot' ? 'bg-blue-100' : 'bg-gray-100'
+                      }`}>
+                        {message.type === 'bot' ? (
+                          <Bot className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Users className="h-4 w-4 text-gray-600" />
+                        )}
+                      </div>
+                      <div className={`flex-1 p-3 rounded-lg ${
+                        message.type === 'bot' ? 'bg-gray-100' : 'bg-blue-600 text-white'
+                      }`}>
+                        <p className="text-sm whitespace-pre-line">{message.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
