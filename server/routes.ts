@@ -934,13 +934,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const webhookData = whatsAppMessageSchema.parse(req.body);
       
-      // Process each message
+      console.log("Legacy webhook received message, delegating to simple webhook...");
+      
+      // Process each message using our working simple webhook
       for (const entry of webhookData.entry) {
         for (const change of entry.changes) {
           if (change.value.messages) {
             for (const message of change.value.messages) {
               if (message.type === "text") {
-                await processWhatsAppMessage(message.from, message.text.body);
+                console.log(`Delegating message from ${message.from}: "${message.text.body}" to simple webhook`);
+                
+                try {
+                  // Use our working simple webhook service
+                  const bookingService = new (await import('./services/whatsapp-booking.service')).WhatsAppBookingService();
+                  
+                  // Initialize booking context
+                  const bookingContext = {
+                    tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+                    customerPhone: message.from,
+                    currentStep: 'welcome'
+                  };
+                  
+                  // Process the message with our working booking service
+                  const result = await bookingService.processBookingMessage(
+                    {
+                      text: { body: message.text.body },
+                      from: message.from,
+                      id: message.id || `legacy_${Date.now()}`,
+                      type: 'text',
+                      timestamp: new Date().toISOString()
+                    },
+                    bookingContext.tenantId,
+                    bookingContext
+                  );
+                  
+                  if (result.success && result.message) {
+                    await sendWhatsAppMessage(message.from, result.message);
+                    console.log(`Successfully processed message via simple webhook`);
+                  } else {
+                    console.error(`Simple webhook failed to process message:`, result);
+                    await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                  }
+                } catch (error) {
+                  console.error("Error delegating to simple webhook:", error);
+                  await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                }
               }
             }
           }
