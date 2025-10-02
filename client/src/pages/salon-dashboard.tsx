@@ -7100,7 +7100,7 @@ export default function SalonDashboard() {
     if (!timeString) return "10:00";
     
     // If already in 24-hour format (HH:mm), return as is
-    if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM')) {
+    if (/^\d{1,2}:\d{2}$/.test(timeString) && !timeString.includes('AM') && !timeString.includes('PM') && !timeString.includes('am') && !timeString.includes('pm')) {
       return timeString;
     }
     
@@ -7109,9 +7109,11 @@ export default function SalonDashboard() {
     const [hours, minutes] = time.split(':');
     let hour24 = parseInt(hours);
     
-    if (period === 'PM' && hour24 !== 12) {
+    // Handle both uppercase and lowercase AM/PM
+    const periodUpper = period?.toUpperCase();
+    if (periodUpper === 'PM' && hour24 !== 12) {
       hour24 += 12;
-    } else if (period === 'AM' && hour24 === 12) {
+    } else if (periodUpper === 'AM' && hour24 === 12) {
       hour24 = 0;
     }
     
@@ -7244,8 +7246,8 @@ export default function SalonDashboard() {
         }
         
         // CRITICAL FIX: Always convert time to 24-hour format if it exists but is in 12-hour format
-        console.log('🕐 BEFORE CONVERSION - timeValue:', timeValue, 'contains AM/PM:', timeValue && (timeValue.includes('AM') || timeValue.includes('PM')));
-        if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM'))) {
+        console.log('🕐 BEFORE CONVERSION - timeValue:', timeValue, 'contains AM/PM:', timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm')));
+        if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm'))) {
           const convertedTime = convertTo24HourFormat(timeValue);
           console.log('🕐 Converting existing time from 12-hour to 24-hour:', timeValue, '->', convertedTime);
           timeValue = convertedTime;
