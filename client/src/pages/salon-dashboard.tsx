@@ -2718,7 +2718,7 @@ function StaffSection({
   );
 }
 
-function CalendarSection({ loadTodaysAppointments, appointments, setAppointments, handleEditAppointment }) {
+function CalendarSection({ loadTodaysAppointments, appointments, setAppointments, handleEditAppointment, editAppointment, setEditAppointment }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
   console.log('📅 CALENDAR SECTION: Received props - appointments length:', appointments?.length || 0);
   console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
@@ -2748,17 +2748,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
     time: "",
     notes: ""
   });
-  const [editAppointment, setEditAppointment] = useState({
-    customerName: "",
-    phone: "",
-    email: "",
-    service: "",
-    staffMember: "",
-    date: "",
-    time: "",
-    status: "confirmed",
-    notes: ""
-  });
+  // editAppointment state is now passed as a prop from the main component
   const [cancelReason, setCancelReason] = useState("");
   const [sendNotification, setSendNotification] = useState(true);
   const [services, setServices] = useState<UIService[]>([]);
@@ -7303,7 +7293,12 @@ export default function SalonDashboard() {
         console.log('🚨 CRITICAL: Setting editAppointment state with time:', editData.time);
         
         console.log('🔍 Setting edit appointment data:', editData);
+        console.log('🚨 CRITICAL: About to call setEditAppointment with time:', editData.time);
         setEditAppointment(editData);
+        console.log('🚨 CRITICAL: setEditAppointment called, checking state after 100ms...');
+        setTimeout(() => {
+          console.log('🚨 CRITICAL: State check after 100ms - editAppointment.time should be:', editData.time);
+        }, 100);
       }
     } catch (error) {
       console.error('Error loading data for edit modal:', error);
@@ -7505,6 +7500,8 @@ export default function SalonDashboard() {
           appointments={appointmentsToPass}
           setAppointments={handleSetAppointments}
           handleEditAppointment={handleEditAppointment}
+          editAppointment={editAppointment}
+          setEditAppointment={setEditAppointment}
         />;
       case "payments":
         return <PaymentsSection />;
