@@ -583,6 +583,32 @@ router.post('/appointments', async (req, res) => {
       finalAmount, currency, notes, payment_status
     ]);
     
+    // Send real-time notification
+    try {
+      const notificationResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/realtime/broadcast/${tenantId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'new_appointment',
+          data: {
+            appointment: result.rows[0],
+            message: 'New appointment booked!',
+            timestamp: new Date().toISOString()
+          }
+        })
+      });
+      
+      if (notificationResponse.ok) {
+        console.log('✅ Real-time notification sent for new appointment');
+      } else {
+        console.log('⚠️ Failed to send real-time notification');
+      }
+    } catch (error) {
+      console.error('❌ Error sending real-time notification:', error);
+    }
+
     res.status(201).json({
       success: true,
       data: result.rows[0]

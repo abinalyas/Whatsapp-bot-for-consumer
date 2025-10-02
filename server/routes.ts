@@ -9,6 +9,7 @@ import salonApiRoutes from "./routes/salon-api";
 import staffApiRoutes from "./routes/staff-api";
 import { createWebhookRoutes } from "./routes/webhook.routes";
 import { createSimpleWebhookRoutes } from "./routes/simple-webhook.routes";
+import { createRealtimeRoutes } from "./routes/realtime.routes";
 import { DynamicFlowProcessorService } from './services/dynamic-flow-processor.service';
 import { MessageProcessorService } from './services/message-processor.service';
 import { WhatsAppSenderService } from './services/whatsapp-sender.service';
@@ -1423,6 +1424,10 @@ We apologize for any inconvenience caused.`;
   // Add simple webhook routes that actually work
   const simpleWebhookRoutes = createSimpleWebhookRoutes();
   app.use("/api", simpleWebhookRoutes);
+  
+  // Add real-time routes for live updates
+  const realtimeRoutes = createRealtimeRoutes();
+  app.use("/api/realtime", realtimeRoutes);
 
   // Flow activation endpoints
   app.post("/api/bot-flows/:flowId/activate", async (req, res) => {

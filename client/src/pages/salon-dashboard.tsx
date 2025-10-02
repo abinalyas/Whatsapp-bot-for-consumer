@@ -7010,6 +7010,11 @@ export default function SalonDashboard() {
   
   // Staff schedule state
   const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
+  
+  // Real-time notifications
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   
   // Cancel appointment modal state
@@ -7177,6 +7182,152 @@ export default function SalonDashboard() {
     loadTodaysAppointments();
     loadAllAppointments();
   }, []);
+
+  // Real-time notifications setup
+  useEffect(() => {
+    const tenantId = '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7'; // Bella Salon tenant ID
+    const eventSource = new EventSource(`/api/realtime/events/${tenantId}`);
+    
+    eventSource.onopen = () => {
+      console.log('🔗 Real-time connection established');
+      setRealtimeConnected(true);
+    };
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📡 Real-time update received:', data);
+        
+        if (data.type === 'new_appointment' || data.type === 'new_whatsapp_booking') {
+          // Add notification
+          setNotifications(prev => [...prev, {
+            id: Date.now(),
+            type: data.type,
+            message: data.data.message,
+            appointment: data.data.appointment,
+            timestamp: data.timestamp
+          }]);
+          
+          // Refresh appointments data
+          loadTodaysAppointments();
+          loadAllAppointments();
+          
+          // Show browser notification
+          if (Notification.permission === 'granted') {
+            new Notification('New Appointment!', {
+              body: `${data.data.appointment.customer_name} - ${data.data.appointment.service_name}`,
+              icon: '/favicon.ico'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error parsing real-time data:', error);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('❌ Real-time connection error:', error);
+      setRealtimeConnected(false);
+    };
+    
+    // Request notification permission
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    
+    return () => {
+      eventSource.close();
+      setRealtimeConnected(false);
+    };
+  }, []);
+
+  // Notification UI Components
+  const NotificationIndicator = () => (
+    <div className="relative">
+      <button
+        onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+        className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        title={`${notifications.length} new notifications`}
+      >
+        <Bell className="h-6 w-6 text-gray-600" />
+        {notifications.length > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {notifications.length}
+          </span>
+        )}
+        {realtimeConnected && (
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+        )}
+      </button>
+    </div>
+  );
+
+  const NotificationPanel = () => (
+    showNotificationPanel && (
+      <div className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-900">Notifications</h3>
+            <button
+              onClick={() => setNotifications([])}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Clear All
+            </button>
+          </div>
+          <div className="flex items-center mt-2">
+            <div className={`w-2 h-2 rounded-full mr-2 ${realtimeConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-xs text-gray-600">
+              {realtimeConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+        </div>
+        
+        <div className="p-2">
+          {notifications.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Bell className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <p>No notifications yet</p>
+            </div>
+          ) : (
+            notifications.slice().reverse().map((notification) => (
+              <div key={notification.id} className="p-3 border-b border-gray-100 hover:bg-gray-50">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    {notification.type === 'new_whatsapp_booking' ? (
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm">📱</span>
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm">📅</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {notification.appointment?.customer_name || 'Unknown Customer'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {notification.appointment?.service_name || 'Service'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(notification.timestamp).toLocaleTimeString()}
+                    </p>
+                    {notification.type === 'new_whatsapp_booking' && (
+                      <span className="inline-block mt-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                        WhatsApp Bot
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    )
+  );
 
   const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [showDailySummaryModal, setShowDailySummaryModal] = useState(false);

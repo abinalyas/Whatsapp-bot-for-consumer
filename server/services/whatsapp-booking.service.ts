@@ -838,6 +838,42 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
 
       console.log(`✅ Booking created successfully: ${bookingId}`);
       console.log(`📊 Query result:`, result.rows);
+      
+      // Send real-time notification for WhatsApp Bot bookings
+      try {
+        const notificationResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/realtime/broadcast/${tenantId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: 'new_whatsapp_booking',
+            data: {
+              appointment: {
+                id: result.rows[0]?.id,
+                customer_name: appointmentData.customer_name,
+                customer_phone: appointmentData.customer_phone,
+                service_name: appointmentData.service_name,
+                staff_name: appointmentData.staff_name,
+                scheduled_at: appointmentData.scheduled_at,
+                amount: appointmentData.amount,
+                source: 'WhatsApp Bot'
+              },
+              message: 'New WhatsApp Bot booking!',
+              timestamp: new Date().toISOString()
+            }
+          })
+        });
+        
+        if (notificationResponse.ok) {
+          console.log('✅ Real-time notification sent for WhatsApp Bot booking');
+        } else {
+          console.log('⚠️ Failed to send real-time notification for WhatsApp Bot booking');
+        }
+      } catch (error) {
+        console.error('❌ Error sending real-time notification for WhatsApp Bot booking:', error);
+      }
+      
       return result.rows[0]?.id || null;
 
     } catch (error) {
