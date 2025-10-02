@@ -2240,7 +2240,7 @@ function StaffSection({
                     <TableCell className="font-medium">
                       {appointment.time || 'N/A'}
                     </TableCell>
-                    <TableCell>
+                  <TableCell>
                       {appointment.staff_name || 'Unassigned'}
                     </TableCell>
                     <TableCell>
@@ -2255,10 +2255,10 @@ function StaffSection({
                         variant="outline"
                         onClick={() => handleReassignAppointment(appointment)}
                       >
-                        Reassign
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      Reassign
+                    </Button>
+                  </TableCell>
+                </TableRow>
                 ))
               )}
             </TableBody>
@@ -3416,7 +3416,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                         <div className="text-sm font-medium text-gray-900">
                           {time}
                       </div>
-                      </div>
+                            </div>
                       
                       {/* Status Indicator */}
                       <div className="flex-shrink-0">
@@ -3478,7 +3478,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                                 className="text-xs"
                               >
                                 {apt.status || 'confirmed'}
-                              </Badge>
+                            </Badge>
                             ))}
                           </div>
                         ) : (
@@ -7292,6 +7292,9 @@ export default function SalonDashboard() {
           finalEditData: editData
         });
         
+        // CRITICAL DEBUG: Log what's being set in the form
+        console.log('🚨 CRITICAL: Setting editAppointment state with time:', editData.time);
+        
         console.log('🔍 Setting edit appointment data:', editData);
         setEditAppointment(editData);
       }
@@ -7674,9 +7677,16 @@ export default function SalonDashboard() {
                   <input
                     type="time"
                     value={editAppointment.time}
-                    onChange={(e) => setEditAppointment({...editAppointment, time: e.target.value})}
+                    onChange={(e) => {
+                      console.log('🕐 Time input changed:', e.target.value);
+                      setEditAppointment({...editAppointment, time: e.target.value});
+                    }}
                     className="w-full p-3 border border-input rounded-md bg-background"
                   />
+                  {/* DEBUG: Show what value the time input is getting */}
+                  <div className="text-xs text-red-500 mt-1">
+                    DEBUG: Time input value = "{editAppointment.time}"
+                  </div>
                 </div>
               </div>
 
