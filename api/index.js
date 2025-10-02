@@ -461,11 +461,11 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       async getServices(tenantId) {
         try {
           const result = await this.pool.query(`
-        SELECT id, name, description, base_price as price, is_active
-        FROM offerings 
-        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
-        ORDER BY display_order, name
-      `, [tenantId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE is_active = true
+        ORDER BY name
+      `);
           return result.rows;
         } catch (error) {
           console.error("Error fetching services:", error);
@@ -478,10 +478,10 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       async getServiceById(tenantId, serviceId) {
         try {
           const result = await this.pool.query(`
-        SELECT id, name, description, base_price as price, is_active
-        FROM offerings 
-        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service' AND is_active = true
-      `, [tenantId, serviceId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE id = $1 AND is_active = true
+      `, [serviceId]);
           return result.rows[0] || null;
         } catch (error) {
           console.error("Error fetching service:", error);

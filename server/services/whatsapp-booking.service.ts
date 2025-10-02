@@ -544,13 +544,13 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getServices(tenantId: string): Promise<any[]> {
     try {
-      // Use the same data source as salon dashboard (offerings table)
+      // Use the services table to match the bookings foreign key constraint
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price as price, is_active
-        FROM offerings 
-        WHERE tenant_id = $1 AND offering_type = 'service' AND is_active = true
-        ORDER BY display_order, name
-      `, [tenantId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE is_active = true
+        ORDER BY name
+      `);
       
       return result.rows;
     } catch (error) {
@@ -564,12 +564,12 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
    */
   private async getServiceById(tenantId: string, serviceId: string): Promise<any> {
     try {
-      // Use the same data source as salon dashboard (offerings table)
+      // Use the services table to match the bookings foreign key constraint
       const result = await this.pool.query(`
-        SELECT id, name, description, base_price as price, is_active
-        FROM offerings 
-        WHERE tenant_id = $1 AND id = $2 AND offering_type = 'service' AND is_active = true
-      `, [tenantId, serviceId]);
+        SELECT id, name, description, price, is_active
+        FROM services 
+        WHERE id = $1 AND is_active = true
+      `, [serviceId]);
       
       return result.rows[0] || null;
     } catch (error) {
