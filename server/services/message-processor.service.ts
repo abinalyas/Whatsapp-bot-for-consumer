@@ -10,6 +10,7 @@ import * as schema from '@shared/schema';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { ServiceRepository } from '../repositories/service.repository';
 import { BotConfigurationService } from './bot-configuration.service';
+import { WhatsAppBookingService, BookingContext } from './whatsapp-booking.service';
 import type {
   ServiceResponse,
   TenantContext,
@@ -132,6 +133,7 @@ export class MessageProcessorService {
   private conversationRepo: ConversationRepository;
   private serviceRepo: ServiceRepository;
   private botConfigService: BotConfigurationService;
+  private bookingService: WhatsAppBookingService;
 
   constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
@@ -139,6 +141,7 @@ export class MessageProcessorService {
     this.conversationRepo = new ConversationRepository(connectionString);
     this.serviceRepo = new ServiceRepository(connectionString);
     this.botConfigService = new BotConfigurationService(connectionString);
+    this.bookingService = new WhatsAppBookingService();
   }
 
   // ===== MAIN MESSAGE PROCESSING =====
@@ -470,6 +473,9 @@ export class MessageProcessorService {
         case 'completed':
           return this.handleCompletedState(tenantId, messageContent, contextData);
 
+        case 'booking_flow':
+          return this.handleBookingFlowState(tenantId, messageContent, message, contextData);
+
         default:
           return this.handleUnknownState(tenantId, messageContent, contextData);
       }
@@ -494,20 +500,63 @@ export class MessageProcessorService {
     contextData: any
   ): Promise<ServiceResponse<{ newState?: string; response?: BotResponse; contextData?: any }>> {
     try {
+      // Check if this is a booking request
+      const bookingKeywords = ['book', 'appointment', 'booking', 'schedule', 'reserve'];
+      const isBookingRequest = bookingKeywords.some(keyword => 
+        messageContent.toLowerCase().includes(keyword)
+      );
+
+      if (isBookingRequest) {
+        // Initialize booking context
+        const bookingContext: BookingContext = {
+          tenantId,
+          customerPhone: contextData.customerPhone || 'unknown',
+          currentStep: 'welcome'
+        };
+
+        // Process booking message
+        const bookingResult = await this.bookingService.processBookingMessage(
+          { text: { body: messageContent } } as any,
+          tenantId,
+          bookingContext
+        );
+
+        if (bookingResult.success) {
+          return {
+            success: true,
+            data: {
+              newState: 'booking_flow',
+              response: {
+                content: bookingResult.message,
+                messageType: 'text',
+              },
+              contextData: {
+                ...contextData,
+                bookingContext: {
+                  ...bookingContext,
+                  currentStep: bookingResult.nextStep || 'service_selection'
+                },
+                isBookingFlow: true,
+              },
+            },
+          };
+        }
+      }
+
       // Get bot configuration for personalized greeting
       const configResult = await this.botConfigService.getBotConfiguration(tenantId);
       if (!configResult.success) {
         console.error('Failed to get bot configuration:', configResult.error);
         // Fallback to default greeting
         const response: BotResponse = {
-          content: 'Hello! Welcome to our business. I\'m here to help you book an appointment.',
+          content: 'Hello! Welcome to Bella Salon. I\'m here to help you book an appointment. Type "book appointment" to get started!',
           messageType: 'text',
         };
 
         return {
           success: true,
           data: {
-            newState: 'awaiting_service',
+            newState: 'greeting',
             response,
             contextData: {
               ...contextData,
@@ -959,6 +1008,83 @@ We'll send you a reminder before your appointment. Thank you for choosing us!`,
         },
       },
     };
+  }
+
+  /**
+   * Handle booking flow state
+   */
+  private async handleBookingFlowState(
+    tenantId: string,
+    messageContent: string,
+    message: WhatsAppMessage,
+    contextData: any
+  ): Promise<ServiceResponse<{ newState?: string; response?: BotResponse; contextData?: any }>> {
+    try {
+      const bookingContext = contextData.bookingContext as BookingContext;
+      
+      if (!bookingContext) {
+        return {
+          success: false,
+          error: {
+            code: 'BOOKING_CONTEXT_MISSING',
+            message: 'Booking context not found',
+          },
+        };
+      }
+
+      // Update customer phone from message
+      bookingContext.customerPhone = message.from;
+
+      // Process booking message
+      const bookingResult = await this.bookingService.processBookingMessage(
+        message,
+        tenantId,
+        bookingContext
+      );
+
+      if (bookingResult.success) {
+        const newState = bookingResult.nextStep === 'completed' ? 'completed' : 'booking_flow';
+        
+        return {
+          success: true,
+          data: {
+            newState,
+            response: {
+              content: bookingResult.message,
+              messageType: 'text',
+            },
+            contextData: {
+              ...contextData,
+              bookingContext: {
+                ...bookingContext,
+                currentStep: bookingResult.nextStep || bookingContext.currentStep
+              },
+              appointmentId: bookingResult.appointmentId,
+            },
+          },
+        };
+      } else {
+        return {
+          success: true,
+          data: {
+            response: {
+              content: bookingResult.message,
+              messageType: 'text',
+            },
+            contextData,
+          },
+        };
+      }
+    } catch (error) {
+      console.error('Error handling booking flow state:', error);
+      return {
+        success: false,
+        error: {
+          code: 'BOOKING_FLOW_ERROR',
+          message: 'Failed to process booking flow',
+        },
+      };
+    }
   }
 
   /**
