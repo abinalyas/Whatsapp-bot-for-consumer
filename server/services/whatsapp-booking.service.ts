@@ -336,8 +336,18 @@ Please reply with the time slot number or time.`,
             console.log(`🔍 Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
             
             let hour = parseInt(match[1]);
-            let minute = match[2] ? parseInt(match[2]) : 0;
-            const period = match[3]?.toLowerCase();
+            let minute = 0;
+            let period = undefined;
+            
+            // Handle different pattern structures
+            if (pattern.toString().includes('(\\d{1,2}):(\\d{2})')) {
+              // Pattern has minute group: /(\d{1,2}):(\d{2})\s*(am|pm)/i or /(\d{1,2}):(\d{2})/i
+              minute = parseInt(match[2]);
+              period = match[3];
+            } else if (pattern.toString().includes('(am|pm)')) {
+              // Pattern has period but no minute: /(\d{1,2})\s*(am|pm)/i
+              period = match[2];
+            }
             
             console.log(`🔍 Parsed time:`, { hour, minute, period });
             

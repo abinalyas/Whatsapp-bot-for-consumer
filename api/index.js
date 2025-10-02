@@ -286,8 +286,14 @@ Please reply with the time slot number or time.`,
               if (match) {
                 console.log(`\u{1F50D} Time pattern match:`, { pattern: pattern.toString(), match: match[0], groups: match });
                 let hour = parseInt(match[1]);
-                let minute = match[2] ? parseInt(match[2]) : 0;
-                const period = match[3]?.toLowerCase();
+                let minute = 0;
+                let period = void 0;
+                if (pattern.toString().includes("(\\d{1,2}):(\\d{2})")) {
+                  minute = parseInt(match[2]);
+                  period = match[3];
+                } else if (pattern.toString().includes("(am|pm)")) {
+                  period = match[2];
+                }
                 console.log(`\u{1F50D} Parsed time:`, { hour, minute, period });
                 if (period === "pm" && hour !== 12) {
                   hour += 12;
