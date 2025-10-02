@@ -3335,6 +3335,13 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
     console.log('📅 Current date:', currentDate);
     const dayAppointments = getAppointmentsForDate(currentDate);
     console.log('📅 Day appointments for current date:', dayAppointments);
+    console.log('🔍 Day appointments breakdown:', dayAppointments.map(apt => ({ 
+      id: apt.id, 
+      customer: apt.customer_name, 
+      staff: apt.staff_name, 
+      time: apt.time,
+      duplicate: dayAppointments.filter(a => a.id === apt.id).length > 1
+    })));
     const dateString = currentDate.toLocaleDateString('en-IN', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -3492,6 +3499,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
               <div className="space-y-6">
                 {staffMembers.map((staff, index) => {
                   const staffAppointments = dayAppointments.filter(apt => apt.staff_name === staff);
+                  console.log(`🔍 Timeline: Staff ${staff} has ${staffAppointments.length} appointments:`, staffAppointments.map(apt => ({ id: apt.id, customer: apt.customer_name, time: apt.time })));
                   
                   // Create hourly timeline (9 AM to 7 PM)
                   const hours = Array.from({ length: 11 }, (_, i) => i + 9); // 9 to 19 (9 AM to 7 PM)
