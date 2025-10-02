@@ -220,11 +220,25 @@ export function createSimpleWebhookRoutes(): Router {
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
 
       // Process the message
+      console.log('🔍 Processing message with bookingService:', {
+        message,
+        phoneNumber,
+        currentStep: bookingContext.currentStep,
+        tenantId: bookingContext.tenantId
+      });
+      
       const result = await bookingService.processBookingMessage(
         { text: { body: message }, from: phoneNumber, id: 'test', type: 'text', timestamp: new Date().toISOString() },
         bookingContext.tenantId,
         bookingContext
       );
+      
+      console.log('🔍 BookingService result:', {
+        success: result.success,
+        nextStep: result.nextStep,
+        message: result.message?.substring(0, 100) + '...',
+        error: result.error
+      });
 
       // Update conversation state if successful
       if (result.success && result.nextStep) {
