@@ -7736,15 +7736,12 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         "17:00"
       ];
       const bookedSlots = await this.pool.query(`
-        SELECT scheduled_at
-        FROM transactions 
-        WHERE tenant_id = $1 
-        AND DATE(scheduled_at) = $2 
-        AND transaction_type = 'booking'
-      `, [tenantId, date]);
-      const bookedTimes = bookedSlots.rows.map(
-        (row) => new Date(row.scheduled_at).toTimeString().substring(0, 5)
-      );
+        SELECT appointment_time
+        FROM bookings 
+        WHERE appointment_date = $1 
+        AND status != 'cancelled'
+      `, [date]);
+      const bookedTimes = bookedSlots.rows.map((row) => row.appointment_time);
       return timeSlots.map((time) => ({
         time,
         available: !bookedTimes.includes(time)
