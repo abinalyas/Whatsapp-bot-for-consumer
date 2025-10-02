@@ -346,7 +346,8 @@ Please reply with the time slot number or time.`,
         };
       }
       
-      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!, selectedService?.name);
+      // Temporarily disable smart staff matching to isolate the issue
+      const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate!);
       const availableSlots = availableTimeSlots.filter(slot => slot.available);
       
       let selectedTime = null;
@@ -369,19 +370,7 @@ Please reply with the time slot number or time.`,
       }
 
       context.selectedTime = selectedTime;
-      
-      // Find the assigned staff for this time slot
-      const selectedSlot = availableSlots.find(slot => slot.time === selectedTime);
-      console.log('🔍 Time selection debug:', {
-        selectedTime,
-        availableSlots: availableSlots.length,
-        selectedSlot: selectedSlot ? 'found' : 'not found',
-        hasAssignedStaff: selectedSlot?.assignedStaff ? 'yes' : 'no'
-      });
-      
-      if (selectedSlot && selectedSlot.assignedStaff) {
-        context.selectedStaff = selectedSlot.assignedStaff.id;
-        context.currentStep = 'confirmation';
+      context.currentStep = 'confirmation';
         
         // Get service details for confirmation
         const service = await this.getServiceById(context.selectedService);
@@ -397,8 +386,8 @@ Please reply with the time slot number or time.`,
           customer_email: context.customerEmail || '',
           service_id: context.selectedService,
           service_name: service?.name || 'Unknown Service',
-          staff_id: selectedSlot.assignedStaff.id,
-          staff_name: selectedSlot.assignedStaff.name,
+          staff_id: null, // Temporarily disable staff assignment
+          staff_name: 'To be assigned',
           scheduled_at: utcDateTime.toISOString(),
           selectedTime: selectedTime,
           amount: service?.price || 0,
