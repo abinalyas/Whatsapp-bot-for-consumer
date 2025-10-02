@@ -51,7 +51,7 @@ export class WhatsAppBookingService {
       // Handle different booking steps
       switch (context.currentStep) {
         case 'welcome':
-          return this.handleWelcome(messageText, context);
+          return await this.handleWelcome(messageText, context);
         
         case 'service_selection':
           return await this.handleServiceSelection(messageText, context);
@@ -87,25 +87,45 @@ export class WhatsAppBookingService {
   /**
    * Handle welcome message and start booking flow
    */
-  private handleWelcome(messageText: string, context: BookingContext): BookingResponse {
+  private async handleWelcome(messageText: string, context: BookingContext): Promise<BookingResponse> {
     const bookingKeywords = ['book', 'appointment', 'booking', 'schedule', 'reserve'];
     
     if (bookingKeywords.some(keyword => messageText.includes(keyword))) {
-      return {
-        success: true,
-        message: `Hi! 👋 Welcome to Bella Salon! I'm here to help you book an appointment. 
+      try {
+        // Fetch actual services from database
+        const services = await this.getServices(context.tenantId);
+        
+        if (services.length === 0) {
+          return {
+            success: false,
+            message: "I'm sorry, no services are currently available. Please contact us directly."
+          };
+        }
 
-What service are you interested in today?
+        // Display services with emojis and pricing
+        const serviceList = services.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${emoji} ${service.name} – ₹${service.base_price}`;
+        }).join('\n');
 
-💇‍♀️ Hair Cut & Color
-💅 Manicure
-✨ Facial
-🔍 View All Services
+        return {
+          success: true,
+          message: `Hi! 👋 Welcome to Bella Salon! I'm here to help you book an appointment.
 
-Please reply with the service name or number.`,
-        nextStep: 'service_selection',
-        options: ['Hair Cut & Color', 'Manicure', 'Facial', 'View All Services']
-      };
+Here are our services:
+${serviceList}
+
+Reply with the number or name of the service to book.`,
+          nextStep: 'service_selection',
+          options: services.map(service => service.name)
+        };
+      } catch (error) {
+        console.error('Error fetching services in welcome:', error);
+        return {
+          success: false,
+          message: "I'm sorry, there was an error loading our services. Please try again later."
+        };
+      }
     }
 
     return {
@@ -119,51 +139,49 @@ Please reply with the service name or number.`,
    */
   private async handleServiceSelection(messageText: string, context: BookingContext): Promise<BookingResponse> {
     try {
-      // Map common service names to database IDs
-      const serviceMapping: { [key: string]: string } = {
-        'hair cut': 'hair-cut',
-        'hair cut & color': 'hair-cut-color',
-        'hair color': 'hair-color',
-        'manicure': 'manicure',
-        'facial': 'facial',
-        '1': 'hair-cut-color',
-        '2': 'manicure',
-        '3': 'facial'
-      };
-
-      let selectedService = null;
-      for (const [keyword, serviceId] of Object.entries(serviceMapping)) {
-        if (messageText.includes(keyword)) {
-          selectedService = serviceId;
-          break;
-        }
-      }
-
-      if (!selectedService || messageText.includes('view all')) {
-        // Fetch all services from database
-        const services = await this.getServices(context.tenantId);
-        const serviceList = services.map((service, index) => 
-          `${index + 1}. ${service.name} - ₹${service.base_price} (${service.duration_minutes} mins)`
-        ).join('\n');
-
+      // Fetch all services from database
+      const services = await this.getServices(context.tenantId);
+      
+      if (services.length === 0) {
         return {
-          success: true,
-          message: `Here are all our services:\n\n${serviceList}\n\nPlease reply with the service name or number.`,
-          nextStep: 'service_selection'
+          success: false,
+          message: "I'm sorry, no services are currently available. Please contact us directly."
         };
       }
 
-      // Get service details
-      const service = await this.getServiceById(context.tenantId, selectedService);
-      if (!service) {
+      let selectedService = null;
+
+      // Try to match by number first
+      const serviceNumber = parseInt(messageText.trim());
+      if (!isNaN(serviceNumber) && serviceNumber >= 1 && serviceNumber <= services.length) {
+        selectedService = services[serviceNumber - 1];
+      } else {
+        // Try to match by service name (case insensitive)
+        const messageTextLower = messageText.toLowerCase().trim();
+        for (const service of services) {
+          const serviceNameLower = service.name.toLowerCase();
+          if (serviceNameLower.includes(messageTextLower) || messageTextLower.includes(serviceNameLower)) {
+            selectedService = service;
+            break;
+          }
+        }
+      }
+
+      if (!selectedService) {
+        // Show services again if no match found
+        const serviceList = services.map((service, index) => {
+          const emoji = this.getServiceEmoji(service.name, service.category);
+          return `${index + 1}. ${emoji} ${service.name} – ₹${service.base_price}`;
+        }).join('\n');
+
         return {
           success: false,
-          message: "I'm sorry, I couldn't find that service. Please try again with a valid service name."
+          message: `I couldn't find that service. Please select from our available services:\n\n${serviceList}\n\nReply with the number or name of the service.`
         };
       }
 
       // Update context with selected service
-      context.selectedService = selectedService;
+      context.selectedService = selectedService.id;
       context.currentStep = 'date_selection';
 
       // Get available dates (next 7 days)
@@ -171,9 +189,9 @@ Please reply with the service name or number.`,
 
       return {
         success: true,
-        message: `Great choice! You selected: ${service.name}
-💰 Price: ₹${service.base_price}
-⏰ Duration: ${service.duration_minutes} minutes
+        message: `Great choice! You selected: ${selectedService.name}
+💰 Price: ₹${selectedService.base_price}
+⏰ Duration: ${selectedService.duration_minutes} minutes
 
 When would you like to book this service?
 
@@ -596,5 +614,45 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       console.error('Error creating appointment:', error);
       return null;
     }
+  }
+
+  /**
+   * Get appropriate emoji for service based on name and category
+   */
+  private getServiceEmoji(serviceName: string, category?: string): string {
+    const name = serviceName.toLowerCase();
+    
+    // Hair services
+    if (name.includes('hair') || name.includes('cut') || name.includes('color') || name.includes('style')) {
+      return '💇‍♀️';
+    }
+    
+    // Nail services
+    if (name.includes('nail') || name.includes('manicure') || name.includes('pedicure') || name.includes('polish')) {
+      return '💅';
+    }
+    
+    // Facial/skin services
+    if (name.includes('facial') || name.includes('skin') || name.includes('treatment')) {
+      return '✨';
+    }
+    
+    // Massage services
+    if (name.includes('massage') || name.includes('spa')) {
+      return '🧘‍♀️';
+    }
+    
+    // Makeup services
+    if (name.includes('makeup') || name.includes('bridal') || name.includes('party')) {
+      return '💄';
+    }
+    
+    // Waxing services
+    if (name.includes('wax') || name.includes('threading')) {
+      return '🪒';
+    }
+    
+    // Default emoji
+    return '✨';
   }
 }
