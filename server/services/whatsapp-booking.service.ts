@@ -68,6 +68,7 @@ export class WhatsAppBookingService {
           return await this.handleDateSelection(messageText, context);
         
         case 'time_selection':
+          console.log('🔍 Routing to handleTimeSelection');
           return await this.handleTimeSelection(messageText, context);
         
         case 'confirmation':
