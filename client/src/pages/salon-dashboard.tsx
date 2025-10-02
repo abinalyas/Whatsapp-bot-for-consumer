@@ -2718,7 +2718,7 @@ function StaffSection({
   );
 }
 
-function CalendarSection({ loadTodaysAppointments, appointments, setAppointments, handleEditAppointment, editAppointment, setEditAppointment }) {
+function CalendarSection({ loadTodaysAppointments, appointments, setAppointments, handleEditAppointment, editAppointment, setEditAppointment, handleSaveEditAppointment }) {
   console.log('🗓️ CALENDAR SECTION RENDERED');
   console.log('📅 CALENDAR SECTION: Received props - appointments length:', appointments?.length || 0);
   console.log('📅 CALENDAR SECTION: Received appointments:', appointments);
@@ -2736,7 +2736,6 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
   const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
   const [showEditAppointmentModal, setShowEditAppointmentModal] = useState(false);
   const [showCancelAppointmentModal, setShowCancelAppointmentModal] = useState(false);
-  const [editingAppointment, setEditingAppointment] = useState(null);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [newAppointment, setNewAppointment] = useState({
     customerName: "",
@@ -2820,7 +2819,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
   };
 
   const handleEditAppointmentLocal = async (appointment) => {
-    setEditingAppointment(appointment);
+    handleEditAppointment(appointment);
     
     // Load staff and services data for dropdowns
     let servicesData = [];
@@ -2973,143 +2972,6 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
     });
   };
 
-  const handleSaveEditAppointment = async () => {
-    if (!editingAppointment) return;
-    
-    setLoading(true);
-    try {
-      // Validate required fields
-      if (!editAppointment.service) {
-        alert('Please select a service');
-        return;
-      }
-      
-      if (!editAppointment.staffMember) {
-        alert('Please select a staff member');
-        return;
-      }
-
-      // Parse time properly - convert from 12-hour format to 24-hour format
-      let timeString = editAppointment.time;
-      if (timeString.includes(' AM') || timeString.includes(' PM')) {
-        // Convert 12-hour format to 24-hour format for API
-        const [timePart, ampm] = timeString.split(' ');
-        const [hours, minutes] = timePart.split(':');
-        let hour24 = parseInt(hours);
-        
-        if (ampm === 'PM' && hour24 !== 12) {
-          hour24 += 12;
-        } else if (ampm === 'AM' && hour24 === 12) {
-          hour24 = 0;
-        }
-        
-        timeString = `${hour24.toString().padStart(2, '0')}:${minutes}`;
-      }
-      
-      // Find service and staff details for duration and price
-      const selectedService = services.find(s => s.id === editAppointment.service);
-      const selectedStaff = staff.find(s => s.id === editAppointment.staffMember);
-      
-      // Create appointment data for API
-      const appointmentData = {
-        customer_name: editAppointment.customerName,
-        customer_phone: editAppointment.phone,
-        customer_email: editAppointment.email,
-        service_id: editAppointment.service,
-        staff_id: editAppointment.staffMember,
-        scheduled_at: (() => {
-          try {
-            const dateTimeString = `${editAppointment.date}T${timeString}:00`;
-            console.log('🕐 Creating scheduled_at:', dateTimeString);
-            const date = new Date(dateTimeString);
-            if (isNaN(date.getTime())) {
-              throw new Error('Invalid date/time combination');
-            }
-            return date.toISOString();
-          } catch (error) {
-            console.error('❌ Error creating scheduled_at:', error);
-            throw new Error('Invalid time format. Please enter a valid time.');
-          }
-        })(),
-        duration_minutes: selectedService?.duration_minutes || 60,
-        amount: selectedService?.base_price || 0,
-        currency: 'INR',
-        payment_status: editAppointment.status,
-        notes: editAppointment.notes
-      };
-
-      console.log('💾 Saving edited appointment:', appointmentData);
-
-      // Update appointment via API
-      const response = await fetch(`/api/salon/appointments/${editingAppointment.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': 'bella-salon'
-        },
-        body: JSON.stringify(appointmentData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update appointment');
-      }
-
-      const updatedAppointment = await response.json();
-      console.log('✅ Appointment updated successfully:', updatedAppointment);
-
-      // Refresh appointments data
-      const [appointmentsData, servicesData, staffData] = await Promise.all([
-        salonApi.appointments.getAll(),
-        salonApi.services.getAll(),
-        staffApi.getAll()
-      ]);
-      
-      // Transform and enhance appointments
-      const transformedBookings = transformApiBookingsToUI(appointmentsData);
-      const enhancedAppointments = transformedBookings.map(apt => {
-        const appointmentDateTime = new Date(apt.scheduled_at || '');
-        const timeString = formatTime(apt.appointmentTime || '') || appointmentDateTime.toLocaleTimeString('en-IN', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
-        
-        return {
-          ...apt,
-          customer: apt.customer_name,
-          service: apt.service_name || apt.service || 'Service',
-          staff: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
-          duration: apt.duration_minutes || apt.duration || 60,
-          time: timeString,
-          status: apt.payment_status || apt.status || 'confirmed',
-          amount: parseFloat(apt.amount || 0),
-          customer_name: apt.customer_name,
-          service_name: apt.service_name || 'Service',
-          staff_name: staffData.find(s => s.id === apt.staff_id)?.name || staffData.find(s => s.name === 'Priya Sharma')?.name || 'Unassigned',
-          duration_minutes: apt.duration_minutes || apt.duration || 60,
-          phone: apt.customer_phone,
-          email: apt.customer_email
-        };
-      });
-      
-      setAppointments(enhancedAppointments);
-      
-      // Reload today's appointments for staff schedule
-      loadTodaysAppointments();
-      
-      // Close modal
-      handleCloseEditModal();
-      
-      // Show success message
-      alert('Appointment updated successfully!');
-      
-    } catch (error) {
-      console.error('❌ Error updating appointment:', error);
-      alert('Failed to update appointment. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCloseCancelModal = () => {
     setShowCancelAppointmentModal(false);
@@ -3562,7 +3424,7 @@ function CalendarSection({ loadTodaysAppointments, appointments, setAppointments
                             
                             return (
                               <div
-                                key={aptIndex}
+                                key={`${staff}-${appointment.id}`}
                                 className={`absolute h-6 rounded text-white text-xs flex items-center px-2 font-medium ${getBlockColor(appointment.service_name || appointment.service, appointment.status)}`}
                                 style={{
                                   left: `${(position / 11) * 100}%`,
@@ -7512,6 +7374,7 @@ export default function SalonDashboard() {
           handleEditAppointment={handleEditAppointment}
           editAppointment={editAppointment}
           setEditAppointment={setEditAppointment}
+          handleSaveEditAppointment={handleSaveEditAppointment}
         />;
       case "payments":
         return <PaymentsSection />;
