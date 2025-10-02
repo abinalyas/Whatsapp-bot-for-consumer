@@ -477,6 +477,12 @@ function OverviewSection({
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [allAppointments, setAllAppointments] = useState<any[]>([]); // Store all appointments for revenue calculation
+  
+  // Safety check to ensure allAppointments is always defined
+  if (typeof allAppointments === 'undefined') {
+    console.error('🚨 CRITICAL: allAppointments is undefined!');
+    setAllAppointments([]);
+  }
   const [stats, setStats] = useState({ todayAppointments: 0, todayRevenue: 0, totalServices: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -7382,6 +7388,7 @@ export default function SalonDashboard() {
       case "calendar":
         console.log('🔍 MAIN COMPONENT: Rendering CalendarSection with props:');
         console.log('🔍 MAIN COMPONENT: appointments (today) length:', appointments?.length || 0);
+        console.log('🔍 MAIN COMPONENT: allAppointments variable exists:', typeof allAppointments);
         console.log('🔍 MAIN COMPONENT: allAppointments (all dates) length:', allAppointments?.length || 0);
         console.log('🔍 MAIN COMPONENT: loading state:', loading);
         
