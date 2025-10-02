@@ -6135,6 +6135,109 @@ export default function SalonDashboard() {
     status: "confirmed",
     notes: ""
   });
+
+  // Edit appointment handlers - moved here to ensure proper scope
+  const handleEditAppointment = async (appointment) => {
+    console.log('🔧 MAIN COMPONENT: handleEditAppointment called with appointment:', appointment.id);
+    console.log('🔧 MAIN COMPONENT: setEditingAppointment function:', typeof setEditingAppointment);
+    setEditingAppointment(appointment);
+    
+    // Load staff and services data for dropdowns
+    try {
+      const [staffResponse, servicesResponse] = await Promise.all([
+        fetch('/api/staff/staff', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        }),
+        fetch('/api/salon/services', {
+          headers: { 'x-tenant-id': 'bella-salon' }
+        })
+      ]);
+      
+      const staffResult = await staffResponse.json();
+      const servicesResult = await servicesResponse.json();
+      
+      if (staffResult.success) {
+        setStaff(staffResult.data);
+      }
+      if (servicesResult.success) {
+        setServices(servicesResult.data);
+        
+        // Now that services are loaded, find the service ID
+        let serviceId = appointment.offering_id || appointment.service_id || "";
+        if (!serviceId && appointment.service_name) {
+          const matchingService = servicesResult.data.find(s => s.name === appointment.service_name);
+          if (matchingService) {
+            serviceId = matchingService.id;
+            console.log('🔍 Found service ID by name:', { serviceName: appointment.service_name, serviceId });
+          }
+        }
+        
+        // Extract time from scheduled_at if time field is not available or in wrong format
+        let timeValue = appointment.time || "";
+        console.log('🕐 Initial time extraction - Full appointment data:', appointment);
+        console.log('🕐 Initial time extraction:', {
+          appointmentTime: appointment.time,
+          scheduled_at: appointment.scheduled_at,
+          appointmentTime_field: appointment.appointmentTime,
+          appointment_time_field: appointment.appointment_time,
+          timeValue,
+          allFields: Object.keys(appointment)
+        });
+        
+        // First, try to extract from scheduled_at (most reliable)
+        if (!timeValue && appointment.scheduled_at) {
+          const scheduledDate = new Date(appointment.scheduled_at);
+          timeValue = scheduledDate.toLocaleTimeString('en-IN', { 
+            hour: 'numeric', 
+            minute: '2-digit', 
+            hour12: true 
+          });
+          console.log('🕐 Extracted time from scheduled_at:', timeValue);
+        }
+        
+        // Fallback to appointmentTime or appointment_time fields
+        if (!timeValue) {
+          timeValue = appointment.appointmentTime || appointment.appointment_time || "";
+          console.log('🕐 Using fallback time field:', timeValue);
+        }
+        
+        // Convert time to 24-hour format if it contains AM/PM
+        if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm'))) {
+          console.log('🕐 BEFORE CONVERSION - timeValue:', timeValue, 'contains AM/PM:', timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm')));
+          timeValue = convertTo24HourFormat(timeValue);
+          console.log('🕐 AFTER CONVERSION - timeValue:', timeValue);
+        }
+        
+        // If still no time, default to 10:00
+        if (!timeValue) {
+          timeValue = "10:00";
+          console.log('🕐 Using default time:', timeValue);
+        }
+        
+        console.log('🚨 CRITICAL: Setting editAppointment state with time:', timeValue);
+        
+        // Set the edit appointment state with all the data
+        setEditAppointment({
+          customerName: appointment.customer_name || appointment.customer || "",
+          phone: appointment.customer_phone || appointment.phone || "",
+          email: appointment.customer_email || appointment.email || "",
+          service: serviceId,
+          staffMember: appointment.staff_id || appointment.staffMember || "",
+          date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          time: timeValue,
+          status: appointment.payment_status || appointment.status || "confirmed",
+          notes: appointment.notes || ""
+        });
+        
+        console.log('🚨 CRITICAL: editAppointment state set successfully');
+      }
+    } catch (error) {
+      console.error('Error loading data for edit modal:', error);
+    }
+    
+    // Show the edit modal
+    setShowEditAppointmentModal(true);
+  };
   const [loading, setLoading] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
@@ -7059,163 +7162,7 @@ export default function SalonDashboard() {
     }
   };
 
-  // Edit appointment handlers
-  const handleEditAppointment = async (appointment) => {
-    console.log('🔧 MAIN COMPONENT: handleEditAppointment called with appointment:', appointment.id);
-    console.log('🔧 MAIN COMPONENT: setEditingAppointment function:', typeof setEditingAppointment);
-    setEditingAppointment(appointment);
-    
-    // Load staff and services data for dropdowns
-    try {
-      const [staffResponse, servicesResponse] = await Promise.all([
-        fetch('/api/staff/staff', {
-          headers: { 'x-tenant-id': 'bella-salon' }
-        }),
-        fetch('/api/salon/services', {
-          headers: { 'x-tenant-id': 'bella-salon' }
-        })
-      ]);
-      
-      const staffResult = await staffResponse.json();
-      const servicesResult = await servicesResponse.json();
-      
-      if (staffResult.success) {
-        setStaff(staffResult.data);
-      }
-      if (servicesResult.success) {
-        setServices(servicesResult.data);
-        
-        // Now that services are loaded, find the service ID
-        let serviceId = appointment.offering_id || appointment.service_id || "";
-        if (!serviceId && appointment.service_name) {
-          const matchingService = servicesResult.data.find(s => s.name === appointment.service_name);
-          if (matchingService) {
-            serviceId = matchingService.id;
-            console.log('🔍 Found service ID by name:', { serviceName: appointment.service_name, serviceId });
-          }
-        }
-        
-        // Extract time from scheduled_at if time field is not available or in wrong format
-        let timeValue = appointment.time || "";
-        console.log('🕐 Initial time extraction - Full appointment data:', appointment);
-        console.log('🕐 Initial time extraction:', {
-          appointmentTime: appointment.time,
-          scheduled_at: appointment.scheduled_at,
-          appointmentTime_field: appointment.appointmentTime,
-          appointment_time_field: appointment.appointment_time,
-          timeValue,
-          allFields: Object.keys(appointment)
-        });
-        
-        // First, try to extract from scheduled_at (most reliable)
-        if (!timeValue && appointment.scheduled_at) {
-          try {
-            const date = new Date(appointment.scheduled_at);
-            if (!isNaN(date.getTime())) {
-              // Convert to 24-hour format for HTML time input
-              const hours = date.getHours().toString().padStart(2, '0');
-              const minutes = date.getMinutes().toString().padStart(2, '0');
-              timeValue = `${hours}:${minutes}`;
-              console.log('🕐 Extracted time from scheduled_at (24-hour):', timeValue);
-            } else {
-              console.warn('⚠️ Invalid scheduled_at date:', appointment.scheduled_at);
-            }
-          } catch (error) {
-            console.error('❌ Error parsing scheduled_at:', error);
-          }
-        }
-        
-        // If still no time, try to extract from other fields
-        if (!timeValue) {
-          if (appointment.appointmentTime) {
-            // Convert 12-hour format to 24-hour format if needed
-            timeValue = convertTo24HourFormat(appointment.appointmentTime);
-            console.log('🕐 Using appointmentTime (converted):', timeValue);
-          } else if (appointment.appointment_time) {
-            // Convert 12-hour format to 24-hour format if needed
-            timeValue = convertTo24HourFormat(appointment.appointment_time);
-            console.log('🕐 Using appointment_time (converted):', timeValue);
-          }
-        }
-        
-        // CRITICAL FIX: Always convert time to 24-hour format if it exists but is in 12-hour format
-        console.log('🕐 BEFORE CONVERSION - timeValue:', timeValue, 'contains AM/PM:', timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm')));
-        if (timeValue && (timeValue.includes('AM') || timeValue.includes('PM') || timeValue.includes('am') || timeValue.includes('pm'))) {
-          const convertedTime = convertTo24HourFormat(timeValue);
-          console.log('🕐 Converting existing time from 12-hour to 24-hour:', timeValue, '->', convertedTime);
-          timeValue = convertedTime;
-          console.log('🕐 AFTER CONVERSION - timeValue:', timeValue);
-        } else {
-          console.log('🕐 NO CONVERSION NEEDED - timeValue:', timeValue);
-        }
-        
-        // Final fallback - if still no time, use a reasonable default
-        if (!timeValue) {
-          timeValue = "10:00";
-          console.log('🕐 Using default time:', timeValue);
-        }
-        
-        // Find staff ID (this should already be correct)
-        let staffId = appointment.staff_id || "";
-        console.log('🔍 Staff assignment debug:', {
-          appointmentStaffId: appointment.staff_id,
-          appointmentStaffName: appointment.staff_name || appointment.staff,
-          staffId,
-          staffDataLoaded: staffResult?.data?.length || 0,
-          staffData: staffResult?.data
-        });
-        
-        // Set the edit appointment data
-        const editData = {
-          customerName: appointment.customer_name || appointment.customer || "",
-          phone: appointment.customer_phone || appointment.phone || "",
-          email: appointment.customer_email || appointment.email || "",
-          service: serviceId,
-          staffMember: staffId,
-          date: appointment.scheduled_at ? new Date(appointment.scheduled_at).toISOString().split('T')[0] : "",
-          time: timeValue || "10:00", // Default time if none found (24-hour format)
-          status: appointment.payment_status || appointment.status || "confirmed",
-          notes: appointment.notes || ""
-        };
-        
-        console.log('🔍 Final edit data being set:', {
-          originalAppointment: appointment,
-          extractedTime: timeValue,
-          finalEditData: editData
-        });
-        
-        // CRITICAL DEBUG: Log what's being set in the form
-        console.log('🚨 CRITICAL: Setting editAppointment state with time:', editData.time);
-        
-        console.log('🔍 Setting edit appointment data:', editData);
-        console.log('🚨 CRITICAL: About to call setEditAppointment with time:', editData.time);
-        setEditAppointment(editData);
-        console.log('🚨 CRITICAL: setEditAppointment called, checking state after 100ms...');
-        setTimeout(() => {
-          console.log('🚨 CRITICAL: State check after 100ms - editAppointment.time should be:', editData.time);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error loading data for edit modal:', error);
-    }
-    setShowEditAppointmentModal(true);
-  };
-
-  const handleCloseEditModal = () => {
-    setShowEditAppointmentModal(false);
-    setEditingAppointment(null);
-    setEditAppointment({
-      customerName: "",
-      phone: "",
-      email: "",
-      service: "",
-      staffMember: "",
-      date: "",
-      time: "",
-      status: "confirmed",
-      notes: ""
-    });
-  };
+  // Duplicate function removed - using the one defined earlier in the component
 
   const handleSaveEditAppointment = async () => {
     console.log('🔧 MAIN COMPONENT: handleSaveEditAppointment called');
