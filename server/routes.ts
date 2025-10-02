@@ -930,6 +930,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp webhook for incoming messages (POST)
+  // In-memory conversation state for legacy webhook
+  const legacyConversationState = new Map<string, any>();
+
   app.post("/webhook", async (req, res) => {
     try {
       const webhookData = whatsAppMessageSchema.parse(req.body);
@@ -948,12 +951,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   // Use our working simple webhook service
                   const bookingService = new (await import('./services/whatsapp-booking.service')).WhatsAppBookingService();
                   
-                  // Initialize booking context
-                  const bookingContext = {
-                    tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
-                    customerPhone: message.from,
-                    currentStep: 'welcome'
-                  };
+                  // Get or create conversation state for this phone number
+                  let bookingContext = legacyConversationState.get(message.from);
+                  
+                  if (!bookingContext) {
+                    // Initialize new conversation
+                    bookingContext = {
+                      tenantId: '85de5a0c-6aeb-479a-aa76-cbdd6b0845a7', // Bella Salon tenant ID
+                      customerPhone: message.from,
+                      currentStep: 'welcome'
+                    };
+                    console.log(`Created new conversation state for ${message.from}`);
+                  } else {
+                    console.log(`Using existing conversation state for ${message.from}, current step: ${bookingContext.currentStep}`);
+                  }
                   
                   // Process the message with our working booking service
                   const result = await bookingService.processBookingMessage(
@@ -971,6 +982,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   if (result.success && result.message) {
                     await sendWhatsAppMessage(message.from, result.message);
                     console.log(`Successfully processed message via simple webhook`);
+                    
+                    // Update conversation state if successful
+                    if (result.nextStep) {
+                      bookingContext.currentStep = result.nextStep;
+                      // Store a deep copy of the context to preserve all changes
+                      legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
+                      console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                    }
                   } else {
                     console.error(`Simple webhook failed to process message:`, result);
                     await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
