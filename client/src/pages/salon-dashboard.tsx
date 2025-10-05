@@ -8458,11 +8458,11 @@ export default function SalonDashboard() {
           />
           <div className="h-[calc(100vh-4rem)] overflow-auto p-6">
             {/* DEBUG: This should be visible if changes are deployed */}
-            <div className="mb-4 bg-red-500 text-white p-4 rounded-lg text-center font-bold">
+            <div className="mb-4 bg-red-500 text-white p-4 rounded-lg text-center font-bold sticky top-0 z-50">
               🚨 DEBUG: Toast testing buttons should be visible below this message
             </div>
             {/* Real-time refresh indicator */}
-            <div className="mb-4 flex items-center justify-between bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
+            <div className="mb-4 flex items-center justify-between bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300 sticky top-20 z-40">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className={`w-2 h-2 rounded-full ${appointmentsLoading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
                 <span>{appointmentsLoading ? 'Refreshing...' : 'Live updates enabled'}</span>
@@ -8481,7 +8481,7 @@ export default function SalonDashboard() {
                     });
                     console.log('🧪 Toast called');
                   }}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600"
                 >
                   Test Toast
                 </Button>
@@ -8498,7 +8498,7 @@ export default function SalonDashboard() {
                     });
                     console.log('🧪 Destructive toast called');
                   }}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-red-600 text-white hover:bg-red-700"
                 >
                   Test Destructive
                 </Button>
@@ -8507,7 +8507,7 @@ export default function SalonDashboard() {
                   size="sm" 
                   onClick={() => refetchAppointments()}
                   disabled={appointmentsLoading}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-green-500 text-white hover:bg-green-600"
                 >
                   <RefreshCw className={`h-4 w-4 ${appointmentsLoading ? 'animate-spin' : ''}`} />
                   Refresh
