@@ -286,15 +286,8 @@ Please reply with the time slot number or time.`,
           const skilledStaff = await this.getStaffForService(context.tenantId, selectedService?.name);
           
           if (skilledStaff.length === 0) {
-            console.log('No staff found for service, creating fallback staff');
-            // Try to create fallback staff
-            const fallbackStaff = await this.createFallbackStaff(context.tenantId, selectedService?.name);
-            if (fallbackStaff) {
-              skilledStaff.push(fallbackStaff);
-            } else {
-              // If we can't create fallback staff, proceed without staff assignment
-              console.log('Proceeding without staff assignment');
-            }
+            console.log('No staff found for service, proceeding without staff assignment');
+            // Proceed without staff assignment - this is acceptable for basic booking
           }
           
           // Check which skilled staff are available at this time
@@ -310,9 +303,15 @@ Please reply with the time slot number or time.`,
             };
           }
           
-          // Assign the first available staff member
-          const assignedStaff = availableStaff[0];
-          context.selectedStaff = assignedStaff.id;
+          // Assign staff if available, otherwise proceed without staff assignment
+          let assignedStaff = null;
+          if (availableStaff.length > 0) {
+            assignedStaff = availableStaff[0];
+            context.selectedStaff = assignedStaff.id;
+          } else {
+            console.log('Proceeding without staff assignment');
+            context.selectedStaff = null;
+          }
           context.currentStep = "confirmation";
           
           // Set appointment data for confirmation step
@@ -326,8 +325,8 @@ Please reply with the time slot number or time.`,
             customer_email: context.customerEmail || '',
             service_id: context.selectedService,
             service_name: selectedService?.name || 'Unknown Service',
-            staff_id: assignedStaff.id,
-            staff_name: assignedStaff.name,
+            staff_id: assignedStaff?.id || null,
+            staff_name: assignedStaff?.name || 'To be assigned',
             scheduled_at: utcDateTime.toISOString(),
             selectedTime: selectedTime,
             amount: selectedService?.price || 0,
@@ -816,46 +815,6 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           return "\u{1FA92}";
         }
         return "\u2728";
-      }
-    },
-    /**
-     * Create a fallback staff member for a service when no staff are configured
-     */
-    async createFallbackStaff(tenantId, serviceName) {
-      try {
-        console.log("🔧 Creating fallback staff for service:", serviceName);
-        const existingStaff = await this.pool.query(`
-          SELECT id, name, role
-          FROM staff 
-          WHERE tenant_id = $1 
-          AND name = $2
-          AND is_active = true
-        `, [tenantId, `General Staff - ${serviceName}`]);
-        if (existingStaff.rows.length > 0) {
-          return existingStaff.rows[0];
-        }
-        const staffId = randomUUID3();
-        await this.pool.query(`
-          INSERT INTO staff (
-            id, tenant_id, name, role, specializations, 
-            is_active, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        `, [
-          staffId,
-          tenantId,
-          `General Staff - ${serviceName}`,
-          "General",
-          JSON.stringify([serviceName])
-        ]);
-        console.log("✅ Created fallback staff:", staffId);
-        return {
-          id: staffId,
-          name: `General Staff - ${serviceName}`,
-          role: "General"
-        };
-      } catch (error) {
-        console.error("❌ Error creating fallback staff:", error);
-        return null;
       }
     }
   }
