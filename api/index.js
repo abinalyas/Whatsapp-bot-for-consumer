@@ -62,11 +62,26 @@ var init_whatsapp_booking_service = __esm({
             case "date_selection":
               return await this.handleDateSelection(messageText, context);
             case "time_selection":
-              return await this.handleTimeSelection(messageText, context);
+              console.log("\u{1F50D} Routing to handleTimeSelection");
+              try {
+                return await this.handleTimeSelection(messageText, context);
+              } catch (error) {
+                console.error("\u274C Error in handleTimeSelection:", error);
+                return {
+                  success: false,
+                  message: "I'm sorry, there was an error processing your time selection. Please try again."
+                };
+              }
             case "confirmation":
               return await this.handleConfirmation(messageText, context);
             case "completed":
+              console.log("\u{1F504} Conversation completed, resetting to welcome");
               context.currentStep = "welcome";
+              delete context.appointmentData;
+              delete context.selectedService;
+              delete context.selectedDate;
+              delete context.selectedTime;
+              delete context.selectedStaff;
               return await this.handleWelcome(messageText, context);
             default:
               return {
@@ -235,7 +250,8 @@ Please reply with the date number or date.`,
           }
           context.selectedDate = selectedDate.date;
           context.currentStep = "time_selection";
-          const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date);
+          const selectedService = await this.getServiceById(context.selectedService);
+          const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
           return {
             success: true,
             message: `Perfect! You selected: ${selectedDate.formatted}
@@ -261,6 +277,29 @@ Please reply with the time slot number or time.`,
        */
       async handleTimeSelection(messageText, context) {
         try {
+          console.log("\u{1F50D} handleTimeSelection called with:", {
+            messageText,
+            selectedService: context.selectedService,
+            selectedDate: context.selectedDate,
+            tenantId: context.tenantId
+          });
+          if (!context.selectedService) {
+            console.log("\u274C No selectedService in context");
+            return {
+              success: false,
+              message: "I'm sorry, I couldn't find your selected service. Please start over by typing 'book appointment'."
+            };
+          }
+          const selectedService = await this.getServiceById(context.selectedService);
+          console.log("\u{1F50D} Time selection - selected service:", selectedService?.name);
+          console.log("\u{1F50D} Time selection - selected date:", context.selectedDate);
+          if (!selectedService) {
+            console.log("\u274C Could not find service by ID:", context.selectedService);
+            return {
+              success: false,
+              message: "I'm sorry, I couldn't find your selected service. Please start over by typing 'book appointment'."
+            };
+          }
           const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate);
           const availableSlots = availableTimeSlots.filter((slot) => slot.available);
           let selectedTime = null;
@@ -278,76 +317,38 @@ Please reply with the time slot number or time.`,
             };
           }
           context.selectedTime = selectedTime;
-          
-          // Get the selected service to find appropriate staff
-          console.log('🔍 Getting service for ID:', context.selectedService);
-          const selectedService = await this.getServiceById(context.tenantId, context.selectedService);
-          console.log('🔍 Retrieved service:', selectedService);
-          
-          // Find staff who can perform this service
-          const skilledStaff = await this.getStaffForService(context.tenantId, selectedService?.name);
-          
-          if (skilledStaff.length === 0) {
-            console.log('No staff found for service, proceeding without staff assignment');
-            // Proceed without staff assignment - this is acceptable for basic booking
-          }
-          
-          // Check which skilled staff are available at this time
-          let availableStaff = [];
-          if (skilledStaff.length > 0) {
-            availableStaff = await this.getAvailableStaffAtTime(context.tenantId, context.selectedDate, selectedTime, skilledStaff);
-          }
-          
-          if (availableStaff.length === 0 && skilledStaff.length > 0) {
-            return {
-              success: false,
-              message: "I'm sorry, no staff members are available for this service at this time. Please try a different time."
-            };
-          }
-          
-          // Assign staff if available, otherwise proceed without staff assignment
-          let assignedStaff = null;
-          if (availableStaff.length > 0) {
-            assignedStaff = availableStaff[0];
-            context.selectedStaff = assignedStaff.id;
-          } else {
-            console.log('Proceeding without staff assignment');
-            context.selectedStaff = null;
-          }
           context.currentStep = "confirmation";
-          
-          // Set appointment data for confirmation step
-          const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
-          const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+          const service = await this.getServiceById(context.selectedService);
+          const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${selectedTime}:00`);
+          const istOffset = 5.5 * 60 * 60 * 1e3;
           const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
-          
           context.appointmentData = {
-            customer_name: context.customerName || 'WhatsApp Customer',
+            customer_name: context.customerName || "WhatsApp Customer",
             customer_phone: context.customerPhone,
-            customer_email: context.customerEmail || '',
+            customer_email: context.customerEmail || "",
             service_id: context.selectedService,
-            service_name: selectedService?.name || 'Unknown Service',
-            staff_id: assignedStaff?.id || null,
-            staff_name: assignedStaff?.name || 'To be assigned',
+            service_name: service?.name || "Unknown Service",
+            staff_id: null,
+            // Temporarily disable staff assignment
+            staff_name: "To be assigned",
             scheduled_at: utcDateTime.toISOString(),
-            selectedTime: selectedTime,
-            amount: selectedService?.price || 0,
-            currency: 'INR',
-            notes: 'Booked via WhatsApp Bot',
-            payment_status: 'pending'
+            selectedTime,
+            amount: service?.price || 0,
+            currency: "INR",
+            notes: "Booked via WhatsApp Bot",
+            payment_status: "pending"
           };
-          
           return {
             success: true,
             message: `Perfect! You selected: ${selectedTime}
 
-✅ **Appointment Summary:**
-• Service: ${selectedService?.name || 'Service'}
-• Date: ${context.selectedDate}
-• Time: ${selectedTime}
-• Staff: ${assignedStaff?.name || 'To be assigned'}
-• Price: ₹${selectedService?.price || 0}
-• Duration: ${selectedService?.duration_minutes || 60} minutes
+\u2705 **Appointment Summary:**
+\u2022 Service: ${service?.name}
+\u2022 Date: ${context.selectedDate}
+\u2022 Time: ${selectedTime}
+\u2022 Staff: To be assigned
+\u2022 Price: \u20B9${service?.price}
+\u2022 Duration: ${service?.duration_minutes} minutes
 
 Please reply with "confirm" to book this appointment, or "change" to modify your selection.`,
             nextStep: "confirmation"
@@ -399,74 +400,6 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
           }
         }
         return null;
-      }
-      /**
-       * Handle staff selection
-       */
-      async handleStaffSelection(messageText, context) {
-        try {
-          const availableStaff = await this.getAvailableStaff(context.tenantId, context.selectedDate, context.selectedTime);
-          let selectedStaff = null;
-          const staffNumber = parseInt(messageText);
-          if (!isNaN(staffNumber) && staffNumber >= 1 && staffNumber <= availableStaff.length) {
-            selectedStaff = availableStaff[staffNumber - 1];
-          } else {
-            for (const staff of availableStaff) {
-              if (messageText.toLowerCase().includes(staff.name.toLowerCase())) {
-                selectedStaff = staff;
-                break;
-              }
-            }
-          }
-          if (!selectedStaff) {
-            return {
-              success: false,
-              message: "Please select a valid staff member from the list above."
-            };
-          }
-          context.selectedStaff = selectedStaff.id;
-          context.currentStep = "confirmation";
-          const service = await this.getServiceById(context.tenantId, context.selectedService);
-          const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${context.selectedTime}:00`);
-          const istOffset = 5.5 * 60 * 60 * 1e3;
-          const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
-          context.appointmentData = {
-            customer_name: context.customerName || "WhatsApp Customer",
-            customer_phone: context.customerPhone,
-            customer_email: context.customerEmail || "",
-            service_id: context.selectedService,
-            service_name: service?.name || "Service",
-            staff_id: context.selectedStaff,
-            staff_name: selectedStaff?.name || "To be assigned",
-            scheduled_at: utcDateTime.toISOString(),
-            selectedTime: context.selectedTime,
-            amount: service?.price || 0,
-            currency: "INR",
-            notes: "Booked via WhatsApp Bot",
-            payment_status: "pending"
-          };
-          return {
-            success: true,
-            message: `Perfect! Here's your appointment summary:
-
-\u{1F4C5} **Appointment Details:**
-\u2022 Service: ${service?.name}
-\u2022 Date: ${context.selectedDate}
-\u2022 Time: ${context.selectedTime}
-\u2022 Staff: ${selectedStaff.name}
-\u2022 Price: \u20B9${service?.price}
-\u2022 Duration: ${service?.duration_minutes} minutes
-
-Please confirm by typing 'yes' or 'confirm' to book this appointment.`,
-            nextStep: "confirmation"
-          };
-        } catch (error) {
-          console.error("Error handling staff selection:", error);
-          return {
-            success: false,
-            message: "I'm sorry, there was an error. Please try again."
-          };
-        }
       }
       /**
        * Handle confirmation and create appointment
@@ -573,7 +506,6 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
        */
       async getServiceById(tenantId, serviceId) {
         try {
-          console.log('🔍 getServiceById called with:', { tenantId, serviceId });
           const result = await this.pool.query(`
         SELECT id, name, description, price, is_active,
                CASE 
@@ -592,7 +524,6 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         FROM services 
         WHERE id = $1 AND is_active = true
       `, [serviceId]);
-          console.log('🔍 getServiceById result:', result.rows[0]);
           return result.rows[0] || null;
         } catch (error) {
           console.error("Error fetching Bella Salon service:", error);
@@ -622,8 +553,9 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       /**
        * Get available time slots for a date
        */
-      async getAvailableTimeSlots(tenantId, date) {
+      async getAvailableTimeSlots(tenantId, date, serviceName) {
         try {
+          console.log("\u{1F50D} getAvailableTimeSlots called with:", { tenantId, date, serviceName });
           const timeSlots = [
             "09:00",
             "10:00",
@@ -635,19 +567,161 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
             "16:00",
             "17:00"
           ];
-          const bookedSlots = await this.pool.query(`
-        SELECT appointment_time
-        FROM bookings 
-        WHERE appointment_date = $1 
-        AND status != 'cancelled'
-      `, [date]);
-          const bookedTimes = bookedSlots.rows.map((row) => row.appointment_time);
-          return timeSlots.map((time) => ({
-            time,
-            available: !bookedTimes.includes(time)
-          }));
+          if (!serviceName) {
+            console.log("\u{1F50D} Using basic time slot logic (no service specified)");
+            const bookedSlots = await this.pool.query(`
+          SELECT appointment_time
+          FROM bookings 
+          WHERE appointment_date = $1 
+          AND status != 'cancelled'
+        `, [date]);
+            const bookedTimes = bookedSlots.rows.map((row) => row.appointment_time);
+            console.log("\u{1F50D} Found booked times:", bookedTimes);
+            const result2 = timeSlots.map((time) => ({
+              time,
+              available: !bookedTimes.includes(time)
+            }));
+            console.log("\u{1F50D} Time slots result:", result2);
+            return result2;
+          }
+          const skilledStaff = await this.getStaffForService(tenantId, serviceName);
+          console.log("\u{1F50D} getAvailableTimeSlots debug:", {
+            serviceName,
+            skilledStaffCount: skilledStaff.length,
+            skilledStaff: skilledStaff.map((s) => s.name)
+          });
+          if (skilledStaff.length === 0) {
+            console.log(`No staff available for service: ${serviceName} - using fallback logic`);
+            const fallbackStaff = await this.createFallbackStaff(tenantId, serviceName);
+            if (fallbackStaff) {
+              skilledStaff.push(fallbackStaff);
+            } else {
+              console.log("Using basic availability check without staff validation");
+              const bookedSlots = await this.pool.query(`
+            SELECT appointment_time
+            FROM bookings 
+            WHERE appointment_date = $1 
+            AND status != 'cancelled'
+          `, [date]);
+              const bookedTimes = bookedSlots.rows.map((row) => row.appointment_time);
+              console.log("\u{1F50D} Found booked times (fallback):", bookedTimes);
+              return timeSlots.map((time) => ({
+                time,
+                available: !bookedTimes.includes(time)
+              }));
+            }
+          }
+          const result = [];
+          for (const time of timeSlots) {
+            const availableStaff = await this.getAvailableStaffAtTime(tenantId, date, time, skilledStaff);
+            if (availableStaff.length > 0) {
+              result.push({
+                time,
+                available: true,
+                assignedStaff: availableStaff[0]
+                // Assign the first available staff
+              });
+            } else {
+              result.push({
+                time,
+                available: false
+              });
+            }
+          }
+          return result;
         } catch (error) {
           console.error("Error fetching time slots:", error);
+          return [];
+        }
+      }
+      /**
+       * Create a fallback staff member for a service when no staff are configured
+       */
+      async createFallbackStaff(tenantId, serviceName) {
+        try {
+          console.log("\u{1F527} Creating fallback staff for service:", serviceName);
+          const existingStaff = await this.pool.query(`
+        SELECT id, name, role
+        FROM staff 
+        WHERE tenant_id = $1 
+        AND name = $2
+        AND is_active = true
+      `, [tenantId, `General Staff - ${serviceName}`]);
+          if (existingStaff.rows.length > 0) {
+            return existingStaff.rows[0];
+          }
+          const staffId = randomUUID3();
+          await this.pool.query(`
+        INSERT INTO staff (
+          id, tenant_id, name, role, specializations, 
+          is_active, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      `, [
+            staffId,
+            tenantId,
+            `General Staff - ${serviceName}`,
+            "General",
+            JSON.stringify([serviceName])
+          ]);
+          console.log("\u2705 Created fallback staff:", staffId);
+          return {
+            id: staffId,
+            name: `General Staff - ${serviceName}`,
+            role: "General"
+          };
+        } catch (error) {
+          console.error("\u274C Error creating fallback staff:", error);
+          return null;
+        }
+      }
+      /**
+       * Get staff who can perform a specific service
+       */
+      async getStaffForService(tenantId, serviceName) {
+        try {
+          console.log("\u{1F50D} getStaffForService called with:", { tenantId, serviceName });
+          const result = await this.pool.query(`
+        SELECT id, name, role
+        FROM staff 
+        WHERE tenant_id = $1 
+        AND is_active = true
+        AND specializations @> $2::jsonb
+      `, [tenantId, JSON.stringify([serviceName])]);
+          console.log("\u{1F50D} getStaffForService result:", {
+            rowCount: result.rows.length,
+            staff: result.rows.map((s) => s.name)
+          });
+          return result.rows.map((staff) => ({
+            id: staff.id,
+            name: staff.name,
+            role: staff.role
+          }));
+        } catch (error) {
+          console.error("\u274C Error fetching staff for service:", error);
+          return [];
+        }
+      }
+      /**
+       * Get available staff at a specific time from a list of skilled staff
+       */
+      async getAvailableStaffAtTime(tenantId, date, time, skilledStaff) {
+        try {
+          if (skilledStaff.length === 0) {
+            return [];
+          }
+          const staffIds = skilledStaff.map((staff) => staff.id);
+          const bookedStaff = await this.pool.query(`
+        SELECT staff_id
+        FROM bookings 
+        WHERE appointment_date = $1 
+        AND appointment_time = $2
+        AND status != 'cancelled'
+        AND staff_id = ANY($3)
+      `, [date, time, staffIds]);
+          const bookedStaffIds = bookedStaff.rows.map((row) => row.staff_id);
+          return skilledStaff.filter((staff) => !bookedStaffIds.includes(staff.id)).map((staff) => ({ id: staff.id, name: staff.name }));
+        } catch (error) {
+          console.error("Error checking staff availability:", error);
           return [];
         }
       }
@@ -673,62 +747,6 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           return [];
         }
       }
-      /**
-       * Get staff who can perform a specific service
-       */
-      async getStaffForService(tenantId, serviceName) {
-        try {
-          const result = await this.pool.query(`
-            SELECT id, name, role
-            FROM staff 
-            WHERE tenant_id = $1 
-            AND is_active = true
-            AND specializations @> $2::jsonb
-          `, [tenantId, JSON.stringify([serviceName])]);
-
-          return result.rows.map(staff => ({
-            id: staff.id,
-            name: staff.name,
-            role: staff.role
-          }));
-        } catch (error) {
-          console.error('Error fetching staff for service:', error);
-          return [];
-        }
-      }
-
-      /**
-       * Get available staff at a specific time from a list of skilled staff
-       */
-      async getAvailableStaffAtTime(tenantId, date, time, skilledStaff) {
-        try {
-          if (skilledStaff.length === 0) {
-            return [];
-          }
-
-          // Check which skilled staff are already booked at this time
-          const staffIds = skilledStaff.map(staff => staff.id);
-          const bookedStaff = await this.pool.query(`
-            SELECT staff_id
-            FROM bookings 
-            WHERE appointment_date = $1 
-            AND appointment_time = $2
-            AND status != 'cancelled'
-            AND staff_id = ANY($3)
-          `, [date, time, staffIds]);
-
-          const bookedStaffIds = bookedStaff.rows.map(row => row.staff_id);
-
-          // Return staff who are not booked
-          return skilledStaff
-            .filter(staff => !bookedStaffIds.includes(staff.id))
-            .map(staff => ({ id: staff.id, name: staff.name }));
-        } catch (error) {
-          console.error('Error checking staff availability:', error);
-          return [];
-        }
-      }
-
       /**
        * Create appointment in database
        */
@@ -786,6 +804,38 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
           ]);
           console.log(`\u2705 Booking created successfully: ${bookingId}`);
           console.log(`\u{1F4CA} Query result:`, result.rows);
+          try {
+            const notificationResponse = await fetch(`${process.env.VERCEL_URL || "http://localhost:3000"}/api/realtime/broadcast/${tenantId}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                type: "new_whatsapp_booking",
+                data: {
+                  appointment: {
+                    id: result.rows[0]?.id,
+                    customer_name: appointmentData.customer_name,
+                    customer_phone: appointmentData.customer_phone,
+                    service_name: appointmentData.service_name,
+                    staff_name: appointmentData.staff_name,
+                    scheduled_at: appointmentData.scheduled_at,
+                    amount: appointmentData.amount,
+                    source: "WhatsApp Bot"
+                  },
+                  message: "New WhatsApp Bot booking!",
+                  timestamp: (/* @__PURE__ */ new Date()).toISOString()
+                }
+              })
+            });
+            if (notificationResponse.ok) {
+              console.log("\u2705 Real-time notification sent for WhatsApp Bot booking");
+            } else {
+              console.log("\u26A0\uFE0F Failed to send real-time notification for WhatsApp Bot booking");
+            }
+          } catch (error) {
+            console.error("\u274C Error sending real-time notification for WhatsApp Bot booking:", error);
+          }
           return result.rows[0]?.id || null;
         } catch (error) {
           console.error("\u274C Error creating appointment:", error);
@@ -820,7 +870,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         }
         return "\u2728";
       }
-    }
+    };
   }
 });
 
@@ -4971,6 +5021,29 @@ router2.post("/appointments", async (req, res) => {
       notes,
       payment_status
     ]);
+    try {
+      const notificationResponse = await fetch(`${process.env.VERCEL_URL || "http://localhost:3000"}/api/realtime/broadcast/${tenantId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          type: "new_appointment",
+          data: {
+            appointment: result.rows[0],
+            message: "New appointment booked!",
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        })
+      });
+      if (notificationResponse.ok) {
+        console.log("\u2705 Real-time notification sent for new appointment");
+      } else {
+        console.log("\u26A0\uFE0F Failed to send real-time notification");
+      }
+    } catch (error) {
+      console.error("\u274C Error sending real-time notification:", error);
+    }
     res.status(201).json({
       success: true,
       data: result.rows[0]
@@ -8241,7 +8314,8 @@ function createSimpleWebhookRoutes() {
           };
         }
       }
-      if (message.toLowerCase().includes("reset") || message.toLowerCase().includes("start over")) {
+      const resetKeywords = ["reset", "start over", "book", "book appointment", "new booking"];
+      if (resetKeywords.some((keyword) => message.toLowerCase().includes(keyword))) {
         clearConversationState(phoneNumber);
         bookingContext = {
           tenantId: "85de5a0c-6aeb-479a-aa76-cbdd6b0845a7",
@@ -8249,17 +8323,35 @@ function createSimpleWebhookRoutes() {
           customerPhone: phoneNumber,
           currentStep: "welcome"
         };
+        console.log(`\u{1F504} Reset conversation state for ${phoneNumber} due to: ${message}`);
       }
       console.log(`Current conversation state for ${phoneNumber}:`, bookingContext);
+      console.log("\u{1F50D} Processing message with bookingService:", {
+        message,
+        phoneNumber,
+        currentStep: bookingContext.currentStep,
+        tenantId: bookingContext.tenantId
+      });
       const result = await bookingService.processBookingMessage(
         { text: { body: message }, from: phoneNumber, id: "test", type: "text", timestamp: (/* @__PURE__ */ new Date()).toISOString() },
         bookingContext.tenantId,
         bookingContext
       );
+      console.log("\u{1F50D} BookingService result:", {
+        success: result.success,
+        nextStep: result.nextStep,
+        message: result.message?.substring(0, 100) + "...",
+        error: result.error
+      });
       if (result.success && result.nextStep) {
         bookingContext.currentStep = result.nextStep;
-        conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
-        console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+        if (result.nextStep === "completed") {
+          console.log(`\u{1F389} Booking completed for ${phoneNumber}, clearing conversation state`);
+          clearConversationState(phoneNumber);
+        } else {
+          conversationState.set(phoneNumber, JSON.parse(JSON.stringify(bookingContext)));
+          console.log(`Updated conversation state for ${phoneNumber}:`, bookingContext);
+        }
       }
       if (result.success) {
         res.json({
@@ -8301,6 +8393,86 @@ function extractMessages(payload) {
     console.error("Error extracting messages:", error);
     return [];
   }
+}
+
+// server/routes/realtime.routes.ts
+import { Router as Router6 } from "express";
+import { EventEmitter } from "events";
+function createRealtimeRoutes() {
+  const router4 = Router6();
+  const eventEmitter = new EventEmitter();
+  const activeConnections = /* @__PURE__ */ new Map();
+  router4.get("/events/:tenantId", (req, res) => {
+    const { tenantId } = req.params;
+    const connectionId = `${tenantId}-${Date.now()}`;
+    console.log(`\u{1F517} New SSE connection: ${connectionId} for tenant: ${tenantId}`);
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Cache-Control"
+    });
+    activeConnections.set(connectionId, res);
+    res.write(`data: ${JSON.stringify({
+      type: "connected",
+      message: "Real-time updates connected",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    })}
+
+`);
+    req.on("close", () => {
+      console.log(`\u{1F50C} SSE connection closed: ${connectionId}`);
+      activeConnections.delete(connectionId);
+    });
+    req.on("aborted", () => {
+      console.log(`\u274C SSE connection aborted: ${connectionId}`);
+      activeConnections.delete(connectionId);
+    });
+  });
+  router4.post("/broadcast/:tenantId", (req, res) => {
+    const { tenantId } = req.params;
+    const { type, data } = req.body;
+    console.log(`\u{1F4E1} Broadcasting ${type} to tenant ${tenantId}`);
+    const tenantConnections = Array.from(activeConnections.entries()).filter(([id, _]) => id.startsWith(tenantId));
+    if (tenantConnections.length === 0) {
+      console.log(`\u26A0\uFE0F No active connections for tenant ${tenantId}`);
+      return res.json({ success: true, message: "No active connections" });
+    }
+    const message = {
+      type,
+      data,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    let sentCount = 0;
+    tenantConnections.forEach(([connectionId, response]) => {
+      try {
+        response.write(`data: ${JSON.stringify(message)}
+
+`);
+        sentCount++;
+      } catch (error) {
+        console.error(`\u274C Error sending to connection ${connectionId}:`, error);
+        activeConnections.delete(connectionId);
+      }
+    });
+    console.log(`\u2705 Sent ${type} to ${sentCount} connections for tenant ${tenantId}`);
+    res.json({
+      success: true,
+      message: `Sent to ${sentCount} connections`,
+      sentCount
+    });
+  });
+  router4.get("/status/:tenantId", (req, res) => {
+    const { tenantId } = req.params;
+    const tenantConnections = Array.from(activeConnections.entries()).filter(([id, _]) => id.startsWith(tenantId));
+    res.json({
+      tenantId,
+      activeConnections: tenantConnections.length,
+      connections: tenantConnections.map(([id, _]) => id)
+    });
+  });
+  return router4;
 }
 
 // server/routes.ts
@@ -11253,6 +11425,9 @@ async function sendWhatsAppMessage(to, message) {
   try {
     const phoneNumberId = process.env.WHATSAPP_PHONE_ID;
     const accessToken = process.env.WHATSAPP_TOKEN;
+    console.log(`\u{1F50D} WhatsApp Send - PhoneNumberId: ${phoneNumberId ? "SET" : "MISSING"}`);
+    console.log(`\u{1F50D} WhatsApp Send - AccessToken: ${accessToken ? "SET" : "MISSING"}`);
+    console.log(`\u{1F50D} WhatsApp Send - To: ${to}, Message: ${message.substring(0, 50)}...`);
     if (!phoneNumberId || !accessToken) {
       console.error("WhatsApp credentials not configured");
       return false;
@@ -11270,11 +11445,14 @@ async function sendWhatsAppMessage(to, message) {
         text: { body: message }
       })
     });
+    console.log(`\u{1F50D} WhatsApp API Response Status: ${response.status}`);
     if (!response.ok) {
       const error = await response.text();
-      console.error("Failed to send WhatsApp message:", error);
+      console.error(`\u274C Failed to send WhatsApp message: ${error}`);
+      console.error(`\u274C Response status: ${response.status} ${response.statusText}`);
       return false;
     }
+    console.log(`\u2705 WhatsApp message sent successfully to ${to}`);
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
@@ -11302,7 +11480,11 @@ async function processWhatsAppMessage(from, messageText) {
     await sendWhatsAppMessage(from, response);
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
-    await sendWhatsAppMessage(from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+    try {
+      await sendWhatsAppMessage(from, "I'm having trouble processing your request right now. Please try sending 'hi' to start over, or contact us directly for assistance.");
+    } catch (sendError) {
+      console.error("Error sending error message:", sendError);
+    }
   }
 }
 async function checkForActiveFlow() {
@@ -11542,26 +11724,53 @@ async function processStaticWhatsAppMessage(from, messageText) {
       )
     ]);
   };
-  let conversation = await storage.getConversation(from);
-  if (!conversation) {
-    conversation = await storage.createConversation({
+  let conversation;
+  try {
+    conversation = await withTimeout(storage.getConversation(from), 3e3);
+    if (!conversation) {
+      conversation = await withTimeout(storage.createConversation({
+        phoneNumber: from,
+        currentState: "greeting"
+      }), 3e3);
+      console.log("WhatsApp: Created new conversation", conversation.id);
+    }
+  } catch (error) {
+    console.error("Error managing conversation:", error);
+    conversation = {
+      id: `fallback_${from}_${Date.now()}`,
       phoneNumber: from,
-      currentState: "greeting"
-    });
-    console.log("WhatsApp: Created new conversation", conversation.id);
+      currentState: "greeting",
+      selectedService: null,
+      selectedDate: null,
+      selectedTime: null
+    };
   }
-  await storage.createMessage({
-    conversationId: conversation.id,
-    content: messageText,
-    isFromBot: false
-  });
-  console.log("WhatsApp: Stored user message for conversation", conversation.id);
+  try {
+    await withTimeout(storage.createMessage({
+      conversationId: conversation.id,
+      content: messageText,
+      isFromBot: false
+    }), 3e3);
+    console.log("WhatsApp: Stored user message for conversation", conversation.id);
+  } catch (error) {
+    console.error("Error storing user message:", error);
+  }
   let response = "";
   let newState = conversation.currentState;
   const text3 = messageText.toLowerCase().trim();
   try {
     if (text3 === "hi" || text3 === "hello" || conversation.currentState === "greeting") {
-      const services2 = await withTimeout(storage.getServices(), 5e3);
+      let services2;
+      try {
+        services2 = await withTimeout(storage.getServices(), 3e3);
+      } catch (error) {
+        console.error("Error getting services:", error);
+        services2 = [
+          { id: "1", name: "Haircut & Style", price: 45, isActive: true },
+          { id: "2", name: "Facial Treatment", price: 65, isActive: true },
+          { id: "3", name: "Hair Color", price: 120, isActive: true }
+        ];
+      }
       const activeServices = services2.filter((s) => s.isActive);
       response = "\u{1F44B} Welcome to Spark Salon!\n\nHere are our services:\n";
       activeServices.forEach((service) => {
@@ -11571,7 +11780,17 @@ async function processStaticWhatsAppMessage(from, messageText) {
       response += "\nReply with the number or name of the service to book.";
       newState = "awaiting_service";
     } else if (conversation.currentState === "awaiting_service") {
-      const services2 = await withTimeout(storage.getServices(), 5e3);
+      let services2;
+      try {
+        services2 = await withTimeout(storage.getServices(), 3e3);
+      } catch (error) {
+        console.error("Error getting services:", error);
+        services2 = [
+          { id: "1", name: "Haircut & Style", price: 45, isActive: true },
+          { id: "2", name: "Facial Treatment", price: 65, isActive: true },
+          { id: "3", name: "Hair Color", price: 120, isActive: true }
+        ];
+      }
       const selectedService = services2.find(
         (s) => s.isActive && s.name.toLowerCase() === text3.toLowerCase()
       );
@@ -11599,7 +11818,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
           const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
             selectedService: selectedService.id,
             currentState: "awaiting_date"
-          }), 5e3);
+          }), 3e3);
           if (updatedConversation) {
             newState = "awaiting_date";
           } else {
@@ -11665,7 +11884,17 @@ async function processStaticWhatsAppMessage(from, messageText) {
       const timeChoice = parseInt(text3);
       if (timeChoice >= 1 && timeChoice <= 5) {
         const selectedTime = timeSlots[timeChoice - 1];
-        const services2 = await withTimeout(storage.getServices(), 5e3);
+        let services2;
+        try {
+          services2 = await withTimeout(storage.getServices(), 3e3);
+        } catch (error) {
+          console.error("Error getting services:", error);
+          services2 = [
+            { id: "1", name: "Haircut & Style", price: 45, isActive: true },
+            { id: "2", name: "Facial Treatment", price: 65, isActive: true },
+            { id: "3", name: "Hair Color", price: 120, isActive: true }
+          ];
+        }
         const selectedService = services2.find((s) => s.id === conversation.selectedService);
         if (selectedService) {
           let newStateUpdated = false;
@@ -11673,7 +11902,7 @@ async function processStaticWhatsAppMessage(from, messageText) {
             const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
               selectedTime,
               currentState: "awaiting_payment"
-            }), 5e3);
+            }), 3e3);
             if (updatedConversation) {
               newState = "awaiting_payment";
               newStateUpdated = true;
@@ -11688,7 +11917,13 @@ async function processStaticWhatsAppMessage(from, messageText) {
             newStateUpdated = true;
           }
           if (newStateUpdated) {
-            const latestConversation = await withTimeout(storage.getConversation(from), 5e3) || conversation;
+            let latestConversation;
+            try {
+              latestConversation = await withTimeout(storage.getConversation(from), 3e3) || conversation;
+            } catch (error) {
+              console.error("Error getting updated conversation:", error);
+              latestConversation = conversation;
+            }
             if (latestConversation && latestConversation.selectedDate) {
               const upiLink = generateUPILink(selectedService.price, selectedService.name);
               response = `Perfect! Your appointment is scheduled for ${selectedTime}.
@@ -11710,23 +11945,29 @@ ${upiLink}
 
 `;
               response += "Complete payment in GPay/PhonePe/Paytm and reply 'paid' to confirm your booking.";
-              const time24 = timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00";
-              const [hourStr, minuteStr] = time24.split(":");
-              const istOffsetMs = 5.5 * 60 * 60 * 1e3;
-              const [y, m, d] = latestConversation.selectedDate.split("-").map((v) => parseInt(v, 10));
-              const istMidnight = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
-              const istDateTimeMs = istMidnight.getTime() + (parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10)) * 60 * 1e3;
-              const utcDateTime = new Date(istDateTimeMs - istOffsetMs);
-              await withTimeout(storage.createBooking({
-                conversationId: conversation.id,
-                serviceId: selectedService.id,
-                phoneNumber: from,
-                amount: selectedService.price,
-                // Already in INR
-                status: "pending",
-                appointmentDate: utcDateTime,
-                appointmentTime: selectedTime
-              }), 5e3);
+              try {
+                const time24 = timeChoice === 1 ? "10:00" : timeChoice === 2 ? "11:30" : timeChoice === 3 ? "14:00" : timeChoice === 4 ? "15:30" : "17:00";
+                const [hourStr, minuteStr] = time24.split(":");
+                const istOffsetMs = 5.5 * 60 * 60 * 1e3;
+                const [y, m, d] = latestConversation.selectedDate.split("-").map((v) => parseInt(v, 10));
+                const istMidnight = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+                const istDateTimeMs = istMidnight.getTime() + (parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10)) * 60 * 1e3;
+                const utcDateTime = new Date(istDateTimeMs - istOffsetMs);
+                await withTimeout(storage.createBooking({
+                  conversationId: conversation.id,
+                  serviceId: selectedService.id,
+                  phoneNumber: from,
+                  amount: selectedService.price,
+                  // Already in INR
+                  status: "pending",
+                  appointmentDate: utcDateTime,
+                  appointmentTime: selectedTime
+                }), 3e3);
+                console.log("Booking created successfully");
+              } catch (error) {
+                console.error("Error creating booking:", error);
+                response += "\n\n\u26A0\uFE0F Note: There was an issue saving your booking details, but your appointment is still scheduled.";
+              }
             }
           }
         } else {
@@ -11790,16 +12031,22 @@ ${upiLink}
       try {
         await withTimeout(storage.updateConversation(conversation.id, {
           currentState: newState
-        }), 5e3);
+        }), 3e3);
+        console.log("Conversation state updated to:", newState);
       } catch (error) {
         console.error("Error updating conversation state:", error);
       }
     }
-    await storage.createMessage({
-      conversationId: conversation.id,
-      content: response,
-      isFromBot: true
-    });
+    try {
+      await withTimeout(storage.createMessage({
+        conversationId: conversation.id,
+        content: response,
+        isFromBot: true
+      }), 3e3);
+      console.log("Bot message stored successfully");
+    } catch (error) {
+      console.error("Error storing bot message:", error);
+    }
     return response;
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
@@ -11864,15 +12111,20 @@ async function registerRoutes(app2) {
                     bookingContext
                   );
                   if (result.success && result.message) {
-                    await sendWhatsAppMessage(message.from, result.message);
-                    console.log(`Successfully processed message via simple webhook`);
-                    if (result.nextStep) {
-                      bookingContext.currentStep = result.nextStep;
-                      legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
-                      console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                    console.log(`\u{1F4E4} Sending response to WhatsApp: ${result.message.substring(0, 50)}...`);
+                    const messageSent = await sendWhatsAppMessage(message.from, result.message);
+                    if (messageSent) {
+                      console.log(`\u2705 Successfully processed and sent message via simple webhook`);
+                      if (result.nextStep) {
+                        bookingContext.currentStep = result.nextStep;
+                        legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
+                        console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                      }
+                    } else {
+                      console.error(`\u274C Failed to send WhatsApp message, but processing was successful`);
                     }
                   } else {
-                    console.error(`Simple webhook failed to process message:`, result);
+                    console.error(`\u274C Simple webhook failed to process message:`, result);
                     await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
                   }
                 } catch (error) {
@@ -12206,6 +12458,8 @@ We apologize for any inconvenience caused.`;
   app2.use("/api/webhook", webhookRoutes);
   const simpleWebhookRoutes = createSimpleWebhookRoutes();
   app2.use("/api", simpleWebhookRoutes);
+  const realtimeRoutes = createRealtimeRoutes();
+  app2.use("/api/realtime", realtimeRoutes);
   app2.post("/api/bot-flows/:flowId/activate", async (req, res) => {
     try {
       const { flowId } = req.params;
