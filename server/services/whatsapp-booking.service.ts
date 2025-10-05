@@ -379,52 +379,46 @@ Please reply with the time slot number or time.`,
 
       context.selectedTime = selectedTime;
       context.currentStep = 'confirmation';
-        
-        // Get service details for confirmation
-        const service = await this.getServiceById(context.selectedService);
-        
-        // Set appointment data for confirmation step
-        const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
-        const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-        const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
-        
-        context.appointmentData = {
-          customer_name: context.customerName || 'WhatsApp Customer',
-          customer_phone: context.customerPhone,
-          customer_email: context.customerEmail || '',
-          service_id: context.selectedService,
-          service_name: service?.name || 'Unknown Service',
-          staff_id: null, // Temporarily disable staff assignment
-          staff_name: 'To be assigned',
-          scheduled_at: utcDateTime.toISOString(),
-          selectedTime: selectedTime,
-          amount: service?.price || 0,
-          currency: 'INR',
-          notes: 'Booked via WhatsApp Bot',
-          payment_status: 'pending'
-        };
-        
-        return {
-          success: true,
-          message: `Perfect! You selected: ${selectedTime}
+      
+      // Get service details for confirmation
+      const service = await this.getServiceById(context.selectedService);
+      
+      // Set appointment data for confirmation step
+      const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
+      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+      const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
+      
+      context.appointmentData = {
+        customer_name: context.customerName || 'WhatsApp Customer',
+        customer_phone: context.customerPhone,
+        customer_email: context.customerEmail || '',
+        service_id: context.selectedService,
+        service_name: service?.name || 'Unknown Service',
+        staff_id: null, // Temporarily disable staff assignment
+        staff_name: 'To be assigned',
+        scheduled_at: utcDateTime.toISOString(),
+        selectedTime: selectedTime,
+        amount: service?.price || 0,
+        currency: 'INR',
+        notes: 'Booked via WhatsApp Bot',
+        payment_status: 'pending'
+      };
+      
+      return {
+        success: true,
+        message: `Perfect! You selected: ${selectedTime}
 
 ✅ **Appointment Summary:**
 • Service: ${service?.name}
 • Date: ${context.selectedDate}
 • Time: ${selectedTime}
-• Staff: ${selectedSlot.assignedStaff.name}
+• Staff: To be assigned
 • Price: ₹${service?.price}
 • Duration: ${service?.duration_minutes} minutes
 
 Please reply with "confirm" to book this appointment, or "change" to modify your selection.`,
-          nextStep: 'confirmation'
-        };
-      } else {
-        return {
-          success: false,
-          message: "I'm sorry, this time slot is no longer available. Please select another time."
-        };
-      }
+        nextStep: 'confirmation'
+      };
 
     } catch (error) {
       console.error('Error handling time selection:', error);
