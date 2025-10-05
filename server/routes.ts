@@ -139,8 +139,12 @@ async function processWhatsAppMessage(from: string, messageText: string): Promis
     await sendWhatsAppMessage(from, response);
   } catch (error) {
     console.error("Error processing WhatsApp message:", error);
-    // Send error message to user
-    await sendWhatsAppMessage(from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+    // Send a more helpful error message to user
+    try {
+      await sendWhatsAppMessage(from, "I'm having trouble processing your request right now. Please try sending 'hi' to start over, or contact us directly for assistance.");
+    } catch (sendError) {
+      console.error("Error sending error message:", sendError);
+    }
   }
 }
 
@@ -608,23 +612,42 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
     ]);
   };
 
-  // Get or create conversation
-  let conversation = await storage.getConversation(from);
-  if (!conversation) {
-    conversation = await storage.createConversation({
+  // Get or create conversation with error handling
+  let conversation;
+  try {
+    conversation = await withTimeout(storage.getConversation(from), 3000);
+    if (!conversation) {
+      conversation = await withTimeout(storage.createConversation({
+        phoneNumber: from,
+        currentState: "greeting",
+      }), 3000);
+      console.log("WhatsApp: Created new conversation", conversation.id);
+    }
+  } catch (error) {
+    console.error("Error managing conversation:", error);
+    // Create a fallback conversation object
+    conversation = {
+      id: `fallback_${from}_${Date.now()}`,
       phoneNumber: from,
       currentState: "greeting",
-    });
-    console.log("WhatsApp: Created new conversation", conversation.id);
+      selectedService: null,
+      selectedDate: null,
+      selectedTime: null
+    };
   }
 
-  // Store user message
-  await storage.createMessage({
-    conversationId: conversation.id,
-    content: messageText,
-    isFromBot: false,
-  });
-  console.log("WhatsApp: Stored user message for conversation", conversation.id);
+  // Store user message with error handling
+  try {
+    await withTimeout(storage.createMessage({
+      conversationId: conversation.id,
+      content: messageText,
+      isFromBot: false,
+    }), 3000);
+    console.log("WhatsApp: Stored user message for conversation", conversation.id);
+  } catch (error) {
+    console.error("Error storing user message:", error);
+    // Continue processing even if message storage fails
+  }
 
   let response = "";
   let newState = conversation.currentState;
@@ -634,7 +657,19 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
     // Handle conversation flow
     if (text === "hi" || text === "hello" || conversation.currentState === "greeting") {
       // Send welcome message with services
-      const services = await withTimeout(storage.getServices(), 5000);
+      let services;
+      try {
+        services = await withTimeout(storage.getServices(), 3000);
+      } catch (error) {
+        console.error("Error getting services:", error);
+        // Use fallback services if database fails
+        services = [
+          { id: "1", name: "Haircut & Style", price: 45, isActive: true },
+          { id: "2", name: "Facial Treatment", price: 65, isActive: true },
+          { id: "3", name: "Hair Color", price: 120, isActive: true }
+        ];
+      }
+      
       const activeServices = services.filter(s => s.isActive);
       
       response = "👋 Welcome to Spark Salon!\n\nHere are our services:\n";
@@ -646,7 +681,19 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
       
     } else if (conversation.currentState === "awaiting_service") {
       // Check if message matches a service
-      const services = await withTimeout(storage.getServices(), 5000);
+      let services;
+      try {
+        services = await withTimeout(storage.getServices(), 3000);
+      } catch (error) {
+        console.error("Error getting services:", error);
+        // Use fallback services if database fails
+        services = [
+          { id: "1", name: "Haircut & Style", price: 45, isActive: true },
+          { id: "2", name: "Facial Treatment", price: 65, isActive: true },
+          { id: "3", name: "Hair Color", price: 120, isActive: true }
+        ];
+      }
+      
       const selectedService = services.find(s => 
         s.isActive && s.name.toLowerCase() === text.toLowerCase()
       );
@@ -677,7 +724,7 @@ async function processStaticWhatsAppMessage(from: string, messageText: string): 
           const updatedConversation = await withTimeout(storage.updateConversation(conversation.id, {
             selectedService: selectedService.id,
             currentState: "awaiting_date",
-          }), 5000);
+          }), 3000);
           
           // Only update newState if the database update was successful
           if (updatedConversation) {
