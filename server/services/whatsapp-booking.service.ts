@@ -296,7 +296,7 @@ Please reply with the date number or date.`,
       context.currentStep = 'time_selection';
 
       // Get available time slots for selected date, filtered by service
-      const selectedService = await this.getServiceById(context.selectedService);
+      const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
       const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
 
       return {
@@ -342,7 +342,7 @@ Please reply with the time slot number or time.`,
         };
       }
       
-      const selectedService = await this.getServiceById(context.selectedService);
+      const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
       console.log('🔍 Time selection - selected service:', selectedService?.name);
       console.log('🔍 Time selection - selected date:', context.selectedDate);
       
@@ -381,7 +381,7 @@ Please reply with the time slot number or time.`,
       context.currentStep = 'confirmation';
       
       // Get service details for confirmation
-      const service = await this.getServiceById(context.selectedService);
+      const service = await this.getServiceById(context.selectedService, context.tenantId);
       
       // Set appointment data for confirmation step
       const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
@@ -603,7 +603,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
   /**
    * Get service by ID
    */
-  private async getServiceById(tenantId: string, serviceId: string): Promise<any> {
+  private async getServiceById(serviceId: string, tenantId?: string): Promise<any> {
     try {
       // Use Bella Salon services from services table
       const result = await this.pool.query(`

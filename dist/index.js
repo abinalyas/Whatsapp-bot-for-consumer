@@ -250,7 +250,7 @@ Please reply with the date number or date.`,
           }
           context.selectedDate = selectedDate.date;
           context.currentStep = "time_selection";
-          const selectedService = await this.getServiceById(context.selectedService);
+          const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
           const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
           return {
             success: true,
@@ -290,7 +290,7 @@ Please reply with the time slot number or time.`,
               message: "I'm sorry, I couldn't find your selected service. Please start over by typing 'book appointment'."
             };
           }
-          const selectedService = await this.getServiceById(context.selectedService);
+          const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
           console.log("\u{1F50D} Time selection - selected service:", selectedService?.name);
           console.log("\u{1F50D} Time selection - selected date:", context.selectedDate);
           if (!selectedService) {
@@ -318,7 +318,7 @@ Please reply with the time slot number or time.`,
           }
           context.selectedTime = selectedTime;
           context.currentStep = "confirmation";
-          const service = await this.getServiceById(context.selectedService);
+          const service = await this.getServiceById(context.selectedService, context.tenantId);
           const appointmentDateTime = /* @__PURE__ */ new Date(`${context.selectedDate}T${selectedTime}:00`);
           const istOffset = 5.5 * 60 * 60 * 1e3;
           const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
@@ -504,7 +504,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
       /**
        * Get service by ID
        */
-      async getServiceById(tenantId, serviceId) {
+      async getServiceById(serviceId, tenantId) {
         try {
           const result = await this.pool.query(`
         SELECT id, name, description, price, is_active,
