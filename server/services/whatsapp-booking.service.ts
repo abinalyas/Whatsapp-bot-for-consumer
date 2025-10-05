@@ -385,8 +385,8 @@ Please reply with the time slot number or time.`,
       
       // Set appointment data for confirmation step
       const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
-      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-      const utcDateTime = new Date(appointmentDateTime.getTime() - istOffset);
+      // Store in local timezone instead of UTC to match dashboard filtering
+      const localDateTime = new Date(appointmentDateTime);
       
       context.appointmentData = {
         customer_name: context.customerName || 'WhatsApp Customer',
@@ -396,7 +396,7 @@ Please reply with the time slot number or time.`,
         service_name: service?.name || 'Unknown Service',
         staff_id: null, // Temporarily disable staff assignment
         staff_name: 'To be assigned',
-        scheduled_at: utcDateTime.toISOString(),
+        scheduled_at: localDateTime.toISOString(),
         selectedTime: selectedTime,
         amount: service?.price || 0,
         currency: 'INR',
