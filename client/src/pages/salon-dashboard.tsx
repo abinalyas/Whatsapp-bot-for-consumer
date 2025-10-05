@@ -6890,13 +6890,19 @@ export default function SalonDashboard() {
       const previousAppointments = previousAppointmentsRef.current;
       const currentAppointments = appointmentsData;
       
+      console.log('🔍 Toast Debug - Previous appointments:', previousAppointments.length);
+      console.log('🔍 Toast Debug - Current appointments:', currentAppointments.length);
+      
       // Find new appointments by comparing IDs
       const newAppointments = currentAppointments.filter(current => 
         !previousAppointments.some(previous => previous.id === current.id)
       );
       
+      console.log('🔍 Toast Debug - New appointments found:', newAppointments.length);
+      
       // Show toast for each new appointment
       newAppointments.forEach(appointment => {
+        console.log('🔍 Toast Debug - Showing toast for appointment:', appointment.id);
         // Play notification sound
         try {
           const audio = new Audio('/notification.mp3');
@@ -8457,16 +8463,52 @@ export default function SalonDashboard() {
                 <div className={`w-2 h-2 rounded-full ${appointmentsLoading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
                 <span>{appointmentsLoading ? 'Refreshing...' : 'Live updates enabled'}</span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => refetchAppointments()}
-                disabled={appointmentsLoading}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${appointmentsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    console.log('🧪 Testing toast...');
+                    toast({
+                      title: "🧪 Test Toast",
+                      description: "This is a test notification to check if toasts are working",
+                      duration: 10000,
+                      variant: "default",
+                    });
+                    console.log('🧪 Toast called');
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  Test Toast
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => {
+                    console.log('🧪 Testing destructive toast...');
+                    toast({
+                      title: "🚨 Destructive Test",
+                      description: "This should be very visible with red styling",
+                      duration: 10000,
+                      variant: "destructive",
+                    });
+                    console.log('🧪 Destructive toast called');
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  Test Destructive
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetchAppointments()}
+                  disabled={appointmentsLoading}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${appointmentsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
             {renderSection()}
           </div>
