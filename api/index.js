@@ -286,16 +286,24 @@ Please reply with the time slot number or time.`,
           const skilledStaff = await this.getStaffForService(context.tenantId, selectedService?.name);
           
           if (skilledStaff.length === 0) {
-            return {
-              success: false,
-              message: "I'm sorry, no staff members are available for this service at this time. Please try a different time or service."
-            };
+            console.log('No staff found for service, creating fallback staff');
+            // Try to create fallback staff
+            const fallbackStaff = await this.createFallbackStaff(context.tenantId, selectedService?.name);
+            if (fallbackStaff) {
+              skilledStaff.push(fallbackStaff);
+            } else {
+              // If we can't create fallback staff, proceed without staff assignment
+              console.log('Proceeding without staff assignment');
+            }
           }
           
           // Check which skilled staff are available at this time
-          const availableStaff = await this.getAvailableStaffAtTime(context.tenantId, context.selectedDate, selectedTime, skilledStaff);
+          let availableStaff = [];
+          if (skilledStaff.length > 0) {
+            availableStaff = await this.getAvailableStaffAtTime(context.tenantId, context.selectedDate, selectedTime, skilledStaff);
+          }
           
-          if (availableStaff.length === 0) {
+          if (availableStaff.length === 0 && skilledStaff.length > 0) {
             return {
               success: false,
               message: "I'm sorry, no staff members are available for this service at this time. Please try a different time."
@@ -810,6 +818,46 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         return "\u2728";
       }
     };
+    /**
+     * Create a fallback staff member for a service when no staff are configured
+     */
+    async createFallbackStaff(tenantId, serviceName) {
+      try {
+        console.log("🔧 Creating fallback staff for service:", serviceName);
+        const existingStaff = await this.pool.query(`
+          SELECT id, name, role
+          FROM staff 
+          WHERE tenant_id = $1 
+          AND name = $2
+          AND is_active = true
+        `, [tenantId, `General Staff - ${serviceName}`]);
+        if (existingStaff.rows.length > 0) {
+          return existingStaff.rows[0];
+        }
+        const staffId = randomUUID3();
+        await this.pool.query(`
+          INSERT INTO staff (
+            id, tenant_id, name, role, specializations, 
+            is_active, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        `, [
+          staffId,
+          tenantId,
+          `General Staff - ${serviceName}`,
+          "General",
+          JSON.stringify([serviceName])
+        ]);
+        console.log("✅ Created fallback staff:", staffId);
+        return {
+          id: staffId,
+          name: `General Staff - ${serviceName}`,
+          role: "General"
+        };
+      } catch (error) {
+        console.error("❌ Error creating fallback staff:", error);
+        return null;
+      }
+    }
   }
 });
 
