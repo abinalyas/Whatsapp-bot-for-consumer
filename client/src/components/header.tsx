@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Menu, Search, Bell, User, Settings, LogOut } from "lucide-react";
+import { Menu, Search, Bell, User, Settings, LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +17,13 @@ interface HeaderProps {
   onSidebarToggle?: () => void;
   currentSection?: string;
   sidebarCollapsed?: boolean;
+  onRefreshAppointments?: () => void;
+  appointmentsLoading?: boolean;
 }
 
-export function Header({ onSidebarToggle, currentSection = "Overview", sidebarCollapsed = false }: HeaderProps) {
+export function Header({ onSidebarToggle, currentSection = "Overview", sidebarCollapsed = false, onRefreshAppointments, appointmentsLoading = false }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,6 +64,56 @@ export function Header({ onSidebarToggle, currentSection = "Overview", sidebarCo
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 w-80"
             />
+          </div>
+
+          {/* Toast Test Buttons - DEBUG */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                console.log('🧪 Testing toast from header...');
+                toast({
+                  title: "🧪 Test Toast",
+                  description: "This is a test notification from header",
+                  duration: 10000,
+                  variant: "default",
+                });
+                console.log('🧪 Header toast called');
+              }}
+              className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600"
+            >
+              Test Toast
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => {
+                console.log('🧪 Testing destructive toast from header...');
+                toast({
+                  title: "🚨 Destructive Test",
+                  description: "This should be very visible with red styling",
+                  duration: 10000,
+                  variant: "destructive",
+                });
+                console.log('🧪 Header destructive toast called');
+              }}
+              className="flex items-center gap-2 bg-red-600 text-white hover:bg-red-700"
+            >
+              Test Destructive
+            </Button>
+            {onRefreshAppointments && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefreshAppointments}
+                disabled={appointmentsLoading}
+                className="flex items-center gap-2 bg-green-500 text-white hover:bg-green-600"
+              >
+                <RefreshCw className={`h-4 w-4 ${appointmentsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
           </div>
 
           {/* Notifications */}
