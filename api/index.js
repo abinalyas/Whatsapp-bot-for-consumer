@@ -343,7 +343,7 @@ Please reply with the time slot number or time.`,
 • Service: ${selectedService?.name}
 • Date: ${context.selectedDate}
 • Time: ${selectedTime}
-• Staff: ${assignedStaff.name}
+• Staff: ${assignedStaff?.name || 'To be assigned'}
 • Price: ₹${selectedService?.price}
 • Duration: ${selectedService?.duration_minutes} minutes
 
