@@ -817,7 +817,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         }
         return "\u2728";
       }
-    };
+    }
     /**
      * Create a fallback staff member for a service when no staff are configured
      */
