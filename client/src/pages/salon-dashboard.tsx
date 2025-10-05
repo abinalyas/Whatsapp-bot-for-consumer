@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6865,6 +6866,8 @@ export default function SalonDashboard() {
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { toast } = useToast();
+  const previousAppointmentsRef = useRef([]);
 
   // React Query for real-time appointments data
   const { data: appointmentsData, isLoading: appointmentsLoading, refetch: refetchAppointments } = useQuery({
@@ -6880,6 +6883,72 @@ export default function SalonDashboard() {
     refetchOnWindowFocus: true,
     staleTime: 5000, // Consider data stale after 5 seconds
   });
+
+  // Detect new appointments and show toast notifications
+  useEffect(() => {
+    if (appointmentsData && appointmentsData.length > 0) {
+      const previousAppointments = previousAppointmentsRef.current;
+      const currentAppointments = appointmentsData;
+      
+      // Find new appointments by comparing IDs
+      const newAppointments = currentAppointments.filter(current => 
+        !previousAppointments.some(previous => previous.id === current.id)
+      );
+      
+      // Show toast for each new appointment
+      newAppointments.forEach(appointment => {
+        // Play notification sound
+        try {
+          const audio = new Audio('/notification.mp3');
+          audio.volume = 0.3;
+          audio.play().catch(() => {
+            // Fallback: use browser's built-in notification sound
+            console.log('🔔 New appointment notification');
+          });
+        } catch (error) {
+          console.log('🔔 New appointment notification');
+        }
+        const appointmentDate = new Date(appointment.scheduled_at || appointment.appointmentDate);
+        const formattedDate = appointmentDate.toLocaleDateString('en-IN', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+        const formattedTime = appointment.appointmentTime || 
+          appointmentDate.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          });
+        
+        toast({
+          title: "🎉 New Appointment Booked!",
+          description: (
+            <div className="space-y-1">
+              <div className="font-medium">
+                {appointment.customer_name || appointment.customer}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {appointment.service_name || appointment.service}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                📅 {formattedDate} at {formattedTime}
+              </div>
+              {appointment.staff_name && appointment.staff_name !== 'To be assigned' && (
+                <div className="text-sm text-muted-foreground">
+                  👤 Staff: {appointment.staff_name}
+                </div>
+              )}
+            </div>
+          ),
+          duration: 6000,
+        });
+      });
+      
+      // Update the previous appointments reference
+      previousAppointmentsRef.current = currentAppointments;
+    }
+  }, [appointmentsData, toast]);
 
   // Trigger data loading when React Query data changes
   useEffect(() => {
