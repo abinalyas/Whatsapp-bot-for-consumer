@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6864,6 +6865,28 @@ export default function SalonDashboard() {
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // React Query for real-time appointments data
+  const { data: appointmentsData, isLoading: appointmentsLoading, refetch: refetchAppointments } = useQuery({
+    queryKey: ['salon-appointments'],
+    queryFn: async () => {
+      const response = await fetch('/api/salon/appointments', {
+        headers: { 'x-tenant-id': 'bella-salon' }
+      });
+      const result = await response.json();
+      return result.success ? result.data : [];
+    },
+    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchOnWindowFocus: true,
+    staleTime: 5000, // Consider data stale after 5 seconds
+  });
+
+  // Trigger data loading when React Query data changes
+  useEffect(() => {
+    if (appointmentsData) {
+      loadAllAppointments();
+    }
+  }, [appointmentsData]);
   
   // Edit appointment modal state - moved from first component
   const [editingAppointment, setEditingAppointment] = useState(null);
@@ -7033,11 +7056,18 @@ export default function SalonDashboard() {
     try {
       console.log('🚀 MAIN COMPONENT: Loading all appointments...');
       
-      // Load both appointments and staff/services data for transformation
-      const [appointmentsResponse, staffResponse, servicesResponse] = await Promise.all([
-        fetch('/api/salon/appointments', {
+      // Use React Query data if available, otherwise fetch manually
+      let appointments = appointmentsData;
+      if (!appointments) {
+        const appointmentsResponse = await fetch('/api/salon/appointments', {
           headers: { 'x-tenant-id': 'bella-salon' }
-        }),
+        });
+        const appointmentsResult = await appointmentsResponse.json();
+        appointments = appointmentsResult.success ? appointmentsResult.data : [];
+      }
+      
+      // Load staff and services data for transformation
+      const [staffResponse, servicesResponse] = await Promise.all([
         fetch('/api/staff/staff', {
           headers: { 'x-tenant-id': 'bella-salon' }
         }),
@@ -7046,13 +7076,12 @@ export default function SalonDashboard() {
         })
       ]);
       
-      if (appointmentsResponse.ok && staffResponse.ok && servicesResponse.ok) {
-        const appointmentsResult = await appointmentsResponse.json();
+      if (staffResponse.ok && servicesResponse.ok) {
         const staffResult = await staffResponse.json();
         const servicesResult = await servicesResponse.json();
         
-        if (appointmentsResult.success) {
-          console.log('🚀 MAIN COMPONENT: Loaded all appointments:', appointmentsResult.data?.length || 0);
+        if (appointments && appointments.length > 0) {
+          console.log('🚀 MAIN COMPONENT: Loaded all appointments:', appointments.length);
           console.log('🚀 MAIN COMPONENT: Loaded staff data:', staffResult.data?.length || 0);
           console.log('🚀 MAIN COMPONENT: Loaded services data:', servicesResult.data?.length || 0);
           
@@ -7069,7 +7098,7 @@ export default function SalonDashboard() {
           });
           
           // Transform appointments data to include staff names and calendar fields
-          const transformedAppointments = appointmentsResult.data.map(apt => {
+          const transformedAppointments = appointments.map(apt => {
             console.log('🔍 STAFF MAPPING: Appointment staff_id:', apt.staff_id, 'Available staff:', Array.from(staffMap.entries()));
             const staffName = staffMap.get(apt.staff_id) || 'Unassigned';
             console.log('🔍 STAFF MAPPING: Found staff name:', staffName);
@@ -8353,6 +8382,23 @@ export default function SalonDashboard() {
             sidebarCollapsed={sidebarCollapsed}
           />
           <div className="h-[calc(100vh-4rem)] overflow-auto p-6">
+            {/* Real-time refresh indicator */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className={`w-2 h-2 rounded-full ${appointmentsLoading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                <span>{appointmentsLoading ? 'Refreshing...' : 'Live updates enabled'}</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetchAppointments()}
+                disabled={appointmentsLoading}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${appointmentsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
             {renderSection()}
           </div>
         </main>
