@@ -8457,8 +8457,12 @@ export default function SalonDashboard() {
             sidebarCollapsed={sidebarCollapsed}
           />
           <div className="h-[calc(100vh-4rem)] overflow-auto p-6">
+            {/* DEBUG: This should be visible if changes are deployed */}
+            <div className="mb-4 bg-red-500 text-white p-4 rounded-lg text-center font-bold">
+              🚨 DEBUG: Toast testing buttons should be visible below this message
+            </div>
             {/* Real-time refresh indicator */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between bg-yellow-100 p-4 rounded-lg border-2 border-yellow-300">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className={`w-2 h-2 rounded-full ${appointmentsLoading ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
                 <span>{appointmentsLoading ? 'Refreshing...' : 'Live updates enabled'}</span>
