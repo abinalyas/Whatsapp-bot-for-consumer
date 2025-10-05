@@ -280,7 +280,9 @@ Please reply with the time slot number or time.`,
           context.selectedTime = selectedTime;
           
           // Get the selected service to find appropriate staff
-          const selectedService = await this.getServiceById(context.selectedService);
+          console.log('🔍 Getting service for ID:', context.selectedService);
+          const selectedService = await this.getServiceById(context.tenantId, context.selectedService);
+          console.log('🔍 Retrieved service:', selectedService);
           
           // Find staff who can perform this service
           const skilledStaff = await this.getStaffForService(context.tenantId, selectedService?.name);
@@ -340,12 +342,12 @@ Please reply with the time slot number or time.`,
             message: `Perfect! You selected: ${selectedTime}
 
 ✅ **Appointment Summary:**
-• Service: ${selectedService?.name}
+• Service: ${selectedService?.name || 'Service'}
 • Date: ${context.selectedDate}
 • Time: ${selectedTime}
 • Staff: ${assignedStaff?.name || 'To be assigned'}
-• Price: ₹${selectedService?.price}
-• Duration: ${selectedService?.duration_minutes} minutes
+• Price: ₹${selectedService?.price || 0}
+• Duration: ${selectedService?.duration_minutes || 60} minutes
 
 Please reply with "confirm" to book this appointment, or "change" to modify your selection.`,
             nextStep: "confirmation"
@@ -433,9 +435,9 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
             customer_phone: context.customerPhone,
             customer_email: context.customerEmail || "",
             service_id: context.selectedService,
-            service_name: service?.name || "Unknown Service",
+            service_name: service?.name || "Service",
             staff_id: context.selectedStaff,
-            staff_name: selectedStaff.name,
+            staff_name: selectedStaff?.name || "To be assigned",
             scheduled_at: utcDateTime.toISOString(),
             selectedTime: context.selectedTime,
             amount: service?.price || 0,
@@ -571,6 +573,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
        */
       async getServiceById(tenantId, serviceId) {
         try {
+          console.log('🔍 getServiceById called with:', { tenantId, serviceId });
           const result = await this.pool.query(`
         SELECT id, name, description, price, is_active,
                CASE 
@@ -589,6 +592,7 @@ Thank you for choosing Bella Salon! We look forward to seeing you! \u2728`,
         FROM services 
         WHERE id = $1 AND is_active = true
       `, [serviceId]);
+          console.log('🔍 getServiceById result:', result.rows[0]);
           return result.rows[0] || null;
         } catch (error) {
           console.error("Error fetching Bella Salon service:", error);
