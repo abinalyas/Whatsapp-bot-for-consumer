@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo 'Using pre-built files - no build needed'",
+  "buildCommand": "echo 'Using pre-built files - no build needed - v2.14.0 - $(date)'",
   "builds": [
     {
       "src": "api/index.js",
