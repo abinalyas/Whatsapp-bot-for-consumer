@@ -116,12 +116,22 @@ export class WhatsAppBookingService {
   private async handleWelcome(messageText: string, context: BookingContext): Promise<BookingResponse> {
     const bookingKeywords = ['book', 'appointment', 'booking', 'schedule', 'reserve'];
     const greetingKeywords = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
+    const confirmKeywords = ['confirm', 'yes', 'y', 'ok', 'okay', 'proceed'];
     
     // Handle greeting messages
     if (greetingKeywords.some(keyword => messageText.includes(keyword))) {
       return {
         success: true,
         message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
+        nextStep: 'welcome'
+      };
+    }
+    
+    // Handle confirmation messages - redirect to booking flow
+    if (confirmKeywords.some(keyword => messageText.includes(keyword))) {
+      return {
+        success: true,
+        message: "Great! Let's book your appointment. Please type 'book appointment' or 'book' to get started.",
         nextStep: 'welcome'
       };
     }
@@ -164,9 +174,11 @@ Reply with the number or name of the service to book.`,
       }
     }
 
+    // Handle unrecognized messages with helpful guidance
     return {
-      success: false,
-      message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'."
+      success: true,
+      message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.\n\nIf you were in the middle of booking, please start over by typing 'book appointment'.",
+      nextStep: 'welcome'
     };
   }
 
