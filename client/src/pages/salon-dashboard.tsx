@@ -6862,7 +6862,7 @@ function WhatsAppBotSection() {
 
 export default function SalonDashboard() {
   // Log version for deployment tracking
-      console.log('🚀 Salon Dashboard v2.2.8 - Implemented Cancel Appointment Functionality');
+      console.log('🚀 Salon Dashboard v2.14.3 - Fixed Timezone Issues & Enhanced WhatsApp Bot');
   
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
