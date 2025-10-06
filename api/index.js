@@ -350,7 +350,8 @@ Please reply with the time slot number or time.`,
           context.selectedTime = selectedTime24;
           context.currentStep = "confirmation";
           const service = await this.getServiceById(context.selectedService, context.tenantId);
-          const istDateTimeString = `${context.selectedDate}T${selectedTime24}:00+05:30`;
+          const localDate = /* @__PURE__ */ new Date(`${context.selectedDate}T${selectedTime24}:00`);
+          const utcDateTimeString = localDate.toISOString();
           context.appointmentData = {
             customer_name: context.customerName || "WhatsApp Customer",
             customer_phone: context.customerPhone,
@@ -360,7 +361,7 @@ Please reply with the time slot number or time.`,
             staff_id: null,
             // Temporarily disable staff assignment
             staff_name: "To be assigned",
-            scheduled_at: istDateTimeString,
+            scheduled_at: utcDateTimeString,
             selectedTime,
             amount: service?.price || 0,
             currency: "INR",
