@@ -335,15 +335,19 @@ Please reply with the time slot number or time.`,
             selectedTime = this.parseTimeFromText(input, availableSlots);
           }
           if (!selectedTime) {
-            if (input.includes("confirm") || input.includes("yes") || input.includes("ok")) {
+            const confirmKeywords = ["confirm", "cofirm", "confrim", "confirm", "yes", "y", "ok", "okay", "proceed", "continue"];
+            const isConfirmAttempt = confirmKeywords.some(
+              (keyword) => input.toLowerCase().includes(keyword.toLowerCase())
+            );
+            if (isConfirmAttempt) {
               return {
                 success: false,
-                message: "I need you to select a time slot first. Please choose from the available times above by typing the time (like '4:30 PM') or the number of the slot."
+                message: "I need you to select a time slot first. Please choose from the available times above by typing the time (like '4:30 PM') or the number of the slot.\n\nAvailable times:\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n")
               };
             }
             return {
               success: false,
-              message: "Please select a valid time slot from the list above. You can type the time (like '4:30 PM') or the number of the slot."
+              message: "Please select a valid time slot from the list above. You can type the time (like '4:30 PM') or the number of the slot.\n\nAvailable times:\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n")
             };
           }
           const selectedTime24 = this.convert12HourTo24Hour(selectedTime);
