@@ -275,6 +275,7 @@ Please reply with the date number or date.`,
           context.currentStep = "time_selection";
           const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
           const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
+          console.log(`\u{1F50D} Date selection successful, returning time slots. Next step: time_selection`);
           return {
             success: true,
             message: `Perfect! You selected: ${selectedDate.formatted}
@@ -12195,13 +12196,20 @@ async function registerRoutes(app2) {
                   );
                   if (result.success && result.message) {
                     console.log(`\u{1F4E4} Sending response to WhatsApp: ${result.message.substring(0, 50)}...`);
+                    console.log(`\u{1F50D} Result details:`, { success: result.success, nextStep: result.nextStep, messageLength: result.message.length });
                     const messageSent = await sendWhatsAppMessage(message.from, result.message);
                     if (messageSent) {
                       console.log(`\u2705 Successfully processed and sent message via simple webhook`);
                       if (result.nextStep) {
                         bookingContext.currentStep = result.nextStep;
                         legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
-                        console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                        console.log(`\u2705 Updated conversation state for ${message.from}:`, {
+                          currentStep: bookingContext.currentStep,
+                          selectedService: bookingContext.selectedService,
+                          selectedDate: bookingContext.selectedDate
+                        });
+                      } else {
+                        console.log(`\u26A0\uFE0F No nextStep provided in result, keeping current state: ${bookingContext.currentStep}`);
                       }
                     } else {
                       console.error(`\u274C Failed to send WhatsApp message, but processing was successful`);

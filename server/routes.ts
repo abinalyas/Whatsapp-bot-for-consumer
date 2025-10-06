@@ -1070,6 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (result.success && result.message) {
                     console.log(`📤 Sending response to WhatsApp: ${result.message.substring(0, 50)}...`);
+                    console.log(`🔍 Result details:`, { success: result.success, nextStep: result.nextStep, messageLength: result.message.length });
                     const messageSent = await sendWhatsAppMessage(message.from, result.message);
                     
                     if (messageSent) {
@@ -1080,7 +1081,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         bookingContext.currentStep = result.nextStep;
                         // Store a deep copy of the context to preserve all changes
                         legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
-                        console.log(`Updated conversation state for ${message.from}:`, bookingContext);
+                        console.log(`✅ Updated conversation state for ${message.from}:`, {
+                          currentStep: bookingContext.currentStep,
+                          selectedService: bookingContext.selectedService,
+                          selectedDate: bookingContext.selectedDate
+                        });
+                      } else {
+                        console.log(`⚠️ No nextStep provided in result, keeping current state: ${bookingContext.currentStep}`);
                       }
                     } else {
                       console.error(`❌ Failed to send WhatsApp message, but processing was successful`);

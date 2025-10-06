@@ -330,6 +330,7 @@ Please reply with the date number or date.`,
       const selectedService = await this.getServiceById(context.selectedService, context.tenantId);
       const timeSlots = await this.getAvailableTimeSlots(context.tenantId, selectedDate.date, selectedService?.name);
 
+      console.log(`🔍 Date selection successful, returning time slots. Next step: time_selection`);
       return {
         success: true,
         message: `Perfect! You selected: ${selectedDate.formatted}
