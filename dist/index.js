@@ -54,8 +54,10 @@ var init_whatsapp_booking_service = __esm({
             currentStep: context.currentStep,
             context: JSON.stringify(context, null, 2)
           });
+          console.log(`\u{1F50D} processBookingMessage: Current step is '${context.currentStep}', message: '${messageText}'`);
           switch (context.currentStep) {
             case "welcome":
+              console.log("\u{1F50D} processBookingMessage: Routing to handleWelcome");
               return await this.handleWelcome(messageText, context);
             case "service_selection":
               return await this.handleServiceSelection(messageText, context);
@@ -120,9 +122,12 @@ var init_whatsapp_booking_service = __esm({
           };
         }
         if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
+          console.log("\u{1F50D} Welcome: User wants to book, fetching services...");
           try {
             const services2 = await this.getServices(context.tenantId);
+            console.log(`\u{1F50D} Welcome: Found ${services2.length} services`);
             if (services2.length === 0) {
+              console.log("\u274C Welcome: No services found");
               return {
                 success: false,
                 message: "I'm sorry, no services are currently available. Please contact us directly."
@@ -132,7 +137,7 @@ var init_whatsapp_booking_service = __esm({
               const emoji = this.getServiceEmoji(service.name, service.category);
               return `${emoji} ${service.name} \u2013 \u20B9${service.price}`;
             }).join("\n");
-            return {
+            const response = {
               success: true,
               message: `Hi! \u{1F44B} Welcome to Bella Salon! I'm here to help you book an appointment.
 
@@ -143,6 +148,12 @@ Reply with the number or name of the service to book.`,
               nextStep: "service_selection",
               options: services2.map((service) => service.name)
             };
+            console.log("\u{1F50D} Welcome: Returning service list response:", {
+              success: response.success,
+              nextStep: response.nextStep,
+              serviceCount: services2.length
+            });
+            return response;
           } catch (error) {
             console.error("Error fetching services in welcome:", error);
             return {

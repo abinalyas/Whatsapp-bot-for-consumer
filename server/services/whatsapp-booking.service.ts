@@ -57,8 +57,11 @@ export class WhatsAppBookingService {
       });
 
       // Handle different booking steps
+      console.log(`🔍 processBookingMessage: Current step is '${context.currentStep}', message: '${messageText}'`);
+      
       switch (context.currentStep) {
         case 'welcome':
+          console.log('🔍 processBookingMessage: Routing to handleWelcome');
           return await this.handleWelcome(messageText, context);
         
         case 'service_selection':
@@ -137,11 +140,14 @@ export class WhatsAppBookingService {
     }
     
     if (bookingKeywords.some(keyword => messageText.includes(keyword))) {
+      console.log('🔍 Welcome: User wants to book, fetching services...');
       try {
         // Fetch actual services from database
         const services = await this.getServices(context.tenantId);
+        console.log(`🔍 Welcome: Found ${services.length} services`);
         
         if (services.length === 0) {
+          console.log('❌ Welcome: No services found');
           return {
             success: false,
             message: "I'm sorry, no services are currently available. Please contact us directly."
@@ -154,7 +160,7 @@ export class WhatsAppBookingService {
           return `${emoji} ${service.name} – ₹${service.price}`;
         }).join('\n');
 
-        return {
+        const response = {
           success: true,
           message: `Hi! 👋 Welcome to Bella Salon! I'm here to help you book an appointment.
 
@@ -165,6 +171,14 @@ Reply with the number or name of the service to book.`,
           nextStep: 'service_selection',
           options: services.map(service => service.name)
         };
+        
+        console.log('🔍 Welcome: Returning service list response:', {
+          success: response.success,
+          nextStep: response.nextStep,
+          serviceCount: services.length
+        });
+        
+        return response;
       } catch (error) {
         console.error('Error fetching services in welcome:', error);
         return {
