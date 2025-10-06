@@ -1053,6 +1053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.log(`Created new conversation state for ${message.from}`);
                   } else {
                     console.log(`Using existing conversation state for ${message.from}, current step: ${bookingContext.currentStep}`);
+                    console.log(`🔍 Full conversation context:`, JSON.stringify(bookingContext, null, 2));
                   }
                   
                   // Process the message with our working booking service
@@ -1078,14 +1079,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       
                       // Update conversation state if successful
                       if (result.nextStep) {
+                        console.log(`🔄 Updating conversation state from '${bookingContext.currentStep}' to '${result.nextStep}'`);
                         bookingContext.currentStep = result.nextStep;
                         // Store a deep copy of the context to preserve all changes
                         legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
                         console.log(`✅ Updated conversation state for ${message.from}:`, {
                           currentStep: bookingContext.currentStep,
                           selectedService: bookingContext.selectedService,
-                          selectedDate: bookingContext.selectedDate
+                          selectedDate: bookingContext.selectedDate,
+                          selectedTime: bookingContext.selectedTime
                         });
+                        console.log(`🔍 Stored context in memory:`, JSON.stringify(legacyConversationState.get(message.from), null, 2));
                       } else {
                         console.log(`⚠️ No nextStep provided in result, keeping current state: ${bookingContext.currentStep}`);
                       }

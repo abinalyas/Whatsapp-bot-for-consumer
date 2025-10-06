@@ -12193,6 +12193,7 @@ async function registerRoutes(app2) {
                     console.log(`Created new conversation state for ${message.from}`);
                   } else {
                     console.log(`Using existing conversation state for ${message.from}, current step: ${bookingContext.currentStep}`);
+                    console.log(`\u{1F50D} Full conversation context:`, JSON.stringify(bookingContext, null, 2));
                   }
                   const result = await bookingService.processBookingMessage(
                     {
@@ -12212,13 +12213,16 @@ async function registerRoutes(app2) {
                     if (messageSent) {
                       console.log(`\u2705 Successfully processed and sent message via simple webhook`);
                       if (result.nextStep) {
+                        console.log(`\u{1F504} Updating conversation state from '${bookingContext.currentStep}' to '${result.nextStep}'`);
                         bookingContext.currentStep = result.nextStep;
                         legacyConversationState.set(message.from, JSON.parse(JSON.stringify(bookingContext)));
                         console.log(`\u2705 Updated conversation state for ${message.from}:`, {
                           currentStep: bookingContext.currentStep,
                           selectedService: bookingContext.selectedService,
-                          selectedDate: bookingContext.selectedDate
+                          selectedDate: bookingContext.selectedDate,
+                          selectedTime: bookingContext.selectedTime
                         });
+                        console.log(`\u{1F50D} Stored context in memory:`, JSON.stringify(legacyConversationState.get(message.from), null, 2));
                       } else {
                         console.log(`\u26A0\uFE0F No nextStep provided in result, keeping current state: ${bookingContext.currentStep}`);
                       }
