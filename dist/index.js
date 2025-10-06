@@ -107,20 +107,9 @@ var init_whatsapp_booking_service = __esm({
         const bookingKeywords = ["book", "appointment", "booking", "schedule", "reserve"];
         const greetingKeywords = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"];
         const confirmKeywords = ["confirm", "yes", "y", "ok", "okay", "proceed"];
-        if (greetingKeywords.some((keyword) => messageText.includes(keyword))) {
-          return {
-            success: true,
-            message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
-            nextStep: "welcome"
-          };
-        }
-        if (confirmKeywords.some((keyword) => messageText.includes(keyword))) {
-          return {
-            success: true,
-            message: "Great! Let's book your appointment. Please type 'book appointment' or 'book' to get started.",
-            nextStep: "welcome"
-          };
-        }
+        console.log("\u{1F50D} Welcome: Processing message:", messageText);
+        console.log("\u{1F50D} Welcome: Checking booking keywords:", bookingKeywords);
+        console.log("\u{1F50D} Welcome: Checking confirm keywords:", confirmKeywords);
         if (bookingKeywords.some((keyword) => messageText.includes(keyword))) {
           console.log("\u{1F50D} Welcome: User wants to book, fetching services...");
           try {
@@ -161,6 +150,20 @@ Reply with the number or name of the service to book.`,
               message: "I'm sorry, there was an error loading our services. Please try again later."
             };
           }
+        }
+        if (greetingKeywords.some((keyword) => messageText.includes(keyword))) {
+          return {
+            success: true,
+            message: "Hi! \u{1F44B} Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
+            nextStep: "welcome"
+          };
+        }
+        if (confirmKeywords.some((keyword) => messageText.includes(keyword))) {
+          return {
+            success: true,
+            message: "Great! Let's book your appointment. Please type 'book appointment' or 'book' to get started.",
+            nextStep: "welcome"
+          };
         }
         return {
           success: true,

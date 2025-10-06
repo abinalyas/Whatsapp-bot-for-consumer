@@ -121,24 +121,11 @@ export class WhatsAppBookingService {
     const greetingKeywords = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening'];
     const confirmKeywords = ['confirm', 'yes', 'y', 'ok', 'okay', 'proceed'];
     
-    // Handle greeting messages
-    if (greetingKeywords.some(keyword => messageText.includes(keyword))) {
-      return {
-        success: true,
-        message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
-        nextStep: 'welcome'
-      };
-    }
+    console.log('🔍 Welcome: Processing message:', messageText);
+    console.log('🔍 Welcome: Checking booking keywords:', bookingKeywords);
+    console.log('🔍 Welcome: Checking confirm keywords:', confirmKeywords);
     
-    // Handle confirmation messages - redirect to booking flow
-    if (confirmKeywords.some(keyword => messageText.includes(keyword))) {
-      return {
-        success: true,
-        message: "Great! Let's book your appointment. Please type 'book appointment' or 'book' to get started.",
-        nextStep: 'welcome'
-      };
-    }
-    
+    // Handle booking keywords FIRST (most important)
     if (bookingKeywords.some(keyword => messageText.includes(keyword))) {
       console.log('🔍 Welcome: User wants to book, fetching services...');
       try {
@@ -186,6 +173,24 @@ Reply with the number or name of the service to book.`,
           message: "I'm sorry, there was an error loading our services. Please try again later."
         };
       }
+    }
+    
+    // Handle greeting messages
+    if (greetingKeywords.some(keyword => messageText.includes(keyword))) {
+      return {
+        success: true,
+        message: "Hi! 👋 Welcome to Bella Salon! To book an appointment, please type 'book appointment' or 'book'.",
+        nextStep: 'welcome'
+      };
+    }
+    
+    // Handle confirmation messages - redirect to booking flow
+    if (confirmKeywords.some(keyword => messageText.includes(keyword))) {
+      return {
+        success: true,
+        message: "Great! Let's book your appointment. Please type 'book appointment' or 'book' to get started.",
+        nextStep: 'welcome'
+      };
     }
 
     // Handle unrecognized messages with helpful guidance
