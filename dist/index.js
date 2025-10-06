@@ -334,9 +334,15 @@ Please reply with the time slot number or time.`,
             selectedTime = this.parseTimeFromText(input, availableSlots);
           }
           if (!selectedTime) {
+            if (input.includes("confirm") || input.includes("yes") || input.includes("ok")) {
+              return {
+                success: false,
+                message: "I need you to select a time slot first. Please choose from the available times above by typing the time (like '4:30 PM') or the number of the slot."
+              };
+            }
             return {
               success: false,
-              message: "Please select a valid time slot from the list above."
+              message: "Please select a valid time slot from the list above. You can type the time (like '4:30 PM') or the number of the slot."
             };
           }
           const selectedTime24 = this.convert12HourTo24Hour(selectedTime);
@@ -402,6 +408,20 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
           if (period === "pm" && hours !== 12) hours += 12;
           if (period === "am" && hours === 12) hours = 0;
           const time24 = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+          const time12 = this.formatTimeTo12Hour(time24);
+          for (const slot of availableSlots) {
+            if (slot.time === time12) {
+              return slot.time;
+            }
+          }
+        }
+        const simpleTimeMatch = input.match(/(\d{1,2})\s*(am|pm)/i);
+        if (simpleTimeMatch) {
+          let hours = parseInt(simpleTimeMatch[1]);
+          const period = simpleTimeMatch[2].toLowerCase();
+          if (period === "pm" && hours !== 12) hours += 12;
+          if (period === "am" && hours === 12) hours = 0;
+          const time24 = `${hours.toString().padStart(2, "0")}:00`;
           const time12 = this.formatTimeTo12Hour(time24);
           for (const slot of availableSlots) {
             if (slot.time === time12) {
@@ -12190,11 +12210,11 @@ async function registerRoutes(app2) {
                     }
                   } else {
                     console.error(`\u274C Simple webhook failed to process message:`, result);
-                    await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                    await sendWhatsAppMessage(message.from, result.message || "I'm having trouble processing your request. Please try again.");
                   }
                 } catch (error) {
                   console.error("Error delegating to simple webhook:", error);
-                  await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                  await sendWhatsAppMessage(message.from, "I'm having trouble processing your request right now. Please try sending 'hi' to start over, or contact us directly for assistance.");
                 }
               }
             }

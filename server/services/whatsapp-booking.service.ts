@@ -402,9 +402,17 @@ Please reply with the time slot number or time.`,
       }
 
       if (!selectedTime) {
+        // Check if user is trying to confirm instead of selecting time
+        if (input.includes('confirm') || input.includes('yes') || input.includes('ok')) {
+          return {
+            success: false,
+            message: "I need you to select a time slot first. Please choose from the available times above by typing the time (like '4:30 PM') or the number of the slot."
+          };
+        }
+        
         return {
           success: false,
-          message: "Please select a valid time slot from the list above."
+          message: "Please select a valid time slot from the list above. You can type the time (like '4:30 PM') or the number of the slot."
         };
       }
 
@@ -491,6 +499,26 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
       if (period === 'am' && hours === 12) hours = 0;
       
       const time24 = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      const time12 = this.formatTimeTo12Hour(time24);
+      
+      // Check if this matches any available slot
+      for (const slot of availableSlots) {
+        if (slot.time === time12) {
+          return slot.time;
+        }
+      }
+    }
+    
+    // Handle common time formats without colons (e.g., "4pm", "2pm", "9am")
+    const simpleTimeMatch = input.match(/(\d{1,2})\s*(am|pm)/i);
+    if (simpleTimeMatch) {
+      let hours = parseInt(simpleTimeMatch[1]);
+      const period = simpleTimeMatch[2].toLowerCase();
+      
+      if (period === 'pm' && hours !== 12) hours += 12;
+      if (period === 'am' && hours === 12) hours = 0;
+      
+      const time24 = `${hours.toString().padStart(2, '0')}:00`;
       const time12 = this.formatTimeTo12Hour(time24);
       
       // Check if this matches any available slot

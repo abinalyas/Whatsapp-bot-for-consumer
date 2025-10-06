@@ -1087,11 +1087,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                   } else {
                     console.error(`❌ Simple webhook failed to process message:`, result);
-                    await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                    // Send the actual error message from the bot instead of generic error
+                    await sendWhatsAppMessage(message.from, result.message || "I'm having trouble processing your request. Please try again.");
                   }
                 } catch (error) {
                   console.error("Error delegating to simple webhook:", error);
-                  await sendWhatsAppMessage(message.from, "Sorry, I'm experiencing technical difficulties. Please try again later.");
+                  await sendWhatsAppMessage(message.from, "I'm having trouble processing your request right now. Please try sending 'hi' to start over, or contact us directly for assistance.");
                 }
               }
             }
