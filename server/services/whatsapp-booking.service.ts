@@ -415,13 +415,12 @@ Please reply with the time slot number or time.`,
       const service = await this.getServiceById(context.selectedService, context.tenantId);
       
       // Set appointment data for confirmation step
-      // Create date in Indian timezone (IST = UTC+5:30)
+      // Create date in local timezone and store as local time
       const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
       
-      // Store the appointment time in IST timezone to match dashboard display
-      // Add IST offset to ensure it's stored in the correct timezone
-      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-      const istDateTime = new Date(appointmentDateTime.getTime() + istOffset);
+      // Store the appointment time in local timezone format
+      // Format: YYYY-MM-DDTHH:MM:SS (without timezone conversion)
+      const localDateTimeString = `${context.selectedDate}T${selectedTime}:00`;
       
       context.appointmentData = {
         customer_name: context.customerName || 'WhatsApp Customer',
@@ -431,7 +430,7 @@ Please reply with the time slot number or time.`,
         service_name: service?.name || 'Unknown Service',
         staff_id: null, // Temporarily disable staff assignment
         staff_name: 'To be assigned',
-        scheduled_at: istDateTime.toISOString(),
+        scheduled_at: localDateTimeString,
         selectedTime: selectedTime,
         amount: service?.price || 0,
         currency: 'INR',
