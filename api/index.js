@@ -326,6 +326,12 @@ Please reply with the time slot number or time.`,
           }
           const availableTimeSlots = await this.getAvailableTimeSlots(context.tenantId, context.selectedDate);
           const availableSlots = availableTimeSlots.filter((slot) => slot.available);
+          if (availableSlots.length === 0) {
+            return {
+              success: false,
+              message: "Sorry, no time slots are available for this date. Please try a different date."
+            };
+          }
           let selectedTime = null;
           const input = messageText.trim().toLowerCase();
           const timeNumber = parseInt(input);
@@ -342,12 +348,12 @@ Please reply with the time slot number or time.`,
             if (isConfirmAttempt) {
               return {
                 success: false,
-                message: "I need you to select a time slot first. Please choose from the available times above by typing the time (like '4:30 PM') or the number of the slot.\n\nAvailable times:\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n")
+                message: "I need you to select a time slot first. Please choose from the available times:\n\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n") + "\n\nReply with the number (like '1') or time (like '4:30 PM')."
               };
             }
             return {
               success: false,
-              message: "Please select a valid time slot from the list above. You can type the time (like '4:30 PM') or the number of the slot.\n\nAvailable times:\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n")
+              message: "Please select a valid time slot. Available times:\n\n" + availableSlots.map((slot, index) => `${index + 1}. ${slot.time}`).join("\n") + "\n\nReply with the number (like '1') or time (like '4:30 PM')."
             };
           }
           const selectedTime24 = this.convert12HourTo24Hour(selectedTime);
