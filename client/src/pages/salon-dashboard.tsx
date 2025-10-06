@@ -6927,28 +6927,28 @@ export default function SalonDashboard() {
             hour12: true
           });
         
-        toast({
-          title: "🎉 New Appointment Booked!",
-          description: (
-            <div className="space-y-1">
-              <div className="font-medium">
-                {appointment.customer_name || appointment.customer}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {appointment.service_name || appointment.service}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                📅 {formattedDate} at {formattedTime}
-              </div>
-              {appointment.staff_name && appointment.staff_name !== 'To be assigned' && (
-                <div className="text-sm text-muted-foreground">
-                  👤 Staff: {appointment.staff_name}
+            toast({
+              title: "🎉 New Appointment Booked!",
+              description: (
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    {appointment.customer_name || appointment.customer}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {appointment.service_name || appointment.service}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    📅 {formattedDate} at {formattedTime}
+                  </div>
+                  {appointment.staff_name && appointment.staff_name !== 'To be assigned' && (
+                    <div className="text-sm text-muted-foreground">
+                      👤 Staff: {appointment.staff_name}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ),
-          duration: 6000,
-        });
+              ),
+              duration: Infinity, // Toast will not auto-close
+            });
       });
       
       // Update the previous appointments reference

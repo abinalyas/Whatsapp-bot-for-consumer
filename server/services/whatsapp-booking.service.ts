@@ -408,7 +408,9 @@ Please reply with the time slot number or time.`,
         };
       }
 
-      context.selectedTime = selectedTime;
+      // Convert selected time back to 24-hour format for storage
+      const selectedTime24 = this.convert12HourTo24Hour(selectedTime);
+      context.selectedTime = selectedTime24; // Store in 24-hour format for consistency
       context.currentStep = 'confirmation';
       
       // Get service details for confirmation
@@ -416,11 +418,11 @@ Please reply with the time slot number or time.`,
       
       // Set appointment data for confirmation step
       // Create date in local timezone and store as local time
-      const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime}:00`);
+      const appointmentDateTime = new Date(`${context.selectedDate}T${selectedTime24}:00`);
       
       // Store the appointment time in local timezone format
       // Format: YYYY-MM-DDTHH:MM:SS (without timezone conversion)
-      const localDateTimeString = `${context.selectedDate}T${selectedTime}:00`;
+      const localDateTimeString = `${context.selectedDate}T${selectedTime24}:00`;
       
       context.appointmentData = {
         customer_name: context.customerName || 'WhatsApp Customer',
@@ -474,6 +476,28 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
     for (const slot of availableSlots) {
       if (normalizedInput === slot.time.toLowerCase()) {
         return slot.time;
+      }
+    }
+    
+    // Try to parse time and convert to 12-hour format for matching
+    const timeMatch = input.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+      const period = timeMatch[3] ? timeMatch[3].toLowerCase() : '';
+      
+      // Convert to 24-hour format first, then to 12-hour format
+      if (period === 'pm' && hours !== 12) hours += 12;
+      if (period === 'am' && hours === 12) hours = 0;
+      
+      const time24 = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      const time12 = this.formatTimeTo12Hour(time24);
+      
+      // Check if this matches any available slot
+      for (const slot of availableSlots) {
+        if (slot.time === time12) {
+          return slot.time;
+        }
       }
     }
     
@@ -565,7 +589,7 @@ Please reply with "confirm" to book this appointment, or "change" to modify your
 Your appointment has been confirmed:
 
 📅 Date: ${context.selectedDate}
-⏰ Time: ${context.selectedTime}
+⏰ Time: ${this.formatTimeTo12Hour(context.selectedTime)}
 💇‍♀️ Service: ${context.appointmentData.service_name}
 👩‍💼 Staff: ${context.appointmentData.staff_name}
 💰 Price: ₹${context.appointmentData.amount}
@@ -698,10 +722,16 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
     try {
       console.log('🔍 getAvailableTimeSlots called with:', { tenantId, date, serviceName });
       
-      // Standard time slots
-      const timeSlots = [
-        '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
-      ];
+      // Generate half-hour time slots from 9:00 AM to 6:00 PM
+      const timeSlots = [];
+      for (let hour = 9; hour <= 18; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          if (hour === 18 && minute > 0) break; // Stop at 6:00 PM
+          const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          const time12 = this.formatTimeTo12Hour(time24);
+          timeSlots.push({ time24, time12 });
+        }
+      }
 
       // If no service is specified, use the old logic
       if (!serviceName) {
@@ -716,9 +746,9 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
         const bookedTimes = bookedSlots.rows.map(row => row.appointment_time);
         console.log('🔍 Found booked times:', bookedTimes);
 
-        const result = timeSlots.map(time => ({
-          time,
-          available: !bookedTimes.includes(time)
+        const result = timeSlots.map(slot => ({
+          time: slot.time12, // Use 12-hour format for display
+          available: !bookedTimes.includes(slot.time24) // Check availability using 24-hour format
         }));
         
         console.log('🔍 Time slots result:', result);
@@ -752,28 +782,28 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
           const bookedTimes = bookedSlots.rows.map(row => row.appointment_time);
           console.log('🔍 Found booked times (fallback):', bookedTimes);
 
-          return timeSlots.map(time => ({
-            time,
-            available: !bookedTimes.includes(time)
+          return timeSlots.map(slot => ({
+            time: slot.time12, // Use 12-hour format for display
+            available: !bookedTimes.includes(slot.time24) // Check availability using 24-hour format
           }));
         }
       }
 
       // Check availability for each time slot
       const result = [];
-      for (const time of timeSlots) {
+      for (const slot of timeSlots) {
         // Check if any skilled staff is available at this time
-        const availableStaff = await this.getAvailableStaffAtTime(tenantId, date, time, skilledStaff);
+        const availableStaff = await this.getAvailableStaffAtTime(tenantId, date, slot.time24, skilledStaff);
         
         if (availableStaff.length > 0) {
           result.push({
-            time,
+            time: slot.time12, // Use 12-hour format for display
             available: true,
             assignedStaff: availableStaff[0] // Assign the first available staff
           });
         } else {
           result.push({
-            time,
+            time: slot.time12, // Use 12-hour format for display
             available: false
           });
         }
@@ -1037,6 +1067,33 @@ Thank you for choosing Bella Salon! We look forward to seeing you! ✨`,
       console.error('❌ Error constraint:', error.constraint);
       return null;
     }
+  }
+
+  /**
+   * Format 24-hour time to 12-hour format
+   */
+  private formatTimeTo12Hour(time24: string): string {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  }
+
+  /**
+   * Convert 12-hour format back to 24-hour format for storage
+   */
+  private convert12HourTo24Hour(time12: string): string {
+    const match = time12.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return time12; // Return as-is if not in expected format
+    
+    let hours = parseInt(match[1]);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+    
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
   }
 
   /**
