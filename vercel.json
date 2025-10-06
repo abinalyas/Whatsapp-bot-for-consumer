@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo 'FORCE DEPLOYMENT - v2.14.3 - $(date) - $(uuidgen)'",
+  "buildCommand": "npm run build && echo 'BUILT FROM SOURCE - v2.14.3 - $(date)'",
   "builds": [
     {
       "src": "api/index.js",
